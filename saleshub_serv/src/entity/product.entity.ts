@@ -72,7 +72,7 @@ export class ProductItem {
     quantity_per_product: number;
 
     @Column({ type: 'text', nullable: true, comment: '备注' })
-    remark: string;
+    remark: string | null;
 
     @Column({ type: 'int', default: 1, comment: '状态：1-正常，2-停用' })
     status: number;
