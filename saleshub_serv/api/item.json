@@ -1,0 +1,326 @@
+{
+    "/saleshub/inventory/listItems": {
+        "method": "GET",
+        "summary": "库存件列表",
+        "description": "分页查询当前正常状态（status=1）的库存件。支持按类型 type（device-设备件，common-常用件）、名称 name 模糊匹配、编码 code 精确匹配筛选；支持按预警状态过滤：isWarning=1 仅返回正常库存（current_stock > warn_stock），isWarning=2 仅返回预警库存（current_stock <= warn_stock）。按 create_time 降序。返回项额外计算 isWarning 字段（current_stock <= warn_stock）。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "pageIndex": {
+                    "type": "number",
+                    "description": "页码，从 1 开始（Query 参数）"
+                },
+                "pageSize": {
+                    "type": "number",
+                    "description": "每页条数（Query 参数）"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "device",
+                        "common"
+                    ],
+                    "description": "库存件类型（Query 参数，可选）：device-设备件，common-常用件"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "库存件名称，模糊匹配（Query 参数，可选）"
+                },
+                "code": {
+                    "type": "string",
+                    "description": "库存件编码，精确匹配（Query 参数，可选）"
+                },
+                "isWarning": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "description": "预警状态过滤（Query 参数，可选）：1-正常库存（current_stock > warn_stock），2-预警库存（current_stock <= warn_stock）"
+                }
+            },
+            "required": [
+                "pageIndex",
+                "pageSize"
+            ]
+        },
+        "example_request": {
+            "pageIndex": 1,
+            "pageSize": 10,
+            "type": "common",
+            "isWarning": 2
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "分页结果",
+                    "properties": {
+                        "total": {
+                            "type": "number",
+                            "description": "符合条件的总条数"
+                        },
+                        "items": {
+                            "type": "array",
+                            "description": "库存件列表",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "item_id": {
+                                        "type": "string",
+                                        "description": "库存件主键 UUID（无连字符）"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "device",
+                                            "common"
+                                        ],
+                                        "description": "类型：device-设备件，common-常用件"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "名称"
+                                    },
+                                    "code": {
+                                        "type": "string",
+                                        "description": "编码，格式 IT + 6 位数字（如 IT000001）"
+                                    },
+                                    "specs": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "description": "规格选项（仅常用件有值）"
+                                    },
+                                    "current_stock": {
+                                        "type": "number",
+                                        "description": "当前库存"
+                                    },
+                                    "warn_stock": {
+                                        "type": "number",
+                                        "description": "预警阈值"
+                                    },
+                                    "isWarning": {
+                                        "type": "boolean",
+                                        "description": "是否预警：true-当前库存小于等于预警阈值"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/createItem": {
+        "method": "POST",
+        "summary": "创建库存件",
+        "description": "创建库存件记录。服务端自动生成编码 code（格式 IT + 6 位递增数字，如 IT000001；上限 999999），item_id 由 UUID v7 去连字符生成。type 必须为 device 或 common。specs 仅在常用件（common）时有意义，可传规格选项数组。warnStock 为预警阈值，默认 10。status 默认 1，current_stock 默认 0。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "device",
+                        "common"
+                    ],
+                    "description": "库存件类型：device-设备件，common-常用件"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "名称，最长 100 字符"
+                },
+                "specs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "规格选项数组（可选，仅常用件有意义）"
+                },
+                "warnStock": {
+                    "type": "number",
+                    "description": "预警阈值（可选，默认 10，最小 1）"
+                }
+            },
+            "required": [
+                "type",
+                "name"
+            ]
+        },
+        "example_request": {
+            "type": "common",
+            "name": "M8 螺栓",
+            "specs": [
+                "不锈钢",
+                "镀锌"
+            ],
+            "warnStock": 20
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-创建失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时返回新建库存件 ID",
+                    "properties": {
+                        "item_id": {
+                            "type": "string",
+                            "description": "新建库存件主键 UUID"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/updateItem": {
+        "method": "POST",
+        "summary": "更新库存件",
+        "description": "更新库存件基础信息（类型、名称、规格、预警阈值）。仅当 item_id 对应的库存件存在且 status=1 时可更新。type 与 name 为必填字段（直接覆盖原值）；specs 传入非空数组时更新；warnStock 传入时更新。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "item_id": {
+                    "type": "string",
+                    "description": "库存件主键 UUID"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "device",
+                        "common"
+                    ],
+                    "description": "库存件类型：device-设备件，common-常用件"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "名称，最长 100 字符"
+                },
+                "specs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "规格选项数组（可选，传入非空数组时更新）"
+                },
+                "warnStock": {
+                    "type": "number",
+                    "description": "预警阈值（可选，最小 1）"
+                }
+            },
+            "required": [
+                "item_id",
+                "type",
+                "name"
+            ]
+        },
+        "example_request": {
+            "item_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "type": "common",
+            "name": "M8 螺栓（更新）",
+            "warnStock": 15
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-库存件不存在或更新失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时通常为空对象"
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/deleteItem": {
+        "method": "POST",
+        "summary": "删除库存件",
+        "description": "软删除库存件（将 status 置为 2）。仅当 item_id 对应的库存件存在时可操作。注意：当前实现暂未校验该库存件是否被产品引用（product_items 关联），后续需补充。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "item_id": {
+                    "type": "string",
+                    "description": "库存件主键 UUID"
+                }
+            },
+            "required": [
+                "item_id"
+            ]
+        },
+        "example_request": {
+            "item_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-库存件不存在或删除失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时返回被删除的库存件 ID",
+                    "properties": {
+                        "item_id": {
+                            "type": "string",
+                            "description": "被删除的库存件主键 UUID"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

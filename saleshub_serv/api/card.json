@@ -1,0 +1,1586 @@
+{
+    "/business_card/mobile/cardList": {
+        "method": "GET",
+        "summary": "名片列表",
+        "description": "查询当前用户的有效名片列表（status=1）。按 is_default 降序（默认名片优先）、created_at 降序。请求体中 id 映射为 user_id。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "用户主键 UUID（映射为 user_id）"
+                }
+            },
+            "required": [
+                "id"
+            ]
+        },
+        "example_request": {
+            "id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码，0-成功"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "array",
+                    "description": "名片列表",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "card_id": {
+                                "type": "string",
+                                "description": "名片主键 UUID（无连字符）"
+                            },
+                            "user_id": {
+                                "type": "string",
+                                "description": "所属用户 ID"
+                            },
+                            "card_name": {
+                                "type": "string",
+                                "description": "名片名称"
+                            },
+                            "is_default": {
+                                "type": "number",
+                                "description": "是否默认名片：1-是，2-否"
+                            },
+                            "company_id": {
+                                "type": "string",
+                                "description": "关联企业 ID；个人名片可能为空"
+                            },
+                            "card_type": {
+                                "type": "number",
+                                "description": "名片类型：1-个人名片，2-企业名片"
+                            },
+                            "position": {
+                                "type": "string",
+                                "description": "职务"
+                            },
+                            "template_id": {
+                                "type": "string",
+                                "description": "模板标识，如 classic"
+                            },
+                            "theme_color": {
+                                "type": "string",
+                                "description": "主题色，如 #1989fa"
+                            },
+                            "background_image": {
+                                "type": "string",
+                                "description": "背景图 URL"
+                            },
+                            "view_count": {
+                                "type": "number",
+                                "description": "浏览次数"
+                            },
+                            "share_count": {
+                                "type": "number",
+                                "description": "分享次数"
+                            },
+                            "call_count": {
+                                "type": "number",
+                                "description": "拨号次数"
+                            },
+                            "save_count": {
+                                "type": "number",
+                                "description": "保存次数"
+                            },
+                            "share_code": {
+                                "type": "string",
+                                "description": "分享唯一码"
+                            },
+                            "card_data": {
+                                "type": "object",
+                                "description": "名片内容数据（JSON，键为 element_key）"
+                            },
+                            "created_at": {
+                                "type": "string",
+                                "description": "创建时间，格式 YYYY-MM-DD HH24:MI:SS"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/business_card/mobile/createCard": {
+        "method": "POST",
+        "summary": "创建名片",
+        "description": "创建电子名片。服务端自动校验名片数量上限（checkCardLimit）：个人名片（card_type=1）须有效个人会员（plan_user_type=1）；企业名片（card_type=2）须为有效企业成员且企业所有者拥有有效企业会员（plan_user_type=2）。超限返回 4002。创建时根据模板元素配置（source/field）从 users、company 表自动填充 card_data。生成唯一 share_code。若 is_default=1，同用户同 card_type 下其他默认名片置为 2。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "用户主键 UUID"
+                },
+                "card_name": {
+                    "type": "string",
+                    "description": "名片名称，最长 50 字符"
+                },
+                "card_type": {
+                    "type": "number",
+                    "description": "名片类型：1-个人名片，2-企业名片"
+                },
+                "template_id": {
+                    "type": "string",
+                    "description": "模板标识，如 classic（必填）"
+                },
+                "is_default": {
+                    "type": "number",
+                    "description": "是否默认名片：1-是，2-否（可选，默认 2）"
+                },
+                "position": {
+                    "type": "string",
+                    "description": "职务，最长 50 字符（可选）"
+                },
+                "theme_color": {
+                    "type": "string",
+                    "description": "主题色，最长 20 字符（可选）"
+                },
+                "background_image": {
+                    "type": "string",
+                    "description": "背景图 URL，最长 255 字符（可选）"
+                }
+            },
+            "required": [
+                "user_id",
+                "card_name",
+                "card_type",
+                "template_id"
+            ]
+        },
+        "example_request": {
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "card_name": "我的名片",
+            "card_type": 1,
+            "template_id": "classic",
+            "is_default": 1,
+            "position": "销售经理",
+            "theme_color": "#1989fa"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4002-已达名片数量上限，5001-请先开通个人会员/请先加入企业，5002-企业未开通会员，5000-创建失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时返回新建名片 ID；失败时为空对象或含限额信息",
+                    "properties": {
+                        "card_id": {
+                            "type": "string",
+                            "description": "新建名片主键 UUID"
+                        },
+                        "can_create": {
+                            "type": "boolean",
+                            "description": "限额校验失败时返回，是否还可创建"
+                        },
+                        "current": {
+                            "type": "number",
+                            "description": "当前该类型有效名片数"
+                        },
+                        "max": {
+                            "type": "number",
+                            "description": "会员允许的最大名片数"
+                        },
+                        "need_membership": {
+                            "type": "boolean",
+                            "description": "是否需要开通个人会员"
+                        },
+                        "need_company_membership": {
+                            "type": "boolean",
+                            "description": "是否需要企业会员"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/business_card/mobile/cardDetail": {
+        "method": "GET",
+        "summary": "名片详情",
+        "description": "根据 Path 参数 id（名片 ID）及请求体 id（用户 ID）查询名片详情。仅名片所属用户可访问。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "用户主键 UUID（Body）；Path 参数 id 为名片 card_id"
+                }
+            },
+            "required": [
+                "id"
+            ]
+        },
+        "example_request": {
+            "id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004-名片不存在，2003-无权访问"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "名片详情，字段同 cardList 单项"
+                }
+            }
+        }
+    },
+    "/business_card/mobile/updateCard": {
+        "method": "POST",
+        "summary": "更新名片",
+        "description": "更新名片基础信息（名称、默认状态、职务、模板、主题色、背景图等）。Path 参数 id 为名片 ID。仅更新请求体中传入的字段。若 is_default=1，取消该用户其他默认名片。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "用户主键 UUID（映射为 user_id）"
+                },
+                "card_name": {
+                    "type": "string",
+                    "description": "名片名称（可选）"
+                },
+                "is_default": {
+                    "type": "number",
+                    "description": "是否默认：1-是，2-否（可选）"
+                },
+                "position": {
+                    "type": "string",
+                    "description": "职务（可选）"
+                },
+                "template_id": {
+                    "type": "string",
+                    "description": "模板标识（必填）"
+                },
+                "theme_color": {
+                    "type": "string",
+                    "description": "主题色（可选）"
+                },
+                "background_image": {
+                    "type": "string",
+                    "description": "背景图 URL（可选）"
+                }
+            },
+            "required": [
+                "id",
+                "template_id"
+            ]
+        },
+        "example_request": {
+            "id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "card_name": "更新后的名片",
+            "template_id": "classic",
+            "theme_color": "#ff6600"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004-名片不存在，2003-无权访问，5000-更新失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时通常为空对象"
+                }
+            }
+        }
+    },
+    "/business_card/mobile/deleteCard": {
+        "method": "POST",
+        "summary": "删除名片",
+        "description": "软删除名片（status=2）。Path 参数 id 为名片 ID。仅名片所属用户可操作。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "用户主键 UUID"
+                }
+            },
+            "required": [
+                "id"
+            ]
+        },
+        "example_request": {
+            "id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004-名片不存在，2003-无权访问，5000-删除失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时通常为空对象"
+                }
+            }
+        }
+    },
+    "/business_card/mobile/setDefaultCard": {
+        "method": "POST",
+        "summary": "设置默认名片",
+        "description": "将指定名片设为同 card_type 下的默认名片（is_default=1），同类型其他名片 is_default 置为 2。Path 参数 id 为名片 ID。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "用户主键 UUID"
+                }
+            },
+            "required": [
+                "id"
+            ]
+        },
+        "example_request": {
+            "id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004-名片不存在，2003-无权访问，5000-设置失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时通常为空对象"
+                }
+            }
+        }
+    },
+    "/business_card/mobile/switchTemplate": {
+        "method": "POST",
+        "summary": "切换名片模板",
+        "description": "切换名片使用的模板（template_id），可选同时更新 theme_color。Path 参数 id 为名片 ID。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "用户主键 UUID（映射为 user_id）"
+                },
+                "template_id": {
+                    "type": "string",
+                    "description": "新模板标识（必填）"
+                },
+                "theme_color": {
+                    "type": "string",
+                    "description": "主题色（可选）"
+                }
+            },
+            "required": [
+                "id",
+                "template_id"
+            ]
+        },
+        "example_request": {
+            "id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "template_id": "modern",
+            "theme_color": "#1890ff"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004-名片不存在，2003-无权访问，5000-切换失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时通常为空对象"
+                }
+            }
+        }
+    },
+    "/business_card/mobile/updateCardContent": {
+        "method": "POST",
+        "summary": "更新名片内容",
+        "description": "更新名片 card_data（各元素键值对，键为 element_key）。Path 参数 id 为名片 ID。用于编辑页保存用户填写的名片字段。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "用户主键 UUID（映射为 user_id）"
+                },
+                "card_data": {
+                    "type": "object",
+                    "description": "名片内容 JSON，如 {\"name\":\"张三\",\"phone\":\"13800138000\"}"
+                }
+            },
+            "required": [
+                "id",
+                "card_data"
+            ]
+        },
+        "example_request": {
+            "id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "card_data": {
+                "name": "张三",
+                "phone": "13800138000",
+                "wechat": "zhangsan_wx",
+                "address": "北京市朝阳区"
+            }
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004-名片不存在，2003-无权访问，5000-更新失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时通常为空对象"
+                }
+            }
+        }
+    },
+    "/business_card/mobile/cardStatistics": {
+        "method": "GET",
+        "summary": "名片统计数据",
+        "description": "查询指定名片的访问统计汇总（浏览/分享/拨号/保存次数）。Path 参数 id 为名片 ID。先校验名片归属，再统计 card_analytics 表。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "用户主键 UUID"
+                }
+            },
+            "required": [
+                "id"
+            ]
+        },
+        "example_request": {
+            "id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004/2003-名片校验失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "统计汇总",
+                    "properties": {
+                        "view_count": {
+                            "type": "number",
+                            "description": "浏览次数"
+                        },
+                        "share_count": {
+                            "type": "number",
+                            "description": "分享次数"
+                        },
+                        "call_count": {
+                            "type": "number",
+                            "description": "拨号次数"
+                        },
+                        "save_count": {
+                            "type": "number",
+                            "description": "保存次数"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/business_card/mobile/cardTrend": {
+        "method": "GET",
+        "summary": "名片访问趋势",
+        "description": "查询指定名片最近 N 天的访问趋势（按日分组）。Path 参数 id 为名片 ID。Query 参数 days 默认 7。数据来源 card_visits 表。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "用户主键 UUID（Body）"
+                },
+                "days": {
+                    "type": "number",
+                    "description": "统计天数（Query 参数，默认 7）"
+                }
+            },
+            "required": [
+                "id"
+            ]
+        },
+        "example_request": {
+            "id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "days": 7
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004/2003-名片校验失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "array",
+                    "description": "按日期排序的趋势数据",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "date": {
+                                "type": "string",
+                                "description": "日期，格式 YYYY-MM-DD"
+                            },
+                            "views": {
+                                "type": "number",
+                                "description": "当日浏览次数"
+                            },
+                            "calls": {
+                                "type": "number",
+                                "description": "当日拨号次数"
+                            },
+                            "saves": {
+                                "type": "number",
+                                "description": "当日保存次数"
+                            },
+                            "shares": {
+                                "type": "number",
+                                "description": "当日分享次数"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/business_card/mobile/cardTrack": {
+        "method": "POST",
+        "summary": "记录名片访问行为",
+        "description": "记录访客行为并更新名片计数器。Path 参数 id 为名片 ID。写入 card_visits、card_analytics，并按 action_type 递增 view_count/share_count/call_count/save_count。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "action_type": {
+                    "type": "string",
+                    "description": "行为类型：view-浏览，call-拨号，save-保存，share-分享"
+                },
+                "visit_source": {
+                    "type": "string",
+                    "description": "访问来源：link/qrcode/wechat 等（可选）"
+                },
+                "visitor_ip": {
+                    "type": "string",
+                    "description": "访客 IP（可选）"
+                },
+                "user_agent": {
+                    "type": "string",
+                    "description": "访客 User-Agent（可选）"
+                }
+            },
+            "required": [
+                "action_type"
+            ]
+        },
+        "example_request": {
+            "action_type": "view",
+            "visit_source": "qrcode",
+            "visitor_ip": "192.168.1.1",
+            "user_agent": "Mozilla/5.0"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码，0-成功"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时通常为空对象"
+                }
+            }
+        }
+    },
+    "/business_card/mobile/templateList": {
+        "method": "GET",
+        "summary": "模板列表",
+        "description": "分页查询移动端可用名片模板。条件：status=1（正常）且 is_active=1（已启用）。按 sort_order 升序、created_at 升序。可选按模板名称 name 模糊筛选（LIKE）。返回含 html_content、description 等完整模板信息，供创建/切换名片时选择模板。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "pageIndex": {
+                    "type": "number",
+                    "description": "页码，从 1 开始（Query 参数）"
+                },
+                "pageSize": {
+                    "type": "number",
+                    "description": "每页条数（Query 参数）"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "模板名称，模糊匹配（Query 参数，可选）"
+                }
+            },
+            "required": [
+                "pageIndex",
+                "pageSize"
+            ]
+        },
+        "example_request": {
+            "pageIndex": 1,
+            "pageSize": 10,
+            "name": "经典"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码，0-成功"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "分页结果",
+                    "properties": {
+                        "templates": {
+                            "type": "array",
+                            "description": "模板列表",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "description": "模板主键 UUID（无连字符）"
+                                    },
+                                    "template_id": {
+                                        "type": "string",
+                                        "description": "模板标识，如 classic、modern；创建名片时传入此字段"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "模板名称"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "模板描述"
+                                    },
+                                    "sort_order": {
+                                        "type": "number",
+                                        "description": "排序序号，数字越小越靠前"
+                                    },
+                                    "is_active": {
+                                        "type": "number",
+                                        "description": "是否启用：1-启用，2-禁用"
+                                    },
+                                    "preview": {
+                                        "type": "string",
+                                        "description": "模板预览图 URL"
+                                    },
+                                    "default_theme_color": {
+                                        "type": "string",
+                                        "description": "默认主题色，如 #1989fa"
+                                    },
+                                    "supports_background_image": {
+                                        "type": "boolean",
+                                        "description": "是否支持背景图片"
+                                    },
+                                    "supports_custom_color": {
+                                        "type": "boolean",
+                                        "description": "是否支持自定义主题色"
+                                    },
+                                    "html_content": {
+                                        "type": "string",
+                                        "description": "模板 HTML 内容（含 {{placeholder}} 占位符）"
+                                    },
+                                    "created_at": {
+                                        "type": "string",
+                                        "description": "创建时间，格式 YYYY-MM-DD HH24:MI:SS"
+                                    },
+                                    "updated_at": {
+                                        "type": "string",
+                                        "description": "更新时间，格式 YYYY-MM-DD HH24:MI:SS"
+                                    }
+                                }
+                            }
+                        },
+                        "total": {
+                            "type": "number",
+                            "description": "符合条件的模板总条数"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/business_card/mobile/templateFields": {
+        "method": "GET",
+        "summary": "模板字段列表",
+        "description": "根据 template_id（Query，映射为服务端 TemplateIdDto.id）查询该模板已配置的元素样式列表。关联 card_template_styles 与 card_elements，条件：s.status=1、s.visible=1、e.is_active=1。按 s.sort_order 升序。用于名片编辑页展示可填字段及默认配置；element_key 与 card_data、模板 HTML 占位符 {{key}} 一致。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "template_id": {
+                    "type": "string",
+                    "description": "模板标识（Query 参数），如 classic"
+                }
+            },
+            "required": [
+                "template_id"
+            ]
+        },
+        "example_request": {
+            "template_id": "classic"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，9001-缺少 template_id，5000-查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "array",
+                    "description": "模板元素列表",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "element_key": {
+                                "type": "string",
+                                "description": "元素标识，对应 card_data 的键"
+                            },
+                            "element_name": {
+                                "type": "string",
+                                "description": "元素显示名称"
+                            },
+                            "element_type": {
+                                "type": "string",
+                                "description": "元素类型：text/icon-text/image/button 等"
+                            },
+                            "category": {
+                                "type": "number",
+                                "description": "元素分类 ID"
+                            },
+                            "description": {
+                                "type": "string",
+                                "description": "元素描述"
+                            },
+                            "default_config": {
+                                "type": "string",
+                                "description": "默认配置 JSON 字符串"
+                            },
+                            "visible": {
+                                "type": "number",
+                                "description": "是否可见：1-可见，2-不可见"
+                            },
+                            "sort_order": {
+                                "type": "number",
+                                "description": "排序序号"
+                            },
+                            "element_config": {
+                                "type": "string",
+                                "description": "该模板下元素样式配置 JSON 字符串"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/business_card/mobile/renderCard": {
+        "method": "GET",
+        "summary": "渲染名片 HTML（移动端）",
+        "description": "根据 share_code（Query）渲染名片完整 HTML，供已登录用户预览分享页。流程：① 按 share_code 查询 status=1 的名片；② 按名片 template_id 关联 card_templates（status=1）取 html_content；③ 校验名片所属用户存在；④ 调用 checkCardLimit 校验名片所属用户会员未过期（个人/企业规则同 createCard）；⑤ 将 card_data 各键转为字符串，替换模板中 {{element_key}} 占位符（空值替换为空串）。不自动记录访问统计；公开分享页请使用 /business_card/public/cardRender。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "share_code": {
+                    "type": "string",
+                    "description": "名片分享码（Query 参数）"
+                }
+            },
+            "required": [
+                "share_code"
+            ]
+        },
+        "example_request": {
+            "share_code": "a1B2c3D4"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004-名片不存在/模板不存在或模板内容为空/用户不存在，5001-请先开通个人会员/请先加入企业，5002-企业未开通会员，5000-渲染失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息；会员过期时为「用户会员已过期, 无法访问名片」"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时返回渲染结果；失败时为空对象",
+                    "properties": {
+                        "html": {
+                            "type": "string",
+                            "description": "占位符替换后的完整 HTML 字符串"
+                        },
+                        "card_id": {
+                            "type": "string",
+                            "description": "名片主键 UUID（无连字符）"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/business_card/public/cardRender": {
+        "method": "GET",
+        "summary": "公开渲染名片 HTML",
+        "description": "访客通过分享码访问名片并渲染 HTML，无需登录。在 renderCard 相同渲染逻辑基础上，渲染成功（result=0）时额外：① 写入 card_visits / card_analytics（action_type=view，含访客 IP、User-Agent）；② 递增 business_cards.view_count。适用于扫码、外链等公开分享场景。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "share_code": {
+                    "type": "string",
+                    "description": "名片分享码（Query 参数）"
+                }
+            },
+            "required": [
+                "share_code"
+            ]
+        },
+        "example_request": {
+            "share_code": "a1B2c3D4"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004-名片不存在/模板不存在或模板内容为空/用户不存在，5001-请先开通个人会员/请先加入企业，5002-企业未开通会员，5000-渲染失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "字段同 /business_card/mobile/renderCard 成功响应",
+                    "properties": {
+                        "html": {
+                            "type": "string",
+                            "description": "渲染后的完整 HTML 字符串"
+                        },
+                        "card_id": {
+                            "type": "string",
+                            "description": "名片主键 UUID"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/business_card/mobile/saveCard": {
+        "method": "POST",
+        "summary": "保存名片",
+        "description": "登录用户将他人分享的名片保存到收藏（card_saves）。业务规则：① 按 share_code 查询 status=1 的名片，不存在返回 4004；② 同一 user_id + share_code 且 status=1 已存在时直接返回 result=0、msg=「已保存」（幂等，不重复写入、不增加 save_count）；③ 新建保存记录（id 为 UUID v7 去连字符），冗余 card_id；④ business_cards.save_count 自增 1。保存数量不限制。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "保存者用户主键 UUID"
+                },
+                "share_code": {
+                    "type": "string",
+                    "description": "被保存名片的分享码"
+                }
+            },
+            "required": [
+                "user_id",
+                "share_code"
+            ]
+        },
+        "example_request": {
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "share_code": "a1B2c3D4"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功（含已保存幂等），4004-名片不存在，5000-保存名片失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息：保存成功 / 已保存"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时通常为空对象"
+                }
+            }
+        }
+    },
+    "/business_card/mobile/unsaveCard": {
+        "method": "POST",
+        "summary": "取消保存名片",
+        "description": "取消当前用户对指定分享码的保存记录。将 card_saves 中匹配 user_id、share_code 且 status=1 的记录软删除（status=2，更新 updated_at）。未找到记录时返回 4004。注意：取消保存不会递减 business_cards.save_count。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "操作用户主键 UUID"
+                },
+                "share_code": {
+                    "type": "string",
+                    "description": "被取消保存的名片分享码"
+                }
+            },
+            "required": [
+                "user_id",
+                "share_code"
+            ]
+        },
+        "example_request": {
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "share_code": "a1B2c3D4"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004-未找到保存记录，5000-取消保存失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时通常为空对象"
+                }
+            }
+        }
+    },
+    "/business_card/mobile/saveList": {
+        "method": "GET",
+        "summary": "已保存名片列表",
+        "description": "分页查询当前用户已保存的名片（card_saves.status=1）。左关联 business_cards、card_templates，按 saved_at 倒序。用于「我的收藏」列表；列表项含名片基础字段、card_data 及关联模板 html_content，便于列表内二次渲染或跳转详情。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "用户主键 UUID（Query 参数）"
+                },
+                "pageIndex": {
+                    "type": "number",
+                    "description": "页码，从 1 开始（Query 参数）"
+                },
+                "pageSize": {
+                    "type": "number",
+                    "description": "每页条数（Query 参数）"
+                }
+            },
+            "required": [
+                "user_id",
+                "pageIndex",
+                "pageSize"
+            ]
+        },
+        "example_request": {
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "pageIndex": 1,
+            "pageSize": 10
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，5000-获取已保存名片列表失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "分页结果",
+                    "properties": {
+                        "cards": {
+                            "type": "array",
+                            "description": "已保存名片列表",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "card_id": {
+                                        "type": "string",
+                                        "description": "名片主键 UUID"
+                                    },
+                                    "share_code": {
+                                        "type": "string",
+                                        "description": "分享码"
+                                    },
+                                    "saved_at": {
+                                        "type": "string",
+                                        "description": "保存时间"
+                                    },
+                                    "card_name": {
+                                        "type": "string",
+                                        "description": "名片名称"
+                                    },
+                                    "card_data": {
+                                        "type": "object",
+                                        "description": "名片内容 JSON（element_key 为键）"
+                                    },
+                                    "user_id": {
+                                        "type": "string",
+                                        "description": "名片所属用户 ID"
+                                    },
+                                    "card_type": {
+                                        "type": "number",
+                                        "description": "名片类型：1-个人，2-企业"
+                                    },
+                                    "template_id": {
+                                        "type": "string",
+                                        "description": "模板标识"
+                                    },
+                                    "theme_color": {
+                                        "type": "string",
+                                        "description": "主题色"
+                                    },
+                                    "background_image": {
+                                        "type": "string",
+                                        "description": "背景图 URL"
+                                    },
+                                    "template_name": {
+                                        "type": "string",
+                                        "description": "模板名称（来自 card_templates.name）"
+                                    },
+                                    "html_content": {
+                                        "type": "string",
+                                        "description": "模板 HTML（含 {{placeholder}}）"
+                                    }
+                                }
+                            }
+                        },
+                        "total": {
+                            "type": "number",
+                            "description": "符合条件的总条数"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/business_card/mobile/articleList": {
+        "method": "GET",
+        "summary": "名片文章列表",
+        "description": "按 card_id 查询该名片下所有正常状态文章（card_article.state=1），按 create_time 倒序。须传 user_id 并校验名片归属（business_cards.status=1 且 user_id 匹配），与 cardDetail 权限一致。列表不含 content 正文，含封面图 image_url（通过 public.get_fdfs_url 拼接 FDFS 完整地址）。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "card_id": {
+                    "type": "string",
+                    "description": "名片主键 UUID（Query 参数）"
+                },
+                "user_id": {
+                    "type": "string",
+                    "description": "操作用户主键 UUID（Query 参数）"
+                }
+            },
+            "required": [
+                "card_id",
+                "user_id"
+            ]
+        },
+        "example_request": {
+            "card_id": "0194b1c0a2d34e5f6789012345678abcd",
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004-名片不存在，2003-无权访问该名片，5000-查询名片文章列表失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "array",
+                    "description": "文章列表；无文章时为空数组",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "article_id": {
+                                "type": "string",
+                                "description": "文章主键 UUID（无连字符）"
+                            },
+                            "title": {
+                                "type": "string",
+                                "description": "标题"
+                            },
+                            "description": {
+                                "type": "string",
+                                "description": "描述"
+                            },
+                            "card_id": {
+                                "type": "string",
+                                "description": "所属名片 ID"
+                            },
+                            "state": {
+                                "type": "number",
+                                "description": "状态：1-正常，2-停用"
+                            },
+                            "image_url": {
+                                "type": "string",
+                                "description": "封面图完整 URL（由 image_id 经 FDFS 拼接）"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/business_card/mobile/articleDetail": {
+        "method": "GET",
+        "summary": "名片文章详情",
+        "description": "根据 article_id（Query）查询文章详情，仅返回 state=1 的记录。含完整 content（HTML 富文本）及 image_url。当前实现不校验 user_id，可供分享页或访客直接阅读。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "article_id": {
+                    "type": "string",
+                    "description": "文章主键 UUID（Query 参数）"
+                }
+            },
+            "required": [
+                "article_id"
+            ]
+        },
+        "example_request": {
+            "article_id": "0194c2d3e4f56a7b8c9d0e1f2a3b4c5d"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004-文章不存在，5000-查询文章详情失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "文章详情；失败时为空对象",
+                    "properties": {
+                        "article_id": {
+                            "type": "string",
+                            "description": "文章主键 UUID"
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "标题"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "描述"
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "正文内容，HTML 富文本格式"
+                        },
+                        "card_id": {
+                            "type": "string",
+                            "description": "所属名片 ID"
+                        },
+                        "state": {
+                            "type": "number",
+                            "description": "状态：1-正常"
+                        },
+                        "image_url": {
+                            "type": "string",
+                            "description": "封面图完整 URL"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/business_card/mobile/createArticle": {
+        "method": "POST",
+        "summary": "创建名片文章",
+        "description": "为指定名片创建文章。须校验名片归属（user_id 为名片所有者）。写入 card_article：article_id 为 UUID v7 去连字符，state 默认 1，create_time/update_time 由数据库默认。可选 image_id 关联 FDFS 封面图。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "操作用户主键 UUID"
+                },
+                "card_id": {
+                    "type": "string",
+                    "description": "所属名片主键 UUID"
+                },
+                "title": {
+                    "type": "string",
+                    "description": "标题，最长 200 字符"
+                },
+                "content": {
+                    "type": "string",
+                    "description": "正文内容，HTML 富文本格式"
+                },
+                "image_id": {
+                    "type": "string",
+                    "description": "封面图 FDFS 文件 ID，最长 50 字符（可选）"
+                }
+            },
+            "required": [
+                "user_id",
+                "card_id",
+                "title",
+                "content"
+            ]
+        },
+        "example_request": {
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "card_id": "0194b1c0a2d34e5f6789012345678abcd",
+            "title": "公司简介",
+            "content": "<p>我们专注于电子名片服务。</p>",
+            "image_id": "group1/M00/00/00/example.jpg"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004-名片不存在，2003-无权访问该名片，5000-创建名片文章失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时返回新建文章 ID",
+                    "properties": {
+                        "article_id": {
+                            "type": "string",
+                            "description": "新建文章主键 UUID"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/business_card/mobile/updateArticle": {
+        "method": "POST",
+        "summary": "更新名片文章",
+        "description": "更新指定文章，仅更新请求体中传入的字段。须校验文章存在（state=1）且 user_id 为文章所属名片的所有者。当前实现支持更新 title、content、state；传入字段未包含在请求体中则保持不变。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "article_id": {
+                    "type": "string",
+                    "description": "文章主键 UUID"
+                },
+                "user_id": {
+                    "type": "string",
+                    "description": "操作用户主键 UUID"
+                },
+                "title": {
+                    "type": "string",
+                    "description": "标题，最长 200 字符（可选）"
+                },
+                "content": {
+                    "type": "string",
+                    "description": "正文内容，HTML 富文本（可选）"
+                },
+                "state": {
+                    "type": "number",
+                    "description": "状态：1-正常，2-停用（可选）"
+                }
+            },
+            "required": [
+                "article_id",
+                "user_id"
+            ]
+        },
+        "example_request": {
+            "article_id": "0194c2d3e4f56a7b8c9d0e1f2a3b4c5d",
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "title": "公司简介（更新）",
+            "content": "<p>更新后的正文。</p>"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004-文章不存在，2003-无权访问该名片，5000-更新名片文章失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时通常为空对象"
+                }
+            }
+        }
+    },
+    "/business_card/mobile/deleteArticle": {
+        "method": "POST",
+        "summary": "删除名片文章",
+        "description": "软删除文章：将 card_article.state 置为 2，并更新 update_time。须校验文章存在（state=1）且 user_id 为文章所属名片的所有者。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "article_id": {
+                    "type": "string",
+                    "description": "文章主键 UUID"
+                },
+                "user_id": {
+                    "type": "string",
+                    "description": "操作用户主键 UUID"
+                }
+            },
+            "required": [
+                "article_id",
+                "user_id"
+            ]
+        },
+        "example_request": {
+            "article_id": "0194c2d3e4f56a7b8c9d0e1f2a3b4c5d",
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，4004-文章不存在，2003-无权访问该名片，5000-删除名片文章失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时通常为空对象"
+                }
+            }
+        }
+    }
+}

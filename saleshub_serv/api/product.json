@@ -1,0 +1,425 @@
+{
+    "/saleshub/inventory/listProducts": {
+        "method": "GET",
+        "summary": "产品列表",
+        "description": "分页查询当前正常状态（status=1）的产品。支持按名称 name 模糊匹配、编码 code 精确匹配筛选。按 create_time 降序。返回项不含状态与时间字段，仅含基础信息。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "pageIndex": {
+                    "type": "number",
+                    "description": "页码，从 1 开始（Query 参数）"
+                },
+                "pageSize": {
+                    "type": "number",
+                    "description": "每页条数（Query 参数）"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "产品名称，模糊匹配（Query 参数，可选）"
+                },
+                "code": {
+                    "type": "string",
+                    "description": "产品编码，精确匹配（Query 参数，可选）"
+                }
+            },
+            "required": [
+                "pageIndex",
+                "pageSize"
+            ]
+        },
+        "example_request": {
+            "pageIndex": 1,
+            "pageSize": 10,
+            "name": "智能"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "分页结果",
+                    "properties": {
+                        "total": {
+                            "type": "number",
+                            "description": "符合条件的总条数"
+                        },
+                        "items": {
+                            "type": "array",
+                            "description": "产品列表",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "product_id": {
+                                        "type": "string",
+                                        "description": "产品主键 UUID（无连字符）"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "产品名称"
+                                    },
+                                    "code": {
+                                        "type": "string",
+                                        "description": "产品编码，格式 PR + 6 位数字（如 PR000001）"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "产品描述"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/createProduct": {
+        "method": "POST",
+        "summary": "创建产品",
+        "description": "创建产品记录。服务端自动生成编码 code（格式 PR + 6 位递增数字，如 PR000001；上限 999999），product_id 由 UUID v7 去连字符生成。code 在数据库层面具有唯一约束。status 默认 1。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "产品名称，最长 100 字符"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "产品描述（可选，最长 500 字符）"
+                }
+            },
+            "required": [
+                "name"
+            ]
+        },
+        "example_request": {
+            "name": "智能终端 A1",
+            "description": "面向零售场景的一体化智能终端设备"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-创建失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时返回新建产品 ID",
+                    "properties": {
+                        "product_id": {
+                            "type": "string",
+                            "description": "新建产品主键 UUID"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/updateProduct": {
+        "method": "POST",
+        "summary": "更新产品",
+        "description": "更新产品基础信息（名称、描述）。仅当 product_id 对应的产品存在且 status=1 时可更新。name 为必填字段（直接覆盖原值）；description 传入时更新。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string",
+                    "description": "产品主键 UUID"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "产品名称，最长 100 字符"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "产品描述（可选，最长 500 字符）"
+                }
+            },
+            "required": [
+                "product_id",
+                "name"
+            ]
+        },
+        "example_request": {
+            "product_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "name": "智能终端 A1（更新）",
+            "description": "更新后的描述"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-产品不存在或更新失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时通常为空对象"
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/deleteProduct": {
+        "method": "POST",
+        "summary": "删除产品",
+        "description": "软删除产品（将 status 置为 2）。仅当 product_id 对应的产品存在时可操作。注意：当前实现不会同步处理 product_items 关联记录，需调用方自行决定是否清理。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string",
+                    "description": "产品主键 UUID"
+                }
+            },
+            "required": [
+                "product_id"
+            ]
+        },
+        "example_request": {
+            "product_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-产品不存在或删除失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时返回被删除的产品 ID",
+                    "properties": {
+                        "product_id": {
+                            "type": "string",
+                            "description": "被删除的产品主键 UUID"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/setProductItems": {
+        "method": "POST",
+        "summary": "设置产品库存件",
+        "description": "全量覆盖语义：传入 product_id 与完整的 item 列表，使该产品的有效关联（product_items.status=1）等价于传入列表。事务执行：① 校验产品存在（status=1）；② 校验 item_id 列表无重复；③ 校验所有 item_id 在 inventory_items 中存在且 status=1；④ 将该产品既有 product_items 全部置为 status=2；⑤ 插入新的关联记录（每条 relation_id 为 UUID v7 去连字符，quantity_per_product 当前固定为 1，remark 取入参）。注意：当前实现未使用入参中的 quantity_per_product，单台数量恒为 1。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string",
+                    "description": "产品主键 UUID"
+                },
+                "items": {
+                    "type": "array",
+                    "description": "库存件关联列表（全量覆盖）",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "item_id": {
+                                "type": "string",
+                                "description": "库存件主键 UUID"
+                            },
+                            "quantity_per_product": {
+                                "type": "number",
+                                "description": "单台产品所需数量（可选，最小 1；当前服务端实现固定写入 1，入参值未生效）"
+                            },
+                            "remark": {
+                                "type": "string",
+                                "description": "备注（可选，最长 500 字符）"
+                            }
+                        },
+                        "required": [
+                            "item_id"
+                        ]
+                    }
+                }
+            },
+            "required": [
+                "product_id",
+                "items"
+            ]
+        },
+        "example_request": {
+            "product_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "items": [
+                {
+                    "item_id": "0194b1c0a2d34e5f6789012345678abc",
+                    "quantity_per_product": 2,
+                    "remark": "主电源模块"
+                },
+                {
+                    "item_id": "0194b1c0a2d34e5f6789012345678abd",
+                    "remark": "外壳"
+                }
+            ]
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-产品不存在/库存件列表存在重复项/库存件不存在或已停用/设置失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息；库存件不存在时返回「库存件不存在或已停用: <缺失item_id列表>」"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时通常为空对象"
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/listProductItems": {
+        "method": "GET",
+        "summary": "产品库存件列表",
+        "description": "查询指定产品关联的库存件列表（product_items.status=1），并 innerJoin inventory_items 返回库存件详情（名称、编码、类型、当前库存、预警阈值）。按 product_items.create_time 降序。仅返回库存件存在的关联记录（inventory_items 中无匹配项的关联会被 innerJoin 过滤）。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string",
+                    "description": "产品主键 UUID（Query 参数）"
+                }
+            },
+            "required": [
+                "product_id"
+            ]
+        },
+        "example_request": {
+            "product_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "响应加密算法标识"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "产品库存件列表结果",
+                    "properties": {
+                        "items": {
+                            "type": "array",
+                            "description": "关联记录列表；无关联时为空数组",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "relation_id": {
+                                        "type": "string",
+                                        "description": "关联记录主键 UUID（无连字符）"
+                                    },
+                                    "product_id": {
+                                        "type": "string",
+                                        "description": "所属产品 ID"
+                                    },
+                                    "item_id": {
+                                        "type": "string",
+                                        "description": "库存件 ID"
+                                    },
+                                    "quantity_per_product": {
+                                        "type": "number",
+                                        "description": "单台产品所需数量"
+                                    },
+                                    "remark": {
+                                        "type": "string",
+                                        "description": "备注，可能为 null"
+                                    },
+                                    "item_name": {
+                                        "type": "string",
+                                        "description": "库存件名称（来自 inventory_items.name）"
+                                    },
+                                    "item_code": {
+                                        "type": "string",
+                                        "description": "库存件编码（来自 inventory_items.code）"
+                                    },
+                                    "item_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "device",
+                                            "common"
+                                        ],
+                                        "description": "库存件类型（来自 inventory_items.type）"
+                                    },
+                                    "current_stock": {
+                                        "type": "number",
+                                        "description": "库存件当前库存"
+                                    },
+                                    "warn_stock": {
+                                        "type": "number",
+                                        "description": "库存件预警阈值"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

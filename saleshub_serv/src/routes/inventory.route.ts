@@ -121,7 +121,7 @@ router.get('/listProductItems',
     validationMiddleware(ProductItemIdDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ProductItemIdDto, req.query);
-        const result = await productService.getProductItems(dtoObj.product_id);
+        const result = await productService.getProductItems(dtoObj);
         res.locals.datas = result;
         next();
     })

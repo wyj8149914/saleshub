@@ -1,20 +1,20 @@
-import { InventoryItem } from '../../entity/product.entity';
+import { InventoryItem, ProductItem } from '../../entity/product.entity';
 import { CreateInventoryItemDto, ItemIdDto, ListInventoryItemDto, UpdateInventoryItemDto } from '../../dto/item.dto';
-import { AppDataSource } from '../data.source';
+import { AppDataSource } from '../../config/database.config';
 import { getLogger } from '../../utils/logger.util';
 import { v7 } from 'uuid';
 
 export class InventoryItemService {
     private inventoryItemRepository = AppDataSource.getRepository(InventoryItem);
+    private productItemRepository = AppDataSource.getRepository(ProductItem);
     private logger = getLogger('INVENTORY_SERV');
 
     /**
-     * 创建库存件
+     * 创建零件
      */
     async create(dto: CreateInventoryItemDto) {
         try {
             const code = await this.generateItemCode();
-
             const item = new InventoryItem();
             item.item_id = v7().replace(/-/g, '');
             item.code = code;
@@ -30,13 +30,13 @@ export class InventoryItemService {
             const saved = await this.inventoryItemRepository.save(item);
             return { result: 0, msg: '创建成功', alg: '', datas: { item_id: saved.item_id } };
         } catch (error) {
-            this.logger.error('创建库存件失败:', error);
+            this.logger.error('创建零件失败:', error);
             return { result: 1, msg: '创建失败', alg: '', datas: null };
         }
     }
 
     /**
-     * 查询所有正常状态的库存件
+     * 查询所有正常状态的零件
      */
     async list(dto: ListInventoryItemDto) {
         try {
@@ -62,9 +62,9 @@ export class InventoryItemService {
                 queryBuilder.andWhere('item.code = :code', { code: dto.code });
             }
             if (dto.isWarning === 1) {
-                queryBuilder.andWhere('item.current_stock > item.warn_stock');
+                queryBuilder.andWhere('(item.current_stock > item.warn_stock OR item.warn_stock = 0 )');
             } else if (dto.isWarning === 2) {
-                queryBuilder.andWhere('item.current_stock <= item.warn_stock');
+                queryBuilder.andWhere('(item.current_stock <= item.warn_stock AND item.warn_stock <> 0)');
             }
 
             const start = (dto.pageIndex - 1) * dto.pageSize;
@@ -76,17 +76,17 @@ export class InventoryItemService {
 
             const datas = items.map((item: any) => ({
                 ...item,
-                isWarning: item.current_stock <= item.warn_stock,
+                isWarning: item.current_stock <= item.warn_stock ? 2 : 1,
             }));
             return { result: 0, msg: 'success', alg: '', datas: { total, items: datas }, };
         } catch (error) {
-            this.logger.error('查询库存件列表失败:', error);
+            this.logger.error('查询零件列表失败:', error);
             return { result: 1, msg: '查询失败', alg: '', datas: null, };
         }
     }
 
     /**
-     * 更新库存件信息
+     * 更新零件信息
      */
     async update(dto: UpdateInventoryItemDto) {
         try {
@@ -95,7 +95,7 @@ export class InventoryItemService {
             });
 
             if (!item) {
-                return { result: 1, msg: '库存件不存在', alg: '', datas: null };
+                return { result: 1, msg: '零件不存在', alg: '', datas: null };
             }
 
             item.type = dto.type;
@@ -110,13 +110,13 @@ export class InventoryItemService {
             await this.inventoryItemRepository.save(item);
             return { result: 0, msg: '更新成功', alg: '', datas: {} };
         } catch (error) {
-            this.logger.error('更新库存件失败:', error);
+            this.logger.error('更新零件失败:', error);
             return { result: 1, msg: '更新失败', alg: '', datas: null, };
         }
     }
 
     /**
-     * 软删除库存件（设置状态为2）
+     * 软删除零件（设置状态为2）
      */
     async delete(dto: ItemIdDto) {
         try {
@@ -124,23 +124,28 @@ export class InventoryItemService {
                 where: { item_id: dto.item_id },
             });
 
-            // 判断是否有产品使用该库存件
-            // to-do
+            // 判断是否有产品使用该零件
+            const productItems = await this.productItemRepository.find({
+                where: { item_id: dto.item_id, status: 1 },
+            });
+            if (productItems.length > 0) {
+                return { result: 1, msg: '零件有产品使用，不能删除', alg: '', datas: null, };
+            }
 
             if (!item) {
-                return { result: 1, msg: '库存件不存在', alg: '', datas: null, };
+                return { result: 1, msg: '零件不存在', alg: '', datas: null, };
             }
 
             await this.inventoryItemRepository.update({ item_id: dto.item_id }, { status: 2 });
             return { result: 0, msg: '删除成功', alg: '', datas: { item_id: dto.item_id }, };
         } catch (error) {
-            this.logger.error('删除库存件失败:', error);
+            this.logger.error('删除零件失败:', error);
             return { result: 1, msg: '删除失败', alg: '', datas: null, };
         }
     }
 
     /**
-     * 生成库存件编码：IT + 6位递增数字（如 IT000001）
+     * 生成零件编码：IT + 6位递增数字（如 IT000001）
      */
     private async generateItemCode() {
         const result = await this.inventoryItemRepository
@@ -152,7 +157,7 @@ export class InventoryItemService {
         const nextNum = (Number(result?.maxNum) || 0) + 1;
 
         if (nextNum > 999999) {
-            throw new Error('库存件编码已达上限');
+            throw new Error('零件编码已达上限');
         }
 
         return `IT${String(nextNum).padStart(6, '0')}`;

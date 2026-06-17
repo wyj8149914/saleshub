@@ -22,7 +22,7 @@ export class StockService {
                 where: { item_id: dto.item_id, status: 1 },
             });
             if (!item) {
-                return { result: 1, msg: '库存件不存在', alg: '', datas: null };
+                return { result: 1, msg: '零件不存在', alg: '', datas: null };
             }
 
             const recordNo = await this.generateStockInRecordNo();
@@ -65,7 +65,7 @@ export class StockService {
                 where: { item_id: dto.item_id, status: 1 },
             });
             if (!item) {
-                return { result: 1, msg: '库存件不存在', alg: '', datas: null };
+                return { result: 1, msg: '零件不存在', alg: '', datas: null };
             }
 
             if (item.type !== 'device') {
@@ -76,7 +76,7 @@ export class StockService {
                 where: { product_id: dto.product_id, item_id: dto.item_id, status: 1 },
             });
             if (!rel) {
-                return { result: 1, msg: '该库存件未关联到此产品', alg: '', datas: null };
+                return { result: 1, msg: '该零件未关联到此产品', alg: '', datas: null };
             }
 
             const recordNo = await this.generateStockOutRecordNo();
@@ -111,7 +111,7 @@ export class StockService {
     }
 
     /**
-     * 查询库存件历史记录（入库、出库、盘点）
+     * 查询零件历史记录（入库、出库、盘点）
      */
     async listHistory(dto: ListStockHistoryDto) {
         try {
@@ -119,7 +119,7 @@ export class StockService {
                 where: { item_id: dto.item_id, status: 1 },
             });
             if (!item) {
-                return { result: 1, msg: '库存件不存在', alg: '', datas: null };
+                return { result: 1, msg: '零件不存在', alg: '', datas: null };
             }
 
             let dateCondition = '';
@@ -180,7 +180,7 @@ export class StockService {
                 where: { item_id: dto.item_id, status: 1 },
             });
             if (!item) {
-                return { result: 1, msg: '库存件不存在', alg: '', datas: null };
+                return { result: 1, msg: '零件不存在', alg: '', datas: null };
             }
 
             const beforeStock = item.current_stock;

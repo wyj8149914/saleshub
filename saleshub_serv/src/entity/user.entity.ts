@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryColumn } from 'typeorm';
 
-@Entity({ schema: 'auth', name: 'users' })
+@Entity({ schema: 'auth', name: 'user' })
 export class User {
     @PrimaryColumn({ type: 'varchar', length: 32 })
     user_id: string;

@@ -10,9 +10,9 @@ dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 function getAppConfig() {
     const requiredEnvVars = [
         'SERVER_PORT', 'DEBUG',
-        'DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_DATABASE',
+        'DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'DB_DATABASE',
         'REDIS_HOST', 'REDIS_PORT', 'REDIS_PASSWORD',
-        'MINIO_ENDPOINT', 'MINIO_PORT', 'MINIO_ACCESS_KEY', 'MINIO_SECRET_KEY', 'MINIO_PUBLIC_BUCKET', 'MINIO_PRIVATE_BUCKET', 'MINIO_URL',
+        'MINIO_ENDPOINT', 'MINIO_PORT', 'MINIO_ACCESS_KEY', 'MINIO_SECRET_KEY', 'MINIO_PUBLIC_BUCKET', 'MINIO_URL',
         'JWT_SECRET', 'JWT_EXPIRES_IN', 'REFRESH_TOKEN_EXPIRES_IN',
         'DB_AES_KEY', 'DB_AES_SALT', 'DB_ALGORITHM',
         'API_PREFIX'
@@ -28,7 +28,7 @@ function getAppConfig() {
         db: {
             host: process.env.DB_HOST,
             port: parseInt(process.env.DB_PORT!, 10),
-            username: process.env.DB_USER,
+            username: process.env.DB_USERNAME,
             password: process.env.DB_PASSWORD,
             database: process.env.DB_DATABASE,
         },

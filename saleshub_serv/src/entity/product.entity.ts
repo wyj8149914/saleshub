@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryColumn } from 'typeorm';
 
-@Entity({ schema: 'inventory', name: 'products' })
+@Entity({ schema: 'inventory', name: 'product' })
 export class Product {
     @PrimaryColumn({ type: 'varchar', length: 32 })
     product_id: string;
@@ -24,7 +24,7 @@ export class Product {
     update_time: Date;
 }
 
-@Entity({ schema: 'inventory', name: 'inventory_items' })
+@Entity({ schema: 'inventory', name: 'inventory_item' })
 export class InventoryItem {
     @PrimaryColumn({ type: 'varchar', length: 32 })
     item_id: string;
@@ -57,10 +57,10 @@ export class InventoryItem {
     update_time: Date;
 }
 
-@Entity({ schema: 'inventory', name: 'product_items' })
+@Entity({ schema: 'inventory', name: 'product_item' })
 export class ProductItem {
     @PrimaryColumn({ type: 'varchar', length: 32 })
-    product_item_id: string;
+    relation_id: string;
 
     @Column({ type: 'varchar', length: 32, comment: '产品ID' })
     product_id: string;

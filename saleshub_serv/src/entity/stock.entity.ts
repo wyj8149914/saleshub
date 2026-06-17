@@ -3,7 +3,7 @@ import { Entity, Column, PrimaryColumn } from 'typeorm';
 /**
  * 入库记录实体
  */
-@Entity({ schema: 'inventory', name: 'stock_in_records' })
+@Entity({ schema: 'inventory', name: 'stock_in_record' })
 export class StockInRecord {
     @PrimaryColumn({ type: 'varchar', length: 32 })
     record_id: string;
@@ -36,7 +36,7 @@ export class StockInRecord {
 /**
  * 出库记录实体
  */
-@Entity({ schema: 'inventory', name: 'stock_out_records' })
+@Entity({ schema: 'inventory', name: 'stock_out_record' })
 export class StockOutRecord {
     @PrimaryColumn({ type: 'varchar', length: 32 })
     record_id: string;
@@ -69,7 +69,7 @@ export class StockOutRecord {
 /**
  * 盘点记录实体
  */
-@Entity({ schema: 'inventory', name: 'inventory_checks' })
+@Entity({ schema: 'inventory', name: 'inventory_check' })
 export class InventoryCheck {
     @PrimaryColumn({ type: 'varchar', length: 32 })
     check_id: string;

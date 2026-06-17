@@ -1,9 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
-import { asyncHandler } from '../../middleware';
+import { asyncHandler } from '../middleware/errorHandler.middleware';
 
 // 导入fileService（需要从service/inventory/index.ts导入单例）
-import { fileService } from '../../service/inventory';
+import { fileService } from '../service/file.service';
 
 const router = Router();
 

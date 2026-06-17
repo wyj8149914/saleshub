@@ -5,7 +5,7 @@ import { getLogger } from '../utils/logger.util';
 /**
  * 文件服务 - MinIO对象存储服务
  */
-export class FileService {
+class FileService {
     private minioClient: Minio.Client;
     private bucketName = 'inventory-photos';
     private logger = getLogger('FILE_SERV');
@@ -21,7 +21,7 @@ export class FileService {
         });
 
         // 确保bucket存在
-        this.ensureBucketExists();
+        // this.ensureBucketExists();
     }
 
     /**
@@ -157,3 +157,5 @@ export class FileService {
         return this.bucketName;
     }
 }
+
+export const fileService = new FileService();

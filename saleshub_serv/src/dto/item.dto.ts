@@ -23,7 +23,7 @@ export class CreateInventoryItemDto {
 }
 
 export class UpdateInventoryItemDto extends CreateInventoryItemDto {
-    @IsNotEmpty({ message: '库存件ID不能为空' })
+    @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
 }
 
@@ -40,11 +40,11 @@ export class ListInventoryItemDto extends PageDto {
 
     @IsOptional()
     @Type(() => Number)
-    @IsIn([1, 0], { message: '是否预警必须是1-正常,2-库存预警' })
+    @IsIn([1, 2], { message: '是否预警必须是1-正常,2-库存预警' })
     isWarning: number;
 }
 
 export class ItemIdDto {
-    @IsNotEmpty({ message: '库存件ID不能为空' })
+    @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
 }
