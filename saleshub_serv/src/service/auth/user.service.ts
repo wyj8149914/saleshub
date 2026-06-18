@@ -21,16 +21,16 @@ export class UserService {
                 where: { username: dto.username },
             });
             if (!user) {
-                return { result: 1, msg: '用户名或密码错误', alg: '', datas: null };
+                return { result: 1, msg: '用户名或密码错误' };
             }
 
             if (user.status !== 1) {
-                return { result: 1, msg: '账号已停用', alg: '', datas: null };
+                return { result: 1, msg: '账号已停用' };
             }
 
             const matched = await verifyPassword(dto.password, user.password_hash);
             if (!matched) {
-                return { result: 1, msg: '用户名或密码错误', alg: '', datas: null };
+                return { result: 1, msg: '用户名或密码错误' };
             }
 
             const payload = { sub: user.user_id };
@@ -45,7 +45,6 @@ export class UserService {
             return {
                 result: 0,
                 msg: '登录成功',
-                alg: '',
                 datas: {
                     token,
                     refresh_token,
@@ -57,7 +56,7 @@ export class UserService {
             };
         } catch (error) {
             this.logger.error('登录失败:', error);
-            return { result: 1, msg: '登录失败', alg: '', datas: null };
+            return { result: 1, msg: '登录失败' };
         }
     }
 
@@ -70,12 +69,12 @@ export class UserService {
                 where: { username: dto.username },
             });
             if (existing) {
-                return { result: 1, msg: '用户名已存在', alg: '', datas: null };
+                return { result: 1, msg: '用户名已存在' };
             }
 
             const strength = validatePasswordStrength(dto.password);
             if (!strength.ok) {
-                return { result: 1, msg: strength.msg, alg: '', datas: null };
+                return { result: 1, msg: strength.msg };
             }
 
             const user = new User();
@@ -89,10 +88,10 @@ export class UserService {
             }
 
             const saved = await this.userRepository.save(user);
-            return { result: 0, msg: '创建成功', alg: '', datas: { user_id: saved.user_id } };
+            return { result: 0, msg: '创建成功', datas: { user_id: saved.user_id } };
         } catch (error) {
             this.logger.error('创建用户失败:', error);
-            return { result: 1, msg: '创建失败', alg: '', datas: null };
+            return { result: 1, msg: '创建失败' };
         }
     }
 
@@ -109,8 +108,8 @@ export class UserService {
                     'user.phone as phone',
                     'user.role as role',
                     'user.status as status',
-                    'user.last_login_time as last_login_time',
-                    'user.create_time as create_time',
+                    'to_char(user.last_login_time, \'YYYY-MM-DD HH24:MI:SS\') as last_login_time',
+                    'to_char(user.create_time, \'YYYY-MM-DD HH24:MI:SS\') as create_time',
                 ]);
 
             if (dto.username) {
@@ -136,10 +135,10 @@ export class UserService {
                 .offset(start)
                 .getRawMany();
 
-            return { result: 0, msg: 'success', alg: '', datas: { total, items: users } };
+            return { result: 0, msg: 'success', datas: { total, items: users } };
         } catch (error) {
             this.logger.error('查询用户列表失败:', error);
-            return { result: 1, msg: '查询失败', alg: '', datas: null };
+            return { result: 1, msg: '查询失败' };
         }
     }
 
@@ -152,7 +151,7 @@ export class UserService {
                 where: { user_id: dto.user_id },
             });
             if (!user) {
-                return { result: 1, msg: '用户不存在', alg: '', datas: null };
+                return { result: 1, msg: '用户不存在' };
             }
 
             user.name = dto.name;
@@ -164,10 +163,10 @@ export class UserService {
             }
 
             await this.userRepository.save(user);
-            return { result: 0, msg: '更新成功', alg: '', datas: {} };
+            return { result: 0, msg: '更新成功' };
         } catch (error) {
             this.logger.error('更新用户失败:', error);
-            return { result: 1, msg: '更新失败', alg: '', datas: null };
+            return { result: 1, msg: '更新失败' };
         }
     }
 
@@ -180,14 +179,14 @@ export class UserService {
                 where: { user_id: dto.user_id },
             });
             if (!user) {
-                return { result: 1, msg: '用户不存在', alg: '', datas: null };
+                return { result: 1, msg: '用户不存在' };
             }
 
             await this.userRepository.update({ user_id: dto.user_id }, { status: dto.status });
-            return { result: 0, msg: '状态更新成功', alg: '', datas: { user_id: dto.user_id } };
+            return { result: 0, msg: '状态更新成功' };
         } catch (error) {
             this.logger.error('更新用户状态失败:', error);
-            return { result: 1, msg: '状态更新失败', alg: '', datas: null };
+            return { result: 1, msg: '状态更新失败' };
         }
     }
 
@@ -200,20 +199,20 @@ export class UserService {
                 where: { user_id: dto.user_id },
             });
             if (!user) {
-                return { result: 1, msg: '用户不存在', alg: '', datas: null };
+                return { result: 1, msg: '用户不存在' };
             }
 
             const strength = validatePasswordStrength(dto.password);
             if (!strength.ok) {
-                return { result: 1, msg: strength.msg, alg: '', datas: null };
+                return { result: 1, msg: strength.msg };
             }
 
             user.password_hash = await hashPassword(dto.password);
             await this.userRepository.save(user);
-            return { result: 0, msg: '密码修改成功', alg: '', datas: {} };
+            return { result: 0, msg: '密码修改成功' };
         } catch (error) {
             this.logger.error('修改用户密码失败:', error);
-            return { result: 1, msg: '密码修改失败', alg: '', datas: null };
+            return { result: 1, msg: '密码修改失败' };
         }
     }
 }

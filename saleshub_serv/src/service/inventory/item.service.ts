@@ -28,10 +28,10 @@ export class InventoryItemService {
             }
 
             const saved = await this.inventoryItemRepository.save(item);
-            return { result: 0, msg: '创建成功', alg: '', datas: { item_id: saved.item_id } };
+            return { result: 0, msg: '创建成功', datas: { item_id: saved.item_id } };
         } catch (error) {
             this.logger.error('创建零件失败:', error);
-            return { result: 1, msg: '创建失败', alg: '', datas: null };
+            return { result: 1, msg: '创建失败' };
         }
     }
 
@@ -78,10 +78,10 @@ export class InventoryItemService {
                 ...item,
                 isWarning: item.current_stock <= item.warn_stock ? 2 : 1,
             }));
-            return { result: 0, msg: 'success', alg: '', datas: { total, items: datas }, };
+            return { result: 0, msg: 'success', datas: { total, items: datas } };
         } catch (error) {
             this.logger.error('查询零件列表失败:', error);
-            return { result: 1, msg: '查询失败', alg: '', datas: null, };
+            return { result: 1, msg: '查询失败' };
         }
     }
 
@@ -95,7 +95,7 @@ export class InventoryItemService {
             });
 
             if (!item) {
-                return { result: 1, msg: '零件不存在', alg: '', datas: null };
+                return { result: 1, msg: '零件不存在' };
             }
 
             item.type = dto.type;
@@ -108,10 +108,10 @@ export class InventoryItemService {
             }
 
             await this.inventoryItemRepository.save(item);
-            return { result: 0, msg: '更新成功', alg: '', datas: {} };
+            return { result: 0, msg: '更新成功' };
         } catch (error) {
             this.logger.error('更新零件失败:', error);
-            return { result: 1, msg: '更新失败', alg: '', datas: null, };
+            return { result: 1, msg: '更新失败' };
         }
     }
 
@@ -124,23 +124,22 @@ export class InventoryItemService {
                 where: { item_id: dto.item_id },
             });
 
-            // 判断是否有产品使用该零件
             const productItems = await this.productItemRepository.find({
                 where: { item_id: dto.item_id, status: 1 },
             });
             if (productItems.length > 0) {
-                return { result: 1, msg: '零件有产品使用，不能删除', alg: '', datas: null, };
+                return { result: 1, msg: '零件有产品使用，不能删除' };
             }
 
             if (!item) {
-                return { result: 1, msg: '零件不存在', alg: '', datas: null, };
+                return { result: 1, msg: '零件不存在' };
             }
 
             await this.inventoryItemRepository.update({ item_id: dto.item_id }, { status: 2 });
-            return { result: 0, msg: '删除成功', alg: '', datas: { item_id: dto.item_id }, };
+            return { result: 0, msg: '删除成功' };
         } catch (error) {
             this.logger.error('删除零件失败:', error);
-            return { result: 1, msg: '删除失败', alg: '', datas: null, };
+            return { result: 1, msg: '删除失败' };
         }
     }
 

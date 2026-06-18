@@ -25,8 +25,6 @@ router.post(
             return res.status(400).json({
                 result: 1,
                 msg: '请选择要上传的文件',
-                alg: '',
-                datas: null,
             });
         }
 

@@ -6,7 +6,6 @@ import {
     ListProductDto,
     UpdateProductDto,
     SetProductItemsDto,
-    ProductItemIdDto,
 } from '../../dto/product.dto';
 import { AppDataSource } from '../../config/database.config';
 import { getLogger } from '../../utils/logger.util';
@@ -34,10 +33,10 @@ export class ProductService {
             }
 
             const saved = await this.productRepository.save(product);
-            return { result: 0, msg: '创建成功', alg: '', datas: { product_id: saved.product_id } };
+            return { result: 0, msg: '创建成功', datas: { product_id: saved.product_id } };
         } catch (error) {
             this.logger.error('创建产品失败:', error);
-            return { result: 1, msg: '创建失败', alg: '', datas: null };
+            return { result: 1, msg: '创建失败' };
         }
     }
 
@@ -69,10 +68,10 @@ export class ProductService {
                 .offset(start)
                 .getRawMany();
 
-            return { result: 0, msg: 'success', alg: '', datas: { total, items: products } };
+            return { result: 0, msg: 'success', datas: { total, items: products } };
         } catch (error) {
             this.logger.error('查询产品列表失败:', error);
-            return { result: 1, msg: '查询失败', alg: '', datas: null };
+            return { result: 1, msg: '查询失败' };
         }
     }
 
@@ -85,7 +84,7 @@ export class ProductService {
                 where: { product_id: dto.product_id, status: 1 },
             });
             if (!product) {
-                return { result: 1, msg: '产品不存在', alg: '', datas: null };
+                return { result: 1, msg: '产品不存在' };
             }
 
             product.name = dto.name;
@@ -94,10 +93,10 @@ export class ProductService {
             }
 
             await this.productRepository.save(product);
-            return { result: 0, msg: '更新成功', alg: '', datas: {} };
+            return { result: 0, msg: '更新成功' };
         } catch (error) {
             this.logger.error('更新产品失败:', error);
-            return { result: 1, msg: '更新失败', alg: '', datas: null };
+            return { result: 1, msg: '更新失败' };
         }
     }
 
@@ -110,14 +109,14 @@ export class ProductService {
                 where: { product_id: dto.product_id },
             });
             if (!product) {
-                return { result: 1, msg: '产品不存在', alg: '', datas: null };
+                return { result: 1, msg: '产品不存在' };
             }
 
             await this.productRepository.update({ product_id: dto.product_id }, { status: 2 });
-            return { result: 0, msg: '删除成功', alg: '', datas: { product_id: dto.product_id } };
+            return { result: 0, msg: '删除成功' };
         } catch (error) {
             this.logger.error('删除产品失败:', error);
-            return { result: 1, msg: '删除失败', alg: '', datas: null };
+            return { result: 1, msg: '删除失败' };
         }
     }
 
@@ -127,22 +126,19 @@ export class ProductService {
      */
     async setProductItems(dto: SetProductItemsDto) {
         try {
-            // 1. 校验产品存在
             const product = await this.productRepository.findOne({
                 where: { product_id: dto.product_id, status: 1 },
             });
             if (!product) {
-                return { result: 1, msg: '产品不存在', alg: '', datas: null };
+                return { result: 1, msg: '产品不存在' };
             }
 
-            // 2. 校验 item_id 唯一性
             const itemIds = dto.items.map((it) => it.item_id);
             const dedup = new Set(itemIds);
             if (dedup.size !== itemIds.length) {
-                return { result: 1, msg: '零件列表存在重复项', alg: '', datas: null };
+                return { result: 1, msg: '零件列表存在重复项' };
             }
 
-            // 3. 校验零件存在且正常
             const items = await this.inventoryItemRepository
                 .createQueryBuilder('item')
                 .where('item.item_id IN (:...ids) AND item.status = :status', {
@@ -156,8 +152,6 @@ export class ProductService {
                 return {
                     result: 1,
                     msg: `零件不存在或已停用: ${missing.join(',')}`,
-                    alg: '',
-                    datas: null,
                 };
             }
 
@@ -172,16 +166,15 @@ export class ProductService {
                 productItems.push(productItem);
             }
 
-            // 6. 事务执行
             await this.productItemRepository.manager.transaction(async (manager: EntityManager) => {
                 await manager.update(ProductItem, { product_id: dto.product_id }, { status: 2 });
                 await manager.save(ProductItem, productItems);
             });
 
-            return { result: 0, msg: '设置成功', alg: '', datas: {}, };
+            return { result: 0, msg: '设置成功' };
         } catch (error) {
             this.logger.error('设置产品零件失败:', error);
-            return { result: 1, msg: '设置失败', alg: '', datas: null };
+            return { result: 1, msg: '设置失败' };
         }
     }
 
@@ -211,10 +204,10 @@ export class ProductService {
                 .orderBy('pi.create_time', 'DESC')
                 .getRawMany();
 
-            return { result: 0, msg: 'success', alg: '', datas: { items: rows } };
+            return { result: 0, msg: 'success', datas: { items: rows } };
         } catch (error) {
             this.logger.error('查询产品零件失败:', error);
-            return { result: 1, msg: '查询失败', alg: '', datas: null };
+            return { result: 1, msg: '查询失败' };
         }
     }
 

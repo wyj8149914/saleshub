@@ -31,10 +31,6 @@
                     "type": "string",
                     "description": "提示信息"
                 },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
                 "datas": {
                     "type": "array",
                     "description": "名片列表",
@@ -184,10 +180,6 @@
                     "type": "string",
                     "description": "提示信息"
                 },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
                 "datas": {
                     "type": "object",
                     "description": "成功时返回新建名片 ID；失败时为空对象或含限额信息",
@@ -252,10 +244,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
                 },
                 "datas": {
                     "type": "object",
@@ -323,14 +311,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
-                "datas": {
-                    "type": "object",
-                    "description": "成功时通常为空对象"
                 }
             }
         }
@@ -366,14 +346,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
-                "datas": {
-                    "type": "object",
-                    "description": "成功时通常为空对象"
                 }
             }
         }
@@ -409,14 +381,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
-                "datas": {
-                    "type": "object",
-                    "description": "成功时通常为空对象"
                 }
             }
         }
@@ -463,14 +427,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
-                "datas": {
-                    "type": "object",
-                    "description": "成功时通常为空对象"
                 }
             }
         }
@@ -517,14 +473,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
-                "datas": {
-                    "type": "object",
-                    "description": "成功时通常为空对象"
                 }
             }
         }
@@ -560,10 +508,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
                 },
                 "datas": {
                     "type": "object",
@@ -626,10 +570,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
                 },
                 "datas": {
                     "type": "array",
@@ -709,14 +649,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
-                "datas": {
-                    "type": "object",
-                    "description": "成功时通常为空对象"
                 }
             }
         }
@@ -763,10 +695,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
                 },
                 "datas": {
                     "type": "object",
@@ -874,10 +802,6 @@
                     "type": "string",
                     "description": "提示信息"
                 },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
                 "datas": {
                     "type": "array",
                     "description": "模板元素列表",
@@ -958,10 +882,6 @@
                     "type": "string",
                     "description": "提示信息；会员过期时为「用户会员已过期, 无法访问名片」"
                 },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
                 "datas": {
                     "type": "object",
                     "description": "成功时返回渲染结果；失败时为空对象",
@@ -1010,10 +930,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
                 },
                 "datas": {
                     "type": "object",
@@ -1069,14 +985,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息：保存成功 / 已保存"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
-                "datas": {
-                    "type": "object",
-                    "description": "成功时通常为空对象"
                 }
             }
         }
@@ -1118,14 +1026,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
-                "datas": {
-                    "type": "object",
-                    "description": "成功时通常为空对象"
                 }
             }
         }
@@ -1173,10 +1073,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
                 },
                 "datas": {
                     "type": "object",
@@ -1286,10 +1182,6 @@
                     "type": "string",
                     "description": "提示信息"
                 },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
                 "datas": {
                     "type": "array",
                     "description": "文章列表；无文章时为空数组",
@@ -1357,10 +1249,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
                 },
                 "datas": {
                     "type": "object",
@@ -1454,10 +1342,6 @@
                     "type": "string",
                     "description": "提示信息"
                 },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
                 "datas": {
                     "type": "object",
                     "description": "成功时返回新建文章 ID",
@@ -1522,14 +1406,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
-                "datas": {
-                    "type": "object",
-                    "description": "成功时通常为空对象"
                 }
             }
         }
@@ -1571,14 +1447,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
-                "datas": {
-                    "type": "object",
-                    "description": "成功时通常为空对象"
                 }
             }
         }

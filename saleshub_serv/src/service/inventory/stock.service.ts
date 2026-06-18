@@ -22,7 +22,7 @@ export class StockService {
                 where: { item_id: dto.item_id, status: 1 },
             });
             if (!item) {
-                return { result: 1, msg: '零件不存在', alg: '', datas: null };
+                return { result: 1, msg: '零件不存在' };
             }
 
             const recordNo = await this.generateStockInRecordNo();
@@ -37,22 +37,17 @@ export class StockService {
                 record.remark = dto.remark;
             }
 
-            const saved = await this.stockInRepository.save(record);
+            await this.stockInRepository.save(record);
             const afterStock = item.current_stock + dto.quantity;
             await this.inventoryItemRepository.update(
                 { item_id: dto.item_id },
                 { current_stock: afterStock }
             );
 
-            return {
-                result: 0,
-                msg: '入库成功',
-                alg: '',
-                datas: { record_id: saved.record_id, after_stock: afterStock },
-            };
+            return { result: 0, msg: '入库成功' };
         } catch (error) {
             this.logger.error('入库失败:', error);
-            return { result: 1, msg: '入库失败', alg: '', datas: null };
+            return { result: 1, msg: '入库失败' };
         }
     }
 
@@ -65,18 +60,18 @@ export class StockService {
                 where: { item_id: dto.item_id, status: 1 },
             });
             if (!item) {
-                return { result: 1, msg: '零件不存在', alg: '', datas: null };
+                return { result: 1, msg: '零件不存在' };
             }
 
             if (item.type !== 'device') {
-                return { result: 1, msg: '只有设备件可以出库', alg: '', datas: null };
+                return { result: 1, msg: '只有设备件可以出库' };
             }
 
             const rel = await this.productItemRepository.findOne({
                 where: { product_id: dto.product_id, item_id: dto.item_id, status: 1 },
             });
             if (!rel) {
-                return { result: 1, msg: '该零件未关联到此产品', alg: '', datas: null };
+                return { result: 1, msg: '该零件未关联到此产品' };
             }
 
             const recordNo = await this.generateStockOutRecordNo();
@@ -91,22 +86,17 @@ export class StockService {
                 record.remark = dto.remark;
             }
 
-            const saved = await this.stockOutRepository.save(record);
+            await this.stockOutRepository.save(record);
             const afterStock = item.current_stock - dto.quantity;
             await this.inventoryItemRepository.update(
                 { item_id: dto.item_id },
                 { current_stock: afterStock }
             );
 
-            return {
-                result: 0,
-                msg: '出库成功',
-                alg: '',
-                datas: { record_id: saved.record_id, after_stock: afterStock },
-            };
+            return { result: 0, msg: '出库成功' };
         } catch (error) {
             this.logger.error('出库失败:', error);
-            return { result: 1, msg: '出库失败', alg: '', datas: null };
+            return { result: 1, msg: '出库失败' };
         }
     }
 
@@ -119,7 +109,7 @@ export class StockService {
                 where: { item_id: dto.item_id, status: 1 },
             });
             if (!item) {
-                return { result: 1, msg: '零件不存在', alg: '', datas: null };
+                return { result: 1, msg: '零件不存在' };
             }
 
             let dateCondition = '';
@@ -164,10 +154,10 @@ export class StockService {
             const total = mergedRecords.length;
             const items = mergedRecords.slice(start, start + dto.pageSize);
 
-            return { result: 0, msg: 'success', alg: '', datas: { total, items } };
+            return { result: 0, msg: 'success', datas: { total, items } };
         } catch (error) {
             this.logger.error('查询历史记录失败:', error);
-            return { result: 1, msg: '查询失败', alg: '', datas: null };
+            return { result: 1, msg: '查询失败' };
         }
     }
 
@@ -180,7 +170,7 @@ export class StockService {
                 where: { item_id: dto.item_id, status: 1 },
             });
             if (!item) {
-                return { result: 1, msg: '零件不存在', alg: '', datas: null };
+                return { result: 1, msg: '零件不存在' };
             }
 
             const beforeStock = item.current_stock;
@@ -194,21 +184,16 @@ export class StockService {
                 record.remark = dto.remark;
             }
 
-            const saved = await this.inventoryCheckRepository.save(record);
+            await this.inventoryCheckRepository.save(record);
             await this.inventoryItemRepository.update(
                 { item_id: dto.item_id },
                 { current_stock: dto.after_stock }
             );
 
-            return {
-                result: 0,
-                msg: '盘点成功',
-                alg: '',
-                datas: { check_id: saved.check_id, before_stock: beforeStock, after_stock: dto.after_stock },
-            };
+            return { result: 0, msg: '盘点成功' };
         } catch (error) {
             this.logger.error('盘点失败:', error);
-            return { result: 1, msg: '盘点失败', alg: '', datas: null };
+            return { result: 1, msg: '盘点失败' };
         }
     }
 

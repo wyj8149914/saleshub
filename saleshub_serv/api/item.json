@@ -63,10 +63,6 @@
                     "type": "string",
                     "description": "提示信息"
                 },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
                 "datas": {
                     "type": "object",
                     "description": "分页结果",
@@ -186,10 +182,6 @@
                     "type": "string",
                     "description": "提示信息"
                 },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
                 "datas": {
                     "type": "object",
                     "description": "成功时返回新建库存件 ID",
@@ -262,14 +254,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
-                "datas": {
-                    "type": "object",
-                    "description": "成功时通常为空对象"
                 }
             }
         }
@@ -305,20 +289,6 @@
                 "msg": {
                     "type": "string",
                     "description": "提示信息"
-                },
-                "alg": {
-                    "type": "string",
-                    "description": "响应加密算法标识"
-                },
-                "datas": {
-                    "type": "object",
-                    "description": "成功时返回被删除的库存件 ID",
-                    "properties": {
-                        "item_id": {
-                            "type": "string",
-                            "description": "被删除的库存件主键 UUID"
-                        }
-                    }
                 }
             }
         }

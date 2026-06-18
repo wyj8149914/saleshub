@@ -1,0 +1,419 @@
+{
+    "/saleshub/user/login": {
+        "method": "POST",
+        "summary": "用户登录",
+        "description": "使用用户名和密码登录。校验账号存在且 status=1（正常），密码 bcrypt 比对通过后签发 JWT access token 与 refresh token，并更新 last_login_time。登录失败时统一返回「用户名或密码错误」，不区分用户名不存在与密码错误。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "username": {
+                    "type": "string",
+                    "description": "登录用户名，最长 50 字符"
+                },
+                "password": {
+                    "type": "string",
+                    "description": "登录密码，最长 100 字符"
+                }
+            },
+            "required": [
+                "username",
+                "password"
+            ]
+        },
+        "example_request": {
+            "username": "admin",
+            "password": "Admin@123"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-登录失败（用户名或密码错误、账号已停用等）"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「登录成功」「用户名或密码错误」「账号已停用」"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "登录成功时返回令牌与用户信息",
+                    "properties": {
+                        "token": {
+                            "type": "string",
+                            "description": "JWT 访问令牌，后续请求放入 Authorization 请求头"
+                        },
+                        "refresh_token": {
+                            "type": "string",
+                            "description": "JWT 刷新令牌，有效期长于 access token"
+                        },
+                        "user_id": {
+                            "type": "string",
+                            "description": "用户主键 UUID（无连字符，32 位）"
+                        },
+                        "username": {
+                            "type": "string",
+                            "description": "登录用户名"
+                        },
+                        "name": {
+                            "type": "string",
+                            "description": "姓名/昵称"
+                        },
+                        "role": {
+                            "type": "string",
+                            "enum": [
+                                "admin",
+                                "user"
+                            ],
+                            "description": "角色：admin-管理员，user-普通用户"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/user/listUsers": {
+        "method": "GET",
+        "summary": "用户列表",
+        "description": "分页查询用户列表。支持按 username、name、phone 模糊匹配，role 精确匹配，status 精确匹配筛选。按 create_time 降序。返回项含用户基础信息及状态、最后登录时间、创建时间，不含密码哈希。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "pageIndex": {
+                    "type": "number",
+                    "description": "页码，从 1 开始（Query 参数）"
+                },
+                "pageSize": {
+                    "type": "number",
+                    "description": "每页条数（Query 参数）"
+                },
+                "username": {
+                    "type": "string",
+                    "description": "登录用户名，模糊匹配（Query 参数，可选）"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "姓名/昵称，模糊匹配（Query 参数，可选）"
+                },
+                "phone": {
+                    "type": "string",
+                    "description": "手机号，模糊匹配（Query 参数，可选）"
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "admin",
+                        "user"
+                    ],
+                    "description": "角色，精确匹配（Query 参数，可选）：admin-管理员，user-普通用户"
+                },
+                "status": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "description": "状态，精确匹配（Query 参数，可选）：1-正常，2-停用"
+                }
+            },
+            "required": [
+                "pageIndex",
+                "pageSize"
+            ]
+        },
+        "example_request": {
+            "pageIndex": 1,
+            "pageSize": 10,
+            "role": "user",
+            "status": 1
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "分页结果",
+                    "properties": {
+                        "total": {
+                            "type": "number",
+                            "description": "符合条件的总条数"
+                        },
+                        "items": {
+                            "type": "array",
+                            "description": "用户列表",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "user_id": {
+                                        "type": "string",
+                                        "description": "用户主键 UUID（无连字符）"
+                                    },
+                                    "username": {
+                                        "type": "string",
+                                        "description": "登录用户名"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "姓名/昵称"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "description": "手机号"
+                                    },
+                                    "role": {
+                                        "type": "string",
+                                        "enum": [
+                                            "admin",
+                                            "user"
+                                        ],
+                                        "description": "角色：admin-管理员，user-普通用户"
+                                    },
+                                    "status": {
+                                        "type": "number",
+                                        "enum": [
+                                            1,
+                                            2
+                                        ],
+                                        "description": "状态：1-正常，2-停用"
+                                    },
+                                    "last_login_time": {
+                                        "type": "string",
+                                        "description": "最后登录时间（ISO 8601 或数据库 timestamp 格式）"
+                                    },
+                                    "create_time": {
+                                        "type": "string",
+                                        "description": "创建时间"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/user/createUser": {
+        "method": "POST",
+        "summary": "创建用户",
+        "description": "创建系统用户。user_id 由 UUID v7 去连字符生成。username 在数据库层面具有唯一约束，重复时返回「用户名已存在」。密码须满足强度要求：长度至少 8 位，且大写字母、小写字母、数字、特殊符号中至少包含三种；服务端使用 bcrypt 哈希后存储。role 默认 user，status 默认 1。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "username": {
+                    "type": "string",
+                    "description": "登录用户名，最长 50 字符，唯一"
+                },
+                "password": {
+                    "type": "string",
+                    "description": "登录密码，最长 100 字符；至少 8 位，且大写、小写、数字、特殊符号中至少三种"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "姓名/昵称，最长 100 字符"
+                },
+                "phone": {
+                    "type": "string",
+                    "description": "手机号（可选，最长 20 字符）"
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "admin",
+                        "user"
+                    ],
+                    "description": "角色（可选，默认 user）：admin-管理员，user-普通用户"
+                }
+            },
+            "required": [
+                "username",
+                "password",
+                "name"
+            ]
+        },
+        "example_request": {
+            "username": "zhangsan",
+            "password": "Zhang@123",
+            "name": "张三",
+            "phone": "13800138000",
+            "role": "user"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-创建失败（用户名已存在、密码强度不足等）"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时返回新建用户 ID",
+                    "properties": {
+                        "user_id": {
+                            "type": "string",
+                            "description": "新建用户主键 UUID"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/user/updateUser": {
+        "method": "POST",
+        "summary": "更新用户信息",
+        "description": "更新用户基础信息（姓名、手机号、角色）。仅当 user_id 对应的用户存在时可更新。name 为必填字段（直接覆盖原值）；phone 传入时更新（可传空字符串清空）；role 传入时更新。不修改 username 与 password。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "用户主键 UUID"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "姓名/昵称，最长 100 字符"
+                },
+                "phone": {
+                    "type": "string",
+                    "description": "手机号（可选，最长 20 字符）"
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "admin",
+                        "user"
+                    ],
+                    "description": "角色（可选）：admin-管理员，user-普通用户"
+                }
+            },
+            "required": [
+                "user_id",
+                "name"
+            ]
+        },
+        "example_request": {
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "name": "张三（更新）",
+            "phone": "13900139000",
+            "role": "admin"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-用户不存在或更新失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                }
+            }
+        }
+    },
+    "/saleshub/user/updateUserStatus": {
+        "method": "POST",
+        "summary": "设置用户状态",
+        "description": "启用或停用用户账号。仅当 user_id 对应的用户存在时可操作。status=2 时用户无法登录（登录接口返回「账号已停用」）。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "用户主键 UUID"
+                },
+                "status": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "description": "状态：1-正常，2-停用"
+                }
+            },
+            "required": [
+                "user_id",
+                "status"
+            ]
+        },
+        "example_request": {
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "status": 2
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-用户不存在或状态更新失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                }
+            }
+        }
+    },
+    "/saleshub/user/updateUserPassword": {
+        "method": "POST",
+        "summary": "修改用户密码",
+        "description": "重置指定用户的登录密码。仅当 user_id 对应的用户存在时可操作。新密码须满足强度要求：长度至少 8 位，且大写字母、小写字母、数字、特殊符号中至少包含三种；服务端使用 bcrypt 哈希后存储。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "用户主键 UUID"
+                },
+                "password": {
+                    "type": "string",
+                    "description": "新密码，最长 100 字符；至少 8 位，且大写、小写、数字、特殊符号中至少三种"
+                }
+            },
+            "required": [
+                "user_id",
+                "password"
+            ]
+        },
+        "example_request": {
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "password": "NewPass@456"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-用户不存在、密码强度不足或修改失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                }
+            }
+        }
+    }
+}
