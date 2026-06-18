@@ -8,7 +8,7 @@ export class StockInRecord {
     @PrimaryColumn({ type: 'varchar', length: 32 })
     record_id: string;
 
-    @Column({ type: 'varchar', length: 32, comment: '库存件ID' })
+    @Column({ type: 'varchar', length: 32, comment: '零件ID' })
     item_id: string;
 
     @Column({ type: 'int', comment: '入库数量' })
@@ -17,8 +17,8 @@ export class StockInRecord {
     @Column({ type: 'date', comment: '入库日期' })
     date: Date;
 
-    @Column({ type: 'varchar', length: 500, nullable: true, comment: '照片URL' })
-    photo_url: string;
+    @Column({ type: 'varchar', length: 32, nullable: true, comment: '入库照片 file.relation_id' })
+    photo_id: string;
 
     @Column({ type: 'text', nullable: true, comment: '备注' })
     remark: string;
@@ -44,7 +44,7 @@ export class StockOutRecord {
     @Column({ type: 'varchar', length: 32, comment: '产品ID' })
     product_id: string;
 
-    @Column({ type: 'varchar', length: 32, comment: '库存件ID' })
+    @Column({ type: 'varchar', length: 32, comment: '零件ID' })
     item_id: string;
 
     @Column({ type: 'int', comment: '出库数量' })
@@ -74,7 +74,7 @@ export class InventoryCheck {
     @PrimaryColumn({ type: 'varchar', length: 32 })
     check_id: string;
 
-    @Column({ type: 'varchar', length: 32, comment: '库存件ID' })
+    @Column({ type: 'varchar', length: 32, comment: '零件ID' })
     item_id: string;
 
     @Column({ type: 'int', comment: '盘点前库存' })

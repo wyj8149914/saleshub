@@ -32,7 +32,7 @@ export class StockService {
             record.item_id = dto.item_id;
             record.quantity = dto.quantity;
             record.date = new Date(dto.date);
-            record.photo_url = dto.photo_url;
+            record.photo_id = dto.photo_id;
             if (dto.remark) {
                 record.remark = dto.remark;
             }

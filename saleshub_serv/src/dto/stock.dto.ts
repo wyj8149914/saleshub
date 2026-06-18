@@ -3,7 +3,7 @@ import { IsNotEmpty, IsOptional, IsInt, Min, IsDateString, MaxLength } from 'cla
 import { PageDto } from './base.dto';
 
 export class StockInDto {
-    @IsNotEmpty({ message: '库存件ID不能为空' })
+    @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
 
     @IsNotEmpty({ message: '入库数量不能为空' })
@@ -16,9 +16,9 @@ export class StockInDto {
     @IsDateString({}, { message: '入库日期格式不正确' })
     date: string;
 
-    @IsNotEmpty({ message: '照片URL不能为空' })
-    @MaxLength(500, { message: '照片URL长度不能超过500' })
-    photo_url: string;
+    @IsNotEmpty({ message: '照片ID不能为空' })
+    @MaxLength(32, { message: '照片ID长度不能超过32' })
+    photo_id: string;
 
     @IsOptional()
     @MaxLength(500, { message: '备注长度不能超过500' })
@@ -29,7 +29,7 @@ export class StockOutDto {
     @IsNotEmpty({ message: '产品ID不能为空' })
     product_id: string;
 
-    @IsNotEmpty({ message: '库存件ID不能为空' })
+    @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
 
     @IsNotEmpty({ message: '出库数量不能为空' })
@@ -48,7 +48,7 @@ export class StockOutDto {
 }
 
 export class StockCheckDto {
-    @IsNotEmpty({ message: '库存件ID不能为空' })
+    @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
 
     @IsNotEmpty({ message: '盘点后库存不能为空' })
@@ -67,7 +67,7 @@ export class StockCheckDto {
 }
 
 export class ListStockHistoryDto extends PageDto {
-    @IsNotEmpty({ message: '库存件ID不能为空' })
+    @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
 
     @IsOptional()
