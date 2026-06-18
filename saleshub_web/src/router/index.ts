@@ -44,11 +44,6 @@ const routes: RouteRecordRaw[] = [
                 path: 'history',
                 name: 'StockHistory',
                 component: () => import('@/views/inventory/StockHistory.vue')
-            },
-            {
-                path: 'warnings',
-                name: 'StockWarning',
-                component: () => import('@/views/inventory/StockWarning.vue')
             }
         ]
     },

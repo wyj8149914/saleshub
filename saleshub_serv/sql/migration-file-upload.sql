@@ -1,17 +1,17 @@
 -- ============================================
 -- 文件上传功能迁移脚本
--- 版本: 1.0
+-- 版本: 1.1
 -- 创建日期: 2026-06-18
 -- 改动说明:
---   1. 新增 inventory.file 文件元数据表(SHA-256 hash 全局唯一去重)
+--   1. 新增 public.file 文件元数据表(SHA-256 hash 全局唯一去重)
 --   2. 重命名 inventory.stock_in_record.photo_url → photo_id,类型由 varchar(500) 收窄为 varchar(32)
 -- 依赖: 项目当前 schema(stock_in_record 表已存在 photo_url 列)
 -- ============================================
 
 -- ============================================
--- 1. 创建 file 表
+-- 1. 创建 file 表(public schema)
 -- ============================================
-CREATE TABLE IF NOT EXISTS inventory.file (
+CREATE TABLE IF NOT EXISTS public.file (
     relation_id VARCHAR(32) NOT NULL,
     hash VARCHAR(64) NOT NULL,
     object_name VARCHAR(255) NOT NULL,
@@ -27,24 +27,24 @@ CREATE TABLE IF NOT EXISTS inventory.file (
     CONSTRAINT chk_file_status CHECK (status IN (1, 2))
 );
 
-COMMENT ON TABLE inventory.file IS '文件元数据表(MinIO 对象索引)';
+COMMENT ON TABLE public.file IS '文件元数据表(MinIO 对象索引)';
 
-COMMENT ON COLUMN inventory.file.relation_id IS '关系主键ID,业务表通过此列引用文件';
-COMMENT ON COLUMN inventory.file.hash IS 'SHA-256 hex,全局唯一去重键';
-COMMENT ON COLUMN inventory.file.object_name IS 'MinIO 对象键';
-COMMENT ON COLUMN inventory.file.original_name IS '客户端上传时的原始文件名';
-COMMENT ON COLUMN inventory.file.mime_type IS '文件 MIME 类型';
-COMMENT ON COLUMN inventory.file.size IS '文件字节数';
-COMMENT ON COLUMN inventory.file.bucket IS 'MinIO bucket 名';
-COMMENT ON COLUMN inventory.file.status IS '状态：1-正常，2-停用';
-COMMENT ON COLUMN inventory.file.create_time IS '创建时间';
-COMMENT ON COLUMN inventory.file.update_time IS '更新时间';
+COMMENT ON COLUMN public.file.relation_id IS '关系主键ID,业务表通过此列引用文件';
+COMMENT ON COLUMN public.file.hash IS 'SHA-256 hex,全局唯一去重键';
+COMMENT ON COLUMN public.file.object_name IS 'MinIO 对象键';
+COMMENT ON COLUMN public.file.original_name IS '客户端上传时的原始文件名';
+COMMENT ON COLUMN public.file.mime_type IS '文件 MIME 类型';
+COMMENT ON COLUMN public.file.size IS '文件字节数';
+COMMENT ON COLUMN public.file.bucket IS 'MinIO bucket 名';
+COMMENT ON COLUMN public.file.status IS '状态：1-正常，2-停用';
+COMMENT ON COLUMN public.file.create_time IS '创建时间';
+COMMENT ON COLUMN public.file.update_time IS '更新时间';
 
 -- ============================================
 -- 2. file 表索引
 -- ============================================
-CREATE INDEX IF NOT EXISTS idx_file_status ON inventory.file(status);
-COMMENT ON INDEX inventory.idx_file_status IS '文件状态索引';
+CREATE INDEX IF NOT EXISTS idx_file_status ON public.file(status);
+COMMENT ON INDEX public.idx_file_status IS '文件状态索引';
 
 -- ============================================
 -- 3. stock_in_record 字段更名 + 类型收窄

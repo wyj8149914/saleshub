@@ -1,4 +1,4 @@
-# 产品-库存件关联表改造 实现计划
+# 产品-零件关联表改造 实现计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -57,7 +57,7 @@ export class ProductItem {
     @Column({ type: 'varchar', length: 32, comment: '产品ID' })
     product_id: string;
 
-    @Column({ type: 'varchar', length: 32, comment: '库存件ID' })
+    @Column({ type: 'varchar', length: 32, comment: '零件ID' })
     item_id: string;
 
     @Column({ type: 'int', default: 1, comment: '单台产品所需数量' })
@@ -87,7 +87,7 @@ Expected: PASS（无错误；如果有报错说明 `product_id` 还被其他文�
 ```bash
 git add src/entity/product.entity.ts
 git commit -m "$(cat <<'EOF'
-重构: 产品-库存件关联改为独立关联表(实体层)
+重构: 产品-零件关联改为独立关联表(实体层)
 
 ## 主要变更
 
@@ -113,7 +113,7 @@ EOF
 
 ```sql
 -- ============================================
--- 产品-库存件关联表迁移脚本
+-- 产品-零件关联表迁移脚本
 -- 版本: 1.1
 -- 创建日期: 2026-06-16
 -- 改动说明:
@@ -143,10 +143,10 @@ CREATE TABLE IF NOT EXISTS inventory.product_items (
         REFERENCES inventory.inventory_items(item_id)
 );
 
-COMMENT ON TABLE inventory.product_items IS '产品-库存件关联表(BOM)';
+COMMENT ON TABLE inventory.product_items IS '产品-零件关联表(BOM)';
 COMMENT ON COLUMN inventory.product_items.product_item_id IS '关联主键ID';
 COMMENT ON COLUMN inventory.product_items.product_id IS '产品ID';
-COMMENT ON COLUMN inventory.product_items.item_id IS '库存件ID';
+COMMENT ON COLUMN inventory.product_items.item_id IS '零件ID';
 COMMENT ON COLUMN inventory.product_items.quantity_per_product IS '单台产品所需数量';
 COMMENT ON COLUMN inventory.product_items.remark IS '备注';
 COMMENT ON COLUMN inventory.product_items.status IS '状态：1-正常，2-停用';
@@ -166,7 +166,7 @@ ALTER TABLE inventory.inventory_items DROP COLUMN IF EXISTS product_id;
 CREATE INDEX IF NOT EXISTS idx_product_items_product_id ON inventory.product_items(product_id);
 COMMENT ON INDEX inventory.idx_product_items_product_id IS '产品ID索引';
 CREATE INDEX IF NOT EXISTS idx_product_items_item_id ON inventory.product_items(item_id);
-COMMENT ON INDEX inventory.idx_product_items_item_id IS '库存件ID索引';
+COMMENT ON INDEX inventory.idx_product_items_item_id IS '零件ID索引';
 CREATE INDEX IF NOT EXISTS idx_product_items_status ON inventory.product_items(status);
 COMMENT ON INDEX inventory.idx_product_items_status IS '关联状态索引';
 ```
@@ -176,7 +176,7 @@ COMMENT ON INDEX inventory.idx_product_items_status IS '关联状态索引';
 ```bash
 git add sql/migration-product-items.sql
 git commit -m "$(cat <<'EOF'
-新增: 产品-库存件关联表迁移脚本
+新增: 产品-零件关联表迁移脚本
 
 ## 主要变更
 
@@ -212,7 +212,7 @@ import { PageDto } from './base.dto';
 
 ```typescript
 export class ProductItemEntryDto {
-    @IsNotEmpty({ message: '库存件ID不能为空' })
+    @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
 
     @IsOptional()
@@ -230,8 +230,8 @@ export class SetProductItemsDto {
     @IsNotEmpty({ message: '产品ID不能为空' })
     product_id: string;
 
-    @IsArray({ message: '库存件列表必须是数组' })
-    @IsNotEmpty({ message: '库存件列表不能为空' })
+    @IsArray({ message: '零件列表必须是数组' })
+    @IsNotEmpty({ message: '零件列表不能为空' })
     @ValidateNested({ each: true })
     @Type(() => ProductItemEntryDto)
     items: ProductItemEntryDto[];
@@ -265,14 +265,14 @@ Expected: PASS
 ```bash
 git add src/dto/product.dto.ts src/dto/item.dto.ts
 git commit -m "$(cat <<'EOF'
-新增: 产品库存件关联 DTO
+新增: 产品零件关联 DTO
 
 ## 主要变更
 
 ### 1. product.dto.ts
 - 新增 ProductItemEntryDto(单条关联: item_id/quantity_per_product/remark)
 - 新增 SetProductItemsDto(全量覆盖语义: product_id + items[])
-- 新增 ProductItemIdDto(查询产品库存件用)
+- 新增 ProductItemIdDto(查询产品零件用)
 
 ### 2. item.dto.ts
 - ListInventoryItemDto 移除 product_id 字段(关系已迁移到关联表)
@@ -323,7 +323,7 @@ import { v7 } from 'uuid';
 
 ```typescript
     /**
-     * 设置产品库存件(全量覆盖语义)
+     * 设置产品零件(全量覆盖语义)
      * 传入 product_id 与完整 item 列表,使产品的有效关联(status=1)等于列表
      */
     async setProductItems(dto: SetProductItemsDto) {
@@ -340,10 +340,10 @@ import { v7 } from 'uuid';
             const itemIds = dto.items.map((it) => it.item_id);
             const dedup = new Set(itemIds);
             if (dedup.size !== itemIds.length) {
-                return { result: 1, msg: '库存件列表存在重复项', alg: '', datas: null };
+                return { result: 1, msg: '零件列表存在重复项', alg: '', datas: null };
             }
 
-            // 3. 校验库存件存在且正常
+            // 3. 校验零件存在且正常
             const items = await this.inventoryItemRepository
                 .createQueryBuilder('item')
                 .where('item.item_id IN (:...ids) AND item.status = :status', {
@@ -356,7 +356,7 @@ import { v7 } from 'uuid';
                 const missing = itemIds.filter((id) => !found.has(id));
                 return {
                     result: 1,
-                    msg: `库存件不存在或已停用: ${missing.join(',')}`,
+                    msg: `零件不存在或已停用: ${missing.join(',')}`,
                     alg: '',
                     datas: null,
                 };
@@ -419,7 +419,7 @@ import { v7 } from 'uuid';
                 }
             });
 
-            this.logger.info('设置产品库存件成功:', {
+            this.logger.info('设置产品零件成功:', {
                 productId: dto.product_id,
                 insert: toInsert.length,
                 update: toUpdate.length,
@@ -433,13 +433,13 @@ import { v7 } from 'uuid';
                 datas: { product_id: dto.product_id, count: dto.items.length },
             };
         } catch (error) {
-            this.logger.error('设置产品库存件失败:', error);
+            this.logger.error('设置产品零件失败:', error);
             return { result: 1, msg: '设置失败', alg: '', datas: null };
         }
     }
 
     /**
-     * 查询产品的库存件列表(含库存件详情)
+     * 查询产品的零件列表(含零件详情)
      */
     async getProductItems(product_id: string) {
         try {
@@ -467,7 +467,7 @@ import { v7 } from 'uuid';
 
             return { result: 0, msg: 'success', alg: '', datas: { items: rows } };
         } catch (error) {
-            this.logger.error('查询产品库存件失败:', error);
+            this.logger.error('查询产品零件失败:', error);
             return { result: 1, msg: '查询失败', alg: '', datas: null };
         }
     }
@@ -485,7 +485,7 @@ Expected: PASS（若报 `AppDataSource.transaction` 不存在，说明占位实�
 ```bash
 git add src/service/inventory/product.service.ts
 git commit -m "$(cat <<'EOF'
-新增: 产品库存件关联接口(setProductItems/getProductItems)
+新增: 产品零件关联接口(setProductItems/getProductItems)
 
 ## 主要变更
 
@@ -558,7 +558,7 @@ import { StockInRecord, StockOutRecord, InventoryCheck } from '../../entity/stoc
             if (!rel) {
                 return {
                     result: 1,
-                    msg: '该库存件未关联到此产品',
+                    msg: '该零件未关联到此产品',
                     alg: '',
                     datas: null,
                 };
@@ -582,7 +582,7 @@ git commit -m "$(cat <<'EOF'
 ### 1. StockService
 - 新增 productItemRepository 依赖
 - stockOut 中的 item.product_id 内存比较改为查询 product_items 表
-- 未关联到 dto.productId 的库存件不允许出库
+- 未关联到 dto.productId 的零件不允许出库
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 EOF
@@ -630,7 +630,7 @@ git commit -m "$(cat <<'EOF'
 
 ### 1. InventoryItemService.list
 - SELECT 与 WHERE 子句删除 product_id 相关代码
-- 按产品筛选库存件的能力改由 getProductItems 接口提供
+- 按产品筛选零件的能力改由 getProductItems 接口提供
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 EOF
@@ -664,7 +664,7 @@ import {
 在 `// 删除产品（软删除）` 块之后（即 `deleteProduct` 路由之后），插入：
 
 ```typescript
-// 设置产品库存件(全量覆盖)
+// 设置产品零件(全量覆盖)
 router.post('/setProductItems',
     validationMiddleware(SetProductItemsDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
@@ -675,7 +675,7 @@ router.post('/setProductItems',
     })
 );
 
-// 查询产品的库存件列表
+// 查询产品的零件列表
 router.get('/listProductItems',
     validationMiddleware(ProductItemIdDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
@@ -700,7 +700,7 @@ Expected: PASS（若 lint 报错，根据提示修复；通常是 import 顺序�
 ```bash
 git add src/routes/inventory.route.ts
 git commit -m "$(cat <<'EOF'
-新增: 设置/查询产品库存件路由
+新增: 设置/查询产品零件路由
 
 ## 主要变更
 
@@ -744,7 +744,7 @@ WHERE table_schema='inventory' AND table_name='product_items';
 
 - [ ] **Step 8.3: 调用 setProductItems 接口**
 
-前置：先创建一个产品（POST `/inventory/createProduct`）和两个库存件（POST `/inventory/createItem`），拿到 `product_id` 与两个 `item_id`。
+前置：先创建一个产品（POST `/inventory/createProduct`）和两个零件（POST `/inventory/createItem`），拿到 `product_id` 与两个 `item_id`。
 
 ```bash
 curl -X POST http://localhost:<port>/<apiPrefix>/inventory/setProductItems \
@@ -752,8 +752,8 @@ curl -X POST http://localhost:<port>/<apiPrefix>/inventory/setProductItems \
   -d '{
     "product_id": "<产品ID>",
     "items": [
-      {"item_id": "<库存件1>", "quantity_per_product": 2, "remark": "主用"},
-      {"item_id": "<库存件2>", "quantity_per_product": 1}
+      {"item_id": "<零件1>", "quantity_per_product": 2, "remark": "主用"},
+      {"item_id": "<零件2>", "quantity_per_product": 1}
     ]
   }'
 ```
@@ -768,15 +768,15 @@ Expected: 返回 2 条关联，`item_name`、`quantity_per_product` 等字段正
 
 - [ ] **Step 8.5: 验证差分逻辑（移除 + 复活）**
 
-再次调用 setProductItems，items 只保留库存件 1，再追加一个新库存件 3：
+再次调用 setProductItems，items 只保留零件 1，再追加一个新零件 3：
 ```bash
 curl -X POST http://localhost:<port>/<apiPrefix>/inventory/setProductItems \
   -H "Content-Type: application/json" \
   -d '{
     "product_id": "<产品ID>",
     "items": [
-      {"item_id": "<库存件1>"},
-      {"item_id": "<库存件3>"}
+      {"item_id": "<零件1>"},
+      {"item_id": "<零件3>"}
     ]
   }'
 ```
@@ -797,20 +797,20 @@ DB 校验：item2 应当从 status=2 变回 status=1（不是新插入一行）�
 
 - [ ] **Step 8.6: 验证 stockOut 校验**
 
-对一个未关联到产品 P 的库存件 X 调用出库：
+对一个未关联到产品 P 的零件 X 调用出库：
 ```bash
 curl -X POST .../inventory/out \
   -d '{"productId":"<P>","itemId":"<X>","quantity":1,"date":"2026-06-16"}'
 ```
-Expected: `{"result":1,"msg":"该库存件未关联到此产品",...}`
+Expected: `{"result":1,"msg":"该零件未关联到此产品",...}`
 
 把 X 关联到 P 后再出库，应成功。
 
 - [ ] **Step 8.7: 验证错误路径**
 
 - 不存在的 product_id 调用 setProductItems → 期望 `产品不存在`
-- items 含不存在的 item_id → 期望 `库存件不存在或已停用: <id>`
-- items 含重复 item_id → 期望 `库存件列表存在重复项`
+- items 含不存在的 item_id → 期望 `零件不存在或已停用: <id>`
+- items 含重复 item_id → 期望 `零件列表存在重复项`
 
 - [ ] **Step 8.8: 不需要 commit**
 

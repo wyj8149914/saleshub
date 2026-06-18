@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryColumn } from 'typeorm';
 
-@Entity({ schema: 'inventory', name: 'file' })
+@Entity({ schema: 'public', name: 'file' })
 export class File {
     @PrimaryColumn({ type: 'varchar', length: 32 })
     relation_id: string;

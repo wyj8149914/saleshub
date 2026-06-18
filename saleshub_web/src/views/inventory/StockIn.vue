@@ -117,10 +117,9 @@
   // 零件选项
   const itemOptions = computed(() =>
     items.value
-      .filter(item => item.status === 1) // 只显示启用的零件
       .map(item => ({
         label: `${item.name} (${item.code})`,
-        value: item.itemId
+        value: item.item_id
       }))
   );
 
@@ -133,9 +132,12 @@
   const loadInventoryItems = async () => {
     itemsLoading.value = true;
     try {
-      const response = await inventoryApi.getInventoryItems();
+      const response = await inventoryApi.listItems({
+        pageIndex: 1,
+        pageSize: 1000
+      });
       if (response.result === 0) {
-        items.value = response.datas;
+        items.value = response.datas.items;
       } else {
         message.error(response.msg || '加载零件列表失败');
       }
@@ -164,22 +166,22 @@
 
   // 自定义上传
   const handleUpload = async (options: any) => {
-    const { file } = options;
-    uploading.value = true;
-    try {
-      const response = await inventoryApi.uploadPhoto(file);
-      if (response.result === 0) {
-        photoUrl.value = response.datas.url;
-        message.success('照片上传成功');
-      } else {
-        message.error(response.msg || '照片上传失败');
-      }
-    } catch (error) {
-      console.error('照片上传失败:', error);
-      message.error('照片上传失败');
-    } finally {
-      uploading.value = false;
-    }
+    // const { file } = options;
+    // uploading.value = true;
+    // try {
+    //   const response = await inventoryApi.uploadPhoto(file);
+    //   if (response.result === 0) {
+    //     photoUrl.value = response.datas.url;
+    //     message.success('照片上传成功');
+    //   } else {
+    //     message.error(response.msg || '照片上传失败');
+    //   }
+    // } catch (error) {
+    //   console.error('照片上传失败:', error);
+    //   message.error('照片上传失败');
+    // } finally {
+    //   uploading.value = false;
+    // }
   };
 
   // 提交表单
@@ -195,14 +197,14 @@
         notes: form.value.remark || undefined
       };
 
-      const response = await inventoryApi.stockIn(submitData);
+      // const response = await inventoryApi.stockIn(submitData);
 
-      if (response.result === 0) {
-        message.success('入库操作成功');
-        handleReset();
-      } else {
-        message.error(response.msg || '入库操作失败');
-      }
+      // if (response.result === 0) {
+      //   message.success('入库操作成功');
+      //   handleReset();
+      // } else {
+      //   message.error(response.msg || '入库操作失败');
+      // }
     } catch (error) {
       console.error('提交失败:', error);
       message.error('操作失败，请稍后重试');

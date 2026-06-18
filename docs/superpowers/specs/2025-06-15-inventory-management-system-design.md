@@ -38,7 +38,7 @@ Product (产品)
 ├── createdAt: Date (创建时间)
 └── InventoryItem[] (关联的设备件)
 
-InventoryItem (库存件，设备件和常用件合并)
+InventoryItem (零件，设备件和常用件合并)
 ├── item_id: string (主键)
 ├── type: 'device' | 'common' (类型：设备件/常用件)
 ├── name: string (名称)
@@ -52,7 +52,7 @@ InventoryItem (库存件，设备件和常用件合并)
 
 StockInRecord (入库记录)
 ├── in_record_id: string (主键)
-├── item_id: string (库存件ID)
+├── item_id: string (零件ID)
 ├── quantity: number (数量)
 ├── date: Date (入库日期)
 ├── photoUrl: string (照片MinIO路径)
@@ -63,7 +63,7 @@ StockInRecord (入库记录)
 StockOutRecord (出库记录)
 ├── out_record_id: string (主键)
 ├── product_id: string (产品ID)
-├── item_id: string (库存件ID)
+├── item_id: string (零件ID)
 ├── quantity: number (数量)
 ├── date: Date (出库日期)
 ├── remark: string? (备注)
@@ -72,7 +72,7 @@ StockOutRecord (出库记录)
 
 InventoryCheck (盘点记录)
 ├── check_id: string (主键)
-├── item_id: string (库存件ID)
+├── item_id: string (零件ID)
 ├── beforeStock: number (盘点前库存)
 ├── afterStock: number (盘点后库存)
 ├── date: Date (盘点日期)
@@ -97,11 +97,11 @@ POST   /api/product/:id/status 更新产品状态
 ### 库存管理
 
 ```
-GET    /api/inventory         库存件列表（支持按类型、产品筛选）
-POST   /api/inventory         创建库存件
-PUT    /api/inventory/:id     更新库存件
-DELETE /api/inventory/:id     删除库存件（软删除）
-POST   /api/inventory/:id/status 更新库存件状态
+GET    /api/inventory         零件列表（支持按类型、产品筛选）
+POST   /api/inventory         创建零件
+PUT    /api/inventory/:id     更新零件
+DELETE /api/inventory/:id     删除零件（软删除）
+POST   /api/inventory/:id/status 更新零件状态
 GET    /api/inventory/warnings 库存预警列表
 ```
 
@@ -135,7 +135,7 @@ POST   /api/file/upload       上传照片到MinIO
 4. 扣减库存（允许负数），记录 StockOutRecord
 
 ### 盘点流程
-1. 选择库存件（设备件/常用件）
+1. 选择零件（设备件/常用件）
 2. 输入实际库存数量
 3. 更新 InventoryItem 库存，记录 InventoryCheck
 

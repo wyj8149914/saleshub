@@ -31,7 +31,7 @@ export class ProductIdDto {
 }
 
 export class ProductItemEntryDto {
-    @IsNotEmpty({ message: '库存件ID不能为空' })
+    @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
 
     @IsOptional()
@@ -49,8 +49,8 @@ export class SetProductItemsDto {
     @IsNotEmpty({ message: '产品ID不能为空' })
     product_id: string;
 
-    @IsArray({ message: '库存件列表必须是数组' })
-    @IsNotEmpty({ message: '库存件列表不能为空' })
+    @IsArray({ message: '零件列表必须是数组' })
+    @IsNotEmpty({ message: '零件列表不能为空' })
     @ValidateNested({ each: true })
     @Type(() => ProductItemEntryDto)
     items: ProductItemEntryDto[];

@@ -217,7 +217,7 @@
     },
     "/saleshub/inventory/setProductItems": {
         "method": "POST",
-        "summary": "设置产品库存件",
+        "summary": "设置产品零件",
         "description": "全量覆盖语义：传入 product_id 与完整的 item 列表，使该产品的有效关联（product_items.status=1）等价于传入列表。事务执行：① 校验产品存在（status=1）；② 校验 item_id 列表无重复；③ 校验所有 item_id 在 inventory_items 中存在且 status=1；④ 将该产品既有 product_items 全部置为 status=2；⑤ 插入新的关联记录（每条 relation_id 为 UUID v7 去连字符，quantity_per_product 当前固定为 1，remark 取入参）。注意：当前实现未使用入参中的 quantity_per_product，单台数量恒为 1。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
@@ -229,13 +229,13 @@
                 },
                 "items": {
                     "type": "array",
-                    "description": "库存件关联列表（全量覆盖）",
+                    "description": "零件关联列表（全量覆盖）",
                     "items": {
                         "type": "object",
                         "properties": {
                             "item_id": {
                                 "type": "string",
-                                "description": "库存件主键 UUID"
+                                "description": "零件主键 UUID"
                             },
                             "quantity_per_product": {
                                 "type": "number",
@@ -277,19 +277,19 @@
             "properties": {
                 "result": {
                     "type": "number",
-                    "description": "结果码：0-成功，1-产品不存在/库存件列表存在重复项/库存件不存在或已停用/设置失败"
+                    "description": "结果码：0-成功，1-产品不存在/零件列表存在重复项/零件不存在或已停用/设置失败"
                 },
                 "msg": {
                     "type": "string",
-                    "description": "提示信息；库存件不存在时返回「库存件不存在或已停用: <缺失item_id列表>」"
+                    "description": "提示信息；零件不存在时返回「零件不存在或已停用: <缺失item_id列表>」"
                 }
             }
         }
     },
     "/saleshub/inventory/listProductItems": {
         "method": "GET",
-        "summary": "产品库存件列表",
-        "description": "查询指定产品关联的库存件列表（product_items.status=1），并 innerJoin inventory_items 返回库存件详情（名称、编码、类型、当前库存、预警阈值）。按 product_items.create_time 降序。仅返回库存件存在的关联记录（inventory_items 中无匹配项的关联会被 innerJoin 过滤）。",
+        "summary": "产品零件列表",
+        "description": "查询指定产品关联的零件列表（product_items.status=1），并 innerJoin inventory_items 返回零件详情（名称、编码、类型、当前库存、预警阈值）。按 product_items.create_time 降序。仅返回零件存在的关联记录（inventory_items 中无匹配项的关联会被 innerJoin 过滤）。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -320,7 +320,7 @@
                 },
                 "datas": {
                     "type": "object",
-                    "description": "产品库存件列表结果",
+                    "description": "产品零件列表结果",
                     "properties": {
                         "items": {
                             "type": "array",
@@ -338,7 +338,7 @@
                                     },
                                     "item_id": {
                                         "type": "string",
-                                        "description": "库存件 ID"
+                                        "description": "零件 ID"
                                     },
                                     "quantity_per_product": {
                                         "type": "number",
@@ -350,11 +350,11 @@
                                     },
                                     "item_name": {
                                         "type": "string",
-                                        "description": "库存件名称（来自 inventory_items.name）"
+                                        "description": "零件名称（来自 inventory_items.name）"
                                     },
                                     "item_code": {
                                         "type": "string",
-                                        "description": "库存件编码（来自 inventory_items.code）"
+                                        "description": "零件编码（来自 inventory_items.code）"
                                     },
                                     "item_type": {
                                         "type": "string",
@@ -362,15 +362,15 @@
                                             "device",
                                             "common"
                                         ],
-                                        "description": "库存件类型（来自 inventory_items.type）"
+                                        "description": "零件类型（来自 inventory_items.type）"
                                     },
                                     "current_stock": {
                                         "type": "number",
-                                        "description": "库存件当前库存"
+                                        "description": "零件当前库存"
                                     },
                                     "warn_stock": {
                                         "type": "number",
-                                        "description": "库存件预警阈值"
+                                        "description": "零件预警阈值"
                                     }
                                 }
                             }

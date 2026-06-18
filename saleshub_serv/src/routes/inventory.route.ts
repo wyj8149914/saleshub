@@ -16,7 +16,7 @@ import { productService, inventoryItemService, stockService } from '../service/i
 
 const router = Router();
 
-// 查询库存件
+// 查询零件
 router.get('/listItems',
     validationMiddleware(ListInventoryItemDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
@@ -28,7 +28,7 @@ router.get('/listItems',
 );
 
 
-// 创建新库存件
+// 创建新零件
 router.post('/createItem',
     validationMiddleware(CreateInventoryItemDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
@@ -39,7 +39,7 @@ router.post('/createItem',
     })
 );
 
-// 更新库存件信息
+// 更新零件信息
 router.post('/updateItem',
     validationMiddleware(UpdateInventoryItemDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
@@ -50,7 +50,7 @@ router.post('/updateItem',
     })
 );
 
-// 删除库存件（软删除）
+// 删除零件（软删除）
 router.post('/deleteItem',
     validationMiddleware(ItemIdDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
@@ -105,7 +105,7 @@ router.post('/deleteProduct',
     })
 );
 
-// 设置产品库存件(全量覆盖)
+// 设置产品零件(全量覆盖)
 router.post('/setProductItems',
     validationMiddleware(SetProductItemsDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
@@ -116,7 +116,7 @@ router.post('/setProductItems',
     })
 );
 
-// 查询产品的库存件列表
+// 查询产品的零件列表
 router.get('/listProductItems',
     validationMiddleware(ProductItemIdDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
@@ -149,7 +149,7 @@ router.post('/stockOut',
     })
 );
 
-// 查询库存件历史记录
+// 查询零件历史记录
 router.get('/listStockHistory',
     validationMiddleware(ListStockHistoryDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {

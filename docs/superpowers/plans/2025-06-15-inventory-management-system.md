@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**目标：** 构建完整的库存管理系统，包括产品管理、库存件管理、入库/出库/盘点功能、库存预警和历史记录。
+**目标：** 构建完整的库存管理系统，包括产品管理、零件管理、入库/出库/盘点功能、库存预警和历史记录。
 
 **架构：** 前后端分离架构。后端采用 TypeScript + Express + TypeORM + PostgreSQL + MinIO，遵循分层架构（Entity → DTO → Service → Routes）。前端采用 Vue3 + TypeScript + Ant Design Vue。
 
@@ -190,7 +190,7 @@ export class StockInRecord {
   @PrimaryColumn({ name: 'in_record_id', type: 'varchar', length: 32 })
   inRecordId: string;
 
-  @Column({ type: 'varchar', length: 32, comment: '库存件ID' })
+  @Column({ type: 'varchar', length: 32, comment: '零件ID' })
   itemId: string;
 
   @Column({ type: 'int', comment: '入库数量' })
@@ -225,7 +225,7 @@ export class StockOutRecord {
   @Column({ type: 'varchar', length: 32, comment: '产品ID' })
   productId: string;
 
-  @Column({ type: 'varchar', length: 32, comment: '库存件ID' })
+  @Column({ type: 'varchar', length: 32, comment: '零件ID' })
   itemId: string;
 
   @Column({ type: 'int', comment: '出库数量' })
@@ -258,7 +258,7 @@ export class InventoryCheck {
   @PrimaryColumn({ name: 'check_id', type: 'varchar', length: 32 })
   checkId: string;
 
-  @Column({ type: 'varchar', length: 32, comment: '库存件ID' })
+  @Column({ type: 'varchar', length: 32, comment: '零件ID' })
   itemId: string;
 
   @Column({ type: 'int', comment: '盘点前库存' })
@@ -531,7 +531,7 @@ export class ProductResponseDto {
   createdAt: Date;
 }
 
-// 库存件响应DTO
+// 零件响应DTO
 export class InventoryItemResponseDto {
   @Expose()
   id: string;
@@ -790,11 +790,11 @@ export class InventoryItemService {
         warnStock: dto.warnStock || 10
       });
       const saved = await this.itemRepository.save(item);
-      this.logger.info('创建库存件成功:', saved.id);
+      this.logger.info('创建零件成功:', saved.id);
 
       return { result: 0, msg: '创建成功', alg: '', datas: saved };
     } catch (error) {
-      this.logger.error('创建库存件失败:', error);
+      this.logger.error('创建零件失败:', error);
       return { result: 1, msg: '创建失败', alg: '', datas: null };
     }
   }
@@ -825,7 +825,7 @@ export class InventoryItemService {
 
       return { result: 0, msg: 'success', alg: '', datas: result };
     } catch (error) {
-      this.logger.error('查询库存件列表失败:', error);
+      this.logger.error('查询零件列表失败:', error);
       return { result: 1, msg: '查询失败', alg: '', datas: [] };
     }
   }
@@ -858,7 +858,7 @@ export class InventoryItemService {
         .getOne();
 
       if (!item) {
-        return { result: 1, msg: '库存件不存在', alg: '', datas: null };
+        return { result: 1, msg: '零件不存在', alg: '', datas: null };
       }
 
       const result = {
@@ -868,7 +868,7 @@ export class InventoryItemService {
 
       return { result: 0, msg: 'success', alg: '', datas: result };
     } catch (error) {
-      this.logger.error('查询库存件失败:', error);
+      this.logger.error('查询零件失败:', error);
       return { result: 1, msg: '查询失败', alg: '', datas: null };
     }
   }
@@ -877,7 +877,7 @@ export class InventoryItemService {
     try {
       const item = await this.itemRepository.findOne({ where: { itemId: id } });
       if (!item) {
-        return { result: 1, msg: '库存件不存在', alg: '', datas: null };
+        return { result: 1, msg: '零件不存在', alg: '', datas: null };
       }
 
       if (dto.code && dto.code !== item.code) {
@@ -891,11 +891,11 @@ export class InventoryItemService {
 
       Object.assign(item, dto);
       const updated = await this.itemRepository.save(item);
-      this.logger.info('更新库存件成功:', id);
+      this.logger.info('更新零件成功:', id);
 
       return { result: 0, msg: '更新成功', alg: '', datas: updated };
     } catch (error) {
-      this.logger.error('更新库存件失败:', error);
+      this.logger.error('更新零件失败:', error);
       return { result: 1, msg: '更新失败', alg: '', datas: null };
     }
   }
@@ -904,17 +904,17 @@ export class InventoryItemService {
     try {
       const item = await this.itemRepository.findOne({ where: { itemId: id } });
       if (!item) {
-        return { result: 1, msg: '库存件不存在', alg: '', datas: null };
+        return { result: 1, msg: '零件不存在', alg: '', datas: null };
       }
 
       // 软删除
       item.status = 2;
       await this.itemRepository.save(item);
-      this.logger.info('删除库存件成功:', id);
+      this.logger.info('删除零件成功:', id);
 
       return { result: 0, msg: '删除成功', alg: '', datas: null };
     } catch (error) {
-      this.logger.error('删除库存件失败:', error);
+      this.logger.error('删除零件失败:', error);
       return { result: 1, msg: '删除失败', alg: '', datas: null };
     }
   }
@@ -923,16 +923,16 @@ export class InventoryItemService {
     try {
       const item = await this.itemRepository.findOne({ where: { itemId: id } });
       if (!item) {
-        return { result: 1, msg: '库存件不存在', alg: '', datas: null };
+        return { result: 1, msg: '零件不存在', alg: '', datas: null };
       }
 
       item.status = status;
       await this.itemRepository.save(item);
-      this.logger.info('更新库存件状态成功:', id, 'status:', status);
+      this.logger.info('更新零件状态成功:', id, 'status:', status);
 
       return { result: 0, msg: '更新成功', alg: '', datas: item };
     } catch (error) {
-      this.logger.error('更新库存件状态失败:', error);
+      this.logger.error('更新零件状态失败:', error);
       return { result: 1, msg: '更新失败', alg: '', datas: null };
     }
   }
@@ -979,7 +979,7 @@ export class StockService {
     try {
       const item = await this.itemRepository.findOne({ where: { id: dto.itemId } });
       if (!item) {
-        return { result: 1, msg: '库存件不存在', alg: '', datas: null };
+        return { result: 1, msg: '零件不存在', alg: '', datas: null };
       }
 
       const record = this.stockInRepository.create(dto);
@@ -1030,7 +1030,7 @@ export class StockService {
     try {
       const item = await this.itemRepository.findOne({ where: { itemId: itemId } });
       if (!item) {
-        return { result: 1, msg: '库存件不存在', alg: '', datas: null };
+        return { result: 1, msg: '零件不存在', alg: '', datas: null };
       }
 
       const inRecords = await this.stockInRepository.find({
@@ -1065,7 +1065,7 @@ export class StockService {
     try {
       const item = await this.itemRepository.findOne({ where: { itemId: dto.itemId } });
       if (!item) {
-        return { result: 1, msg: '库存件不存在', alg: '', datas: null };
+        return { result: 1, msg: '零件不存在', alg: '', datas: null };
       }
 
       const beforeStock = item.currentStock;
@@ -1260,12 +1260,12 @@ Expected: 文件创建成功
 
 ---
 
-### Task 13: 创建库存件路由
+### Task 13: 创建零件路由
 
 **Files:**
 - Create: `saleshub_serv/src/routes/inventory/inventory-item.route.ts`
 
-- [ ] **Step 1: 创建库存件路由**
+- [ ] **Step 1: 创建零件路由**
 
 ```typescript
 import { Router, Request, Response, NextFunction } from 'express';
@@ -1674,7 +1674,7 @@ export const inventoryApi = {
     return data;
   },
 
-  // 库存件管理
+  // 零件管理
   async getInventoryItems(type?: ItemType, productId?: string): Promise<ApiResponse<InventoryItem[]>> {
     const { data } = await api.get<ApiResponse<InventoryItem[]>>('/api/inventory', {
       params: { type, productId }
@@ -1864,7 +1864,7 @@ const handleDelete = async (id: string) => {
 };
 
 const handleViewParts = (product: Product) => {
-  // 跳转到库存件列表，筛选该产品的设备件
+  // 跳转到零件列表，筛选该产品的设备件
   // 这里可以路由跳转或传递事件
 };
 
@@ -1918,7 +1918,7 @@ Expected: 文件创建成功
           <a-select-option value="device">设备件</a-select-option>
           <a-select-option value="common">常用件</a-select-option>
         </a-select>
-        <a-button type="primary" @click="showCreateModal">新建库存件</a-button>
+        <a-button type="primary" @click="showCreateModal">新建零件</a-button>
       </a-space>
     </template>
 
@@ -2087,10 +2087,10 @@ Expected: 文件创建成功
     <a-form :model="form" layout="vertical" @finish="handleSubmit">
       <a-row :gutter="16">
         <a-col :span="8">
-          <a-form-item label="库存件" name="itemId" :rules="[{ required: true, message: '请选择库存件' }]">
+          <a-form-item label="零件" name="itemId" :rules="[{ required: true, message: '请选择零件' }]">
             <a-select
               v-model:value="form.itemId"
-              placeholder="选择库存件"
+              placeholder="选择零件"
               show-search
               :filter-option="filterOption"
             >
@@ -2172,7 +2172,7 @@ const loadInventoryItems = async () => {
       inventoryItems.value = response.datas;
     }
   } catch (error) {
-    message.error('加载库存件失败');
+    message.error('加载零件失败');
   }
 };
 
@@ -2417,7 +2417,7 @@ Expected: 文件创建成功
       <a-select
         v-model:value="selectedItemId"
         style="width: 300px"
-        placeholder="选择库存件"
+        placeholder="选择零件"
         show-search
         :filter-option="filterOption"
         @change="loadHistory"
@@ -2459,7 +2459,7 @@ import type { InventoryItem, StockHistory } from '../../types/inventory';
 
 const columns = [
   { title: '操作类型', key: 'type', width: 100 },
-  { title: '库存件', dataIndex: 'itemName', key: 'itemName' },
+  { title: '零件', dataIndex: 'itemName', key: 'itemName' },
   { title: '数量变化', key: 'quantity', width: 120 },
   { title: '盘点变化', key: 'checkDiff', width: 150 },
   { title: '日期', dataIndex: 'date', key: 'date' },
@@ -2478,7 +2478,7 @@ const loadInventoryItems = async () => {
       inventoryItems.value = response.datas;
     }
   } catch (error) {
-    message.error('加载库存件失败');
+    message.error('加载零件失败');
   }
 };
 
@@ -2547,7 +2547,7 @@ Expected: 文件创建成功
   <a-card title="库存预警">
     <a-alert
       message="库存预警提醒"
-      description="以下库存件当前库存低于或等于预警阈值，请及时补货"
+      description="以下零件当前库存低于或等于预警阈值，请及时补货"
       type="warning"
       show-icon
       style="margin-bottom: 16px"
@@ -2634,10 +2634,10 @@ Expected: 文件创建成功
 <template>
   <a-modal v-model:open="visible" title="库存盘点" @ok="handleSubmit" @cancel="handleCancel">
     <a-form :model="form" layout="vertical">
-      <a-form-item label="选择库存件">
+      <a-form-item label="选择零件">
         <a-select
           v-model:value="form.itemId"
-          placeholder="选择库存件"
+          placeholder="选择零件"
           show-search
           :filter-option="filterOption"
           @change="handleItemChange"
@@ -2713,7 +2713,7 @@ const loadInventoryItems = async () => {
       inventoryItems.value = response.datas;
     }
   } catch (error) {
-    message.error('加载库存件失败');
+    message.error('加载零件失败');
   }
 };
 
@@ -2884,7 +2884,7 @@ Expected: 文件创建成功
 <template>
   <a-modal
     :visible="visible"
-    :title="isEdit ? '编辑库存件' : '新建库存件'"
+    :title="isEdit ? '编辑零件' : '新建零件'"
     width="600px"
     @ok="handleSubmit"
     @cancel="handleCancel"
@@ -3368,7 +3368,7 @@ Expected: 环境变量配置完成
 实施完成后，验证以下功能：
 
 - [ ] 产品 CRUD 功能正常
-- [ ] 库存件 CRUD 功能正常
+- [ ] 零件 CRUD 功能正常
 - [ ] 入库功能正常（含照片上传）
 - [ ] 出库功能正常（关联产品）
 - [ ] 库存历史查询正常

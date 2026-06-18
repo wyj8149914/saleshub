@@ -65,7 +65,7 @@ export class ProductItem {
     @Column({ type: 'varchar', length: 32, comment: '产品ID' })
     product_id: string;
 
-    @Column({ type: 'varchar', length: 32, comment: '库存件ID' })
+    @Column({ type: 'varchar', length: 32, comment: '零件ID' })
     item_id: string;
 
     @Column({ type: 'int', default: 1, comment: '单台产品所需数量' })

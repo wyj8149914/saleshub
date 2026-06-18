@@ -103,12 +103,10 @@
 
   // 零件选项
   const itemOptions = computed(() =>
-    inventoryItems.value
-      .filter(item => item.status === 1)
-      .map(item => ({
-        label: `${item.name} (${item.code})`,
-        value: item.itemId
-      }))
+    inventoryItems.value.map((item: InventoryItem) => ({
+      label: `${item.name} (${item.code})`,
+      value: item.item_id
+    }))
   );
 
   // 零件搜索过滤
@@ -161,9 +159,12 @@
   const loadInventoryItems = async () => {
     itemsLoading.value = true;
     try {
-      const response = await inventoryApi.getInventoryItems();
+      const response = await inventoryApi.listItems({
+        pageIndex: 1,
+        pageSize: 1000
+      });
       if (response.result === 0) {
-        inventoryItems.value = response.datas;
+        inventoryItems.value = response.datas.items;
       } else {
         message.error(response.msg || '加载零件列表失败');
       }
@@ -177,35 +178,39 @@
 
   // 加载库存历史记录
   const loadHistory = async (itemId: string) => {
-    if (!itemId) {
-      historyRecords.value = [];
-      return;
-    }
+    // if (!itemId) {
+    //   historyRecords.value = [];
+    //   return;
+    // }
 
-    loading.value = true;
-    try {
-      const response = await inventoryApi.getStockHistory(itemId);
-      if (response.result === 0) {
-        const item = inventoryItems.value.find(i => i.itemId === itemId);
+    // loading.value = true;
+    // try {
+    //   const response = await inventoryApi.listStockHistory({
+    //     itemId: itemId,
+    //     pageIndex: 1,
+    //     pageSize: 1000
+    //   });
+    //   if (response.result === 0) {
+    //     const item = inventoryItems.value.find((i: InventoryItem) => i.item_id === itemId);
 
-        // 处理历史记录，添加零件名称
-        historyRecords.value = response.datas.map((record: StockRecord) => ({
-          ...record,
-          itemName: item?.name || '-',
-          // 盘点记录的模拟数据（实际应从API获取）
-          checkDiff: record.type === 'check' ? (Math.random() > 0.5 ? Math.floor(Math.random() * 10) - 5 : 0) : undefined,
-          beforeQuantity: record.type === 'check' ? Math.floor(Math.random() * 50) : undefined,
-          afterQuantity: record.type === 'check' ? Math.floor(Math.random() * 50) : undefined
-        }));
-      } else {
-        message.error(response.msg || '加载库存历史失败');
-      }
-    } catch (error) {
-      console.error('加载库存历史失败:', error);
-      message.error('加载库存历史失败');
-    } finally {
-      loading.value = false;
-    }
+    //     // 处理历史记录，添加零件名称
+    //     historyRecords.value = response.datas.map((record: StockRecord) => ({
+    //       ...record,
+    //       itemName: item?.name || '-',
+    //       // 盘点记录的模拟数据（实际应从API获取）
+    //       checkDiff: record.type === 'check' ? (Math.random() > 0.5 ? Math.floor(Math.random() * 10) - 5 : 0) : undefined,
+    //       beforeQuantity: record.type === 'check' ? Math.floor(Math.random() * 50) : undefined,
+    //       afterQuantity: record.type === 'check' ? Math.floor(Math.random() * 50) : undefined
+    //     }));
+    //   } else {
+    //     message.error(response.msg || '加载库存历史失败');
+    //   }
+    // } catch (error) {
+    //   console.error('加载库存历史失败:', error);
+    //   message.error('加载库存历史失败');
+    // } finally {
+    //   loading.value = false;
+    // }
   };
 
   // 处理零件选择变化

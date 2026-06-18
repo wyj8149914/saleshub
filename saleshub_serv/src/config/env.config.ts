@@ -105,6 +105,7 @@ function getAppConfig() {
             maxCompanyMembers: parseInt(process.env.MAX_COMPANY_MEMBERS!, 10),
             inviteExpireDays: parseInt(process.env.INVITE_EXPIRE_DAYS!, 10),
         },
+        publicPath: ['/saleshub/user/login', '/saleshub/user/refresh']
     };
 }
 

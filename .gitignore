@@ -8,6 +8,10 @@ npm-debug.log*
 
 # Environment variables
 .env
+.env.development
+.env.production
+.env.local
+.env.*.local
 
 # Build output
 dist/

@@ -46,7 +46,7 @@ export function errorHandlerMiddleware(
 
     // 处理JWT错误
     if (error.name === 'JsonWebTokenError') {
-        res.json({
+        res.status(401).json({
             result: 2001,
             msg: '无效的Token',
             alg: '',
@@ -56,7 +56,7 @@ export function errorHandlerMiddleware(
     }
 
     if (error.name === 'TokenExpiredError') {
-        res.json({
+        res.status(401).json({
             result: 2001,
             msg: 'Token已过期',
             alg: '',
@@ -67,7 +67,7 @@ export function errorHandlerMiddleware(
 
     // 处理其他未捕获错误
     logger.error('未处理的错误', error);
-    res.json({
+    res.status(500).json({
         result: 5000,
         msg: '服务器内部错误',
         alg: '',

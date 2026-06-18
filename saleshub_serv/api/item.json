@@ -1,8 +1,8 @@
 {
     "/saleshub/inventory/listItems": {
         "method": "GET",
-        "summary": "库存件列表",
-        "description": "分页查询当前正常状态（status=1）的库存件。支持按类型 type（device-设备件，common-常用件）、名称 name 模糊匹配、编码 code 精确匹配筛选；支持按预警状态过滤：isWarning=1 仅返回正常库存（current_stock > warn_stock），isWarning=2 仅返回预警库存（current_stock <= warn_stock）。按 create_time 降序。返回项额外计算 isWarning 字段（current_stock <= warn_stock）。",
+        "summary": "零件列表",
+        "description": "分页查询当前正常状态（status=1）的零件。支持按类型 type（device-设备件，common-常用件）、名称 name 模糊匹配、编码 code 精确匹配筛选；支持按预警状态过滤：isWarning=1 仅返回正常库存（current_stock > warn_stock），isWarning=2 仅返回预警库存（current_stock <= warn_stock）。按 create_time 降序。返回项额外计算 isWarning 字段（current_stock <= warn_stock）。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -21,15 +21,15 @@
                         "device",
                         "common"
                     ],
-                    "description": "库存件类型（Query 参数，可选）：device-设备件，common-常用件"
+                    "description": "零件类型（Query 参数，可选）：device-设备件，common-常用件"
                 },
                 "name": {
                     "type": "string",
-                    "description": "库存件名称，模糊匹配（Query 参数，可选）"
+                    "description": "零件名称，模糊匹配（Query 参数，可选）"
                 },
                 "code": {
                     "type": "string",
-                    "description": "库存件编码，精确匹配（Query 参数，可选）"
+                    "description": "零件编码，精确匹配（Query 参数，可选）"
                 },
                 "isWarning": {
                     "type": "number",
@@ -73,13 +73,13 @@
                         },
                         "items": {
                             "type": "array",
-                            "description": "库存件列表",
+                            "description": "零件列表",
                             "items": {
                                 "type": "object",
                                 "properties": {
                                     "item_id": {
                                         "type": "string",
-                                        "description": "库存件主键 UUID（无连字符）"
+                                        "description": "零件主键 UUID（无连字符）"
                                     },
                                     "type": {
                                         "type": "string",
@@ -126,8 +126,8 @@
     },
     "/saleshub/inventory/createItem": {
         "method": "POST",
-        "summary": "创建库存件",
-        "description": "创建库存件记录。服务端自动生成编码 code（格式 IT + 6 位递增数字，如 IT000001；上限 999999），item_id 由 UUID v7 去连字符生成。type 必须为 device 或 common。specs 仅在常用件（common）时有意义，可传规格选项数组。warnStock 为预警阈值，默认 10。status 默认 1，current_stock 默认 0。",
+        "summary": "创建零件",
+        "description": "创建零件记录。服务端自动生成编码 code（格式 IT + 6 位递增数字，如 IT000001；上限 999999），item_id 由 UUID v7 去连字符生成。type 必须为 device 或 common。specs 仅在常用件（common）时有意义，可传规格选项数组。warnStock 为预警阈值，默认 10。status 默认 1，current_stock 默认 0。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -138,7 +138,7 @@
                         "device",
                         "common"
                     ],
-                    "description": "库存件类型：device-设备件，common-常用件"
+                    "description": "零件类型：device-设备件，common-常用件"
                 },
                 "name": {
                     "type": "string",
@@ -184,11 +184,11 @@
                 },
                 "datas": {
                     "type": "object",
-                    "description": "成功时返回新建库存件 ID",
+                    "description": "成功时返回新建零件 ID",
                     "properties": {
                         "item_id": {
                             "type": "string",
-                            "description": "新建库存件主键 UUID"
+                            "description": "新建零件主键 UUID"
                         }
                     }
                 }
@@ -197,15 +197,15 @@
     },
     "/saleshub/inventory/updateItem": {
         "method": "POST",
-        "summary": "更新库存件",
-        "description": "更新库存件基础信息（类型、名称、规格、预警阈值）。仅当 item_id 对应的库存件存在且 status=1 时可更新。type 与 name 为必填字段（直接覆盖原值）；specs 传入非空数组时更新；warnStock 传入时更新。",
+        "summary": "更新零件",
+        "description": "更新零件基础信息（类型、名称、规格、预警阈值）。仅当 item_id 对应的零件存在且 status=1 时可更新。type 与 name 为必填字段（直接覆盖原值）；specs 传入非空数组时更新；warnStock 传入时更新。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
             "properties": {
                 "item_id": {
                     "type": "string",
-                    "description": "库存件主键 UUID"
+                    "description": "零件主键 UUID"
                 },
                 "type": {
                     "type": "string",
@@ -213,7 +213,7 @@
                         "device",
                         "common"
                     ],
-                    "description": "库存件类型：device-设备件，common-常用件"
+                    "description": "零件类型：device-设备件，common-常用件"
                 },
                 "name": {
                     "type": "string",
@@ -249,7 +249,7 @@
             "properties": {
                 "result": {
                     "type": "number",
-                    "description": "结果码：0-成功，1-库存件不存在或更新失败"
+                    "description": "结果码：0-成功，1-零件不存在或更新失败"
                 },
                 "msg": {
                     "type": "string",
@@ -260,15 +260,15 @@
     },
     "/saleshub/inventory/deleteItem": {
         "method": "POST",
-        "summary": "删除库存件",
-        "description": "软删除库存件（将 status 置为 2）。仅当 item_id 对应的库存件存在时可操作。注意：当前实现暂未校验该库存件是否被产品引用（product_items 关联），后续需补充。",
+        "summary": "删除零件",
+        "description": "软删除零件（将 status 置为 2）。仅当 item_id 对应的零件存在时可操作。注意：当前实现暂未校验该零件是否被产品引用（product_items 关联），后续需补充。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
             "properties": {
                 "item_id": {
                     "type": "string",
-                    "description": "库存件主键 UUID"
+                    "description": "零件主键 UUID"
                 }
             },
             "required": [
@@ -284,7 +284,7 @@
             "properties": {
                 "result": {
                     "type": "number",
-                    "description": "结果码：0-成功，1-库存件不存在或删除失败"
+                    "description": "结果码：0-成功，1-零件不存在或删除失败"
                 },
                 "msg": {
                     "type": "string",

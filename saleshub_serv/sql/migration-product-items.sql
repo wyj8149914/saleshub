@@ -1,5 +1,5 @@
 -- ============================================
--- 产品-库存件关联表迁移脚本
+-- 产品-零件关联表迁移脚本
 -- 版本: 1.1
 -- 创建日期: 2026-06-16
 -- 改动说明:
@@ -29,12 +29,12 @@ CREATE TABLE IF NOT EXISTS inventory.product_items (
         REFERENCES inventory.inventory_items(item_id)
 );
 
-COMMENT ON TABLE inventory.product_items IS '产品-库存件关联表(BOM)';
+COMMENT ON TABLE inventory.product_items IS '产品-零件关联表(BOM)';
 
 -- product_items 表字段注释
 COMMENT ON COLUMN inventory.product_items.product_item_id IS '关联主键ID';
 COMMENT ON COLUMN inventory.product_items.product_id IS '产品ID';
-COMMENT ON COLUMN inventory.product_items.item_id IS '库存件ID';
+COMMENT ON COLUMN inventory.product_items.item_id IS '零件ID';
 COMMENT ON COLUMN inventory.product_items.quantity_per_product IS '单台产品所需数量';
 COMMENT ON COLUMN inventory.product_items.remark IS '备注';
 COMMENT ON COLUMN inventory.product_items.status IS '状态：1-正常，2-停用';
@@ -54,6 +54,6 @@ ALTER TABLE inventory.inventory_items DROP COLUMN IF EXISTS product_id;
 CREATE INDEX IF NOT EXISTS idx_product_items_product_id ON inventory.product_items(product_id);
 COMMENT ON INDEX inventory.idx_product_items_product_id IS '产品ID索引';
 CREATE INDEX IF NOT EXISTS idx_product_items_item_id ON inventory.product_items(item_id);
-COMMENT ON INDEX inventory.idx_product_items_item_id IS '库存件ID索引';
+COMMENT ON INDEX inventory.idx_product_items_item_id IS '零件ID索引';
 CREATE INDEX IF NOT EXISTS idx_product_items_status ON inventory.product_items(status);
 COMMENT ON INDEX inventory.idx_product_items_status IS '关联状态索引';

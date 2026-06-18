@@ -1,4 +1,4 @@
-# 产品-库存件关联表改造设计
+# 产品-零件关联表改造设计
 
 日期：2026-06-16
 作者：Jason + Claude
@@ -8,10 +8,10 @@
 
 当前 `inventory.inventory_items` 表通过 `product_id` 外键直接关联到 `inventory.products`，语义为"每个设备件（type=device）属于一个产品"。此设计无法表达：
 
-- 一个产品由多个不同的库存件组成（BOM 语义）
-- 同一库存件（如螺丝等通用件）被多个产品共用
+- 一个产品由多个不同的零件组成（BOM 语义）
+- 同一零件（如螺丝等通用件）被多个产品共用
 
-需求是将 `product_id` 从 `inventory_items` 移出，建立独立的产品-库存件关联表，支持 M:N 关系，并在 `ProductService` 中提供"设置产品库存件"接口。
+需求是将 `product_id` 从 `inventory_items` 移出，建立独立的产品-零件关联表，支持 M:N 关系，并在 `ProductService` 中提供"设置产品零件"接口。
 
 ## 范围
 
@@ -37,7 +37,7 @@
 |---|---|---|---|
 | `product_item_id` | VARCHAR(32) | PK | 主键，应用层用 `uuid v7` 去掉 `-` 生成 |
 | `product_id` | VARCHAR(32) | NOT NULL, FK → products | 产品 ID |
-| `item_id` | VARCHAR(32) | NOT NULL, FK → inventory_items | 库存件 ID |
+| `item_id` | VARCHAR(32) | NOT NULL, FK → inventory_items | 零件 ID |
 | `quantity_per_product` | INT | NOT NULL DEFAULT 1 | 单台产品所需数量，最小 1 |
 | `remark` | TEXT | NULL | 备注 |
 | `status` | INT | NOT NULL DEFAULT 1, CHECK IN (1,2) | 1-正常，2-停用 |
@@ -46,7 +46,7 @@
 
 约束：
 - `UNIQUE (product_id, item_id)`：避免重复关联（注意 status=2 的软删除行也包含在唯一约束内，因此重新启用时使用 UPDATE 而非 INSERT）
-- 外键不带 `ON DELETE` 行为：删除产品/库存件走软删除（status=2），不会触发级联
+- 外键不带 `ON DELETE` 行为：删除产品/零件走软删除（status=2），不会触发级联
 
 索引：
 - `idx_product_items_product_id (product_id)`
@@ -74,7 +74,7 @@ export class ProductItem {
     @Column({ type: 'varchar', length: 32, comment: '产品ID' })
     product_id: string;
 
-    @Column({ type: 'varchar', length: 32, comment: '库存件ID' })
+    @Column({ type: 'varchar', length: 32, comment: '零件ID' })
     item_id: string;
 
     @Column({ type: 'int', default: 1, comment: '单台产品所需数量' })
@@ -102,7 +102,7 @@ export class ProductItem {
 
 ```typescript
 export class ProductItemEntryDto {
-    @IsNotEmpty({ message: '库存件ID不能为空' })
+    @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
 
     @IsOptional()
@@ -121,7 +121,7 @@ export class SetProductItemsDto {
     product_id: string;
 
     @IsArray()
-    @IsNotEmpty({ message: '库存件列表不能为空' })
+    @IsNotEmpty({ message: '零件列表不能为空' })
     @ValidateNested({ each: true })
     @Type(() => ProductItemEntryDto)
     items: ProductItemEntryDto[];
@@ -150,7 +150,7 @@ private productItemRepository = AppDataSource.getRepository(ProductItem);
 算法（在事务中执行）：
 
 1. 校验产品存在且 status=1，否则返回 `{ result: 1, msg: '产品不存在' }`
-2. 校验 `items` 中所有 `item_id` 在 `inventory_items` 中存在且 status=1，否则返回 `{ result: 1, msg: '库存件不存在: <id>' }`
+2. 校验 `items` 中所有 `item_id` 在 `inventory_items` 中存在且 status=1，否则返回 `{ result: 1, msg: '零件不存在: <id>' }`
 3. 校验同一 `item_id` 不在 `items` 中重复出现
 4. 查询当前产品的所有关联行（不限 status），在内存中按 `item_id` 建立 Map
 5. 构造差分（按 item_id 比对）：
@@ -164,7 +164,7 @@ private productItemRepository = AppDataSource.getRepository(ProductItem);
 
 ### getProductItems(product_id)
 
-返回某产品当前所有有效关联（status=1），含库存件详情：
+返回某产品当前所有有效关联（status=1），含零件详情：
 
 ```sql
 SELECT pi.product_item_id, pi.product_id, pi.item_id,
@@ -188,7 +188,7 @@ const rel = await this.productItemRepository.findOne({
     where: { product_id: dto.productId, item_id: dto.itemId, status: 1 },
 });
 if (!rel) {
-    return { result: 1, msg: '该库存件未关联到此产品', alg: '', datas: null };
+    return { result: 1, msg: '该零件未关联到此产品', alg: '', datas: null };
 }
 ```
 
@@ -203,7 +203,7 @@ if (!rel) {
 `src/routes/inventory.route.ts` 新增：
 
 ```typescript
-// 设置产品库存件（全量覆盖）
+// 设置产品零件（全量覆盖）
 router.post('/setProductItems',
     validationMiddleware(SetProductItemsDto),
     asyncHandler(async (req, res, next) => {
@@ -214,7 +214,7 @@ router.post('/setProductItems',
     })
 );
 
-// 查询产品的库存件列表
+// 查询产品的零件列表
 router.get('/listProductItems',
     validationMiddleware(ProductItemIdDto),
     asyncHandler(async (req, res, next) => {
