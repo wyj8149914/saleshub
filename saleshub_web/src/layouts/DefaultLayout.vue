@@ -1,104 +1,573 @@
 <template>
-  <a-layout class="default-layout">
-    <a-layout-header class="header">
-      <div class="logo">
-        <h1>SalesHub 库存管理系统</h1>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-bg">
+        <div class="sidebar-grid"></div>
+        <div class="sidebar-glow"></div>
       </div>
-      <a-menu
-        v-model:selectedKeys="selectedKeys"
-        theme="dark"
-        mode="horizontal"
-        :style="{ lineHeight: '64px' }"
-      >
-        <a-menu-item key="products" @click="$router.push('/inventory/products')">
-          产品管理
-        </a-menu-item>
-        <a-menu-item key="items" @click="$router.push('/inventory/items')">
-          库存管理
-        </a-menu-item>
-        <a-menu-item key="stock-in" @click="$router.push('/inventory/stock-in')">
-          入库管理
-        </a-menu-item>
-        <a-menu-item key="stock-out" @click="$router.push('/inventory/stock-out')">
-          出库管理
-        </a-menu-item>
-        <a-menu-item key="history" @click="$router.push('/inventory/history')">
-          库存历史
-        </a-menu-item>
-        <a-menu-item key="warnings" @click="$router.push('/inventory/warnings')">
-          库存预警
-        </a-menu-item>
-      </a-menu>
-    </a-layout-header>
-    <a-layout-content class="content">
+
+      <div class="sidebar-header">
+        <span class="logo-mark">
+          <svg viewBox="0 0 32 32" width="26" height="26">
+            <rect x="2" y="2" width="13" height="13" rx="3" fill="currentColor" />
+            <rect x="17" y="2" width="13" height="13" rx="3" fill="currentColor" opacity="0.5" />
+            <rect x="2" y="17" width="13" height="13" rx="3" fill="currentColor" opacity="0.5" />
+            <rect x="17" y="17" width="13" height="13" rx="3" fill="currentColor" opacity="0.85" />
+          </svg>
+        </span>
+        <span class="logo-text">SalesHub</span>
+      </div>
+
+      <nav class="sidebar-menu">
+        <template v-for="item in menuItems" :key="item.label">
+          <template v-if="item.children">
+            <button type="button" class="menu-item menu-item-parent"
+              :class="{ 'menu-item-contains-active': containsActive(item) }" :aria-expanded="expandedMap[item.label]"
+              @click="toggleExpand(item.label)">
+              <component :is="item.icon" v-if="item.icon" class="menu-icon" />
+              <span class="menu-label">{{ item.label }}</span>
+              <DownOutlined class="menu-chevron" :class="{ 'menu-chevron-open': expandedMap[item.label] }" />
+            </button>
+            <div v-show="expandedMap[item.label]" class="menu-submenu">
+              <router-link v-for="child in item.children" :key="child.path" :to="child.path!"
+                class="menu-item menu-item-child" active-class="menu-item-active">
+                <component :is="child.icon" v-if="child.icon" class="menu-icon" />
+                <span class="menu-label">{{ child.label }}</span>
+              </router-link>
+            </div>
+          </template>
+
+          <router-link v-else :to="item.path!" class="menu-item" active-class="menu-item-active">
+            <component :is="item.icon" v-if="item.icon" class="menu-icon" />
+            <span class="menu-label">{{ item.label }}</span>
+          </router-link>
+        </template>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span>SalesHub Inventory Platform</span>
+        <span>© 2024</span>
+      </div>
+    </aside>
+
+    <header class="topbar">
+      <h1 class="page-title">{{ currentTitle }}</h1>
+
+      <div class="user-area">
+        <div class="user-info">
+          <div class="user-avatar" :aria-label="displayName">{{ userInitial }}</div>
+          <div class="user-meta">
+            <span class="user-name">{{ displayName }}</span>
+            <span class="user-role">{{ roleLabel }}</span>
+          </div>
+        </div>
+
+        <a-button class="logout-btn" @click="handleLogout">
+          <template #icon>
+            <LogoutOutlined />
+          </template>
+          <span class="logout-label">退出登录</span>
+        </a-button>
+      </div>
+    </header>
+
+    <main class="content">
       <router-view />
-    </a-layout-content>
-    <a-layout-footer class="footer">
-      SalesHub 库存管理系统 ©2024
-    </a-layout-footer>
-  </a-layout>
+    </main>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+  /**
+   * 主框架布局：左侧菜单 + 顶部栏 + 主内容区
+   * 通过 CSS Grid Areas 实现，sidebar / topbar / content 三块独立布局
+   * 设计 token 与 Login.vue 共享，确保品牌一致
+   */
+  import { computed, reactive, watch } from 'vue'
+  import type { Component } from 'vue'
+  import { useRoute, useRouter } from 'vue-router'
+  import { Modal, message } from 'ant-design-vue'
+  import {
+    AppstoreOutlined,
+    DatabaseOutlined,
+    DownOutlined,
+    LogoutOutlined,
+    BlockOutlined,
+    ImportOutlined,
+    ExportOutlined,
+    HistoryOutlined
+  } from '@ant-design/icons-vue'
+  import { useAuthStore } from '@/stores/auth'
 
-const route = useRoute();
-const selectedKeys = ref<string[]>([]);
+  interface MenuItem {
+    path?: string
+    label: string
+    icon?: Component
+    children?: MenuItem[]
+  }
 
-// Update selected menu item based on current route
-watch(
-  () => route.path,
-  (newPath) => {
-    const pathMap: Record<string, string> = {
-      '/inventory/products': 'products',
-      '/inventory/items': 'items',
-      '/inventory/stock-in': 'stock-in',
-      '/inventory/stock-out': 'stock-out',
-      '/inventory/history': 'history',
-      '/inventory/warnings': 'warnings'
-    };
-    selectedKeys.value = [pathMap[newPath] || 'products'];
-  },
-  { immediate: true }
-);
+  const route = useRoute()
+  const router = useRouter()
+  const authStore = useAuthStore()
+
+  /**
+   * 菜单配置：无 children 为一级菜单（直接跳路由），含 children 为可展开父级
+   * 「库存预警」路由保留（直接访问 URL 仍可用），但菜单不展示
+   */
+  const menuItems: MenuItem[] = [
+    { path: '/inventory/products', label: '产品管理', icon: AppstoreOutlined },
+    {
+      label: '库存管理',
+      icon: DatabaseOutlined,
+      children: [
+        { path: '/inventory/items', label: '零件管理', icon: BlockOutlined },
+        { path: '/inventory/stock-in', label: '入库管理', icon: ImportOutlined },
+        { path: '/inventory/stock-out', label: '出库管理', icon: ExportOutlined },
+        { path: '/inventory/history', label: '库存历史', icon: HistoryOutlined }
+      ]
+    }
+  ]
+
+  // 顶栏标题兜底：部分路由未配置 meta.title，按路由 name 匹配中文名
+  const routeTitleMap: Record<string, string> = {
+    ProductList: '产品管理',
+    InventoryList: '零件管理',
+    StockIn: '入库管理',
+    StockOut: '出库管理',
+    StockHistory: '库存历史',
+    StockWarning: '库存预警'
+  }
+
+  // 默认展开「库存管理」，避免首次进入时用户看不到子项
+  const expandedMap = reactive<Record<string, boolean>>({
+    库存管理: true
+  })
+
+  // 判断父级菜单是否包含激活的子项（用于父级文字高亮，区别于子项的 active 高亮）
+  function containsActive(item: MenuItem): boolean {
+    return !!item.children?.some((c) => c.path && route.path.startsWith(c.path))
+  }
+
+  function toggleExpand(label: string) {
+    expandedMap[label] = !expandedMap[label]
+  }
+
+  // 路由切换时自动展开包含当前路由的父级，避免折叠状态下用户找不到当前位置
+  watch(
+    () => route.path,
+    () => {
+      menuItems.forEach((item) => {
+        if (item.children && containsActive(item)) {
+          expandedMap[item.label] = true
+        }
+      })
+    },
+    { immediate: true }
+  )
+
+  const currentTitle = computed(() => {
+    const metaTitle = route.meta.title as string | undefined
+    if (metaTitle) return metaTitle
+    return routeTitleMap[route.name as string] || 'SalesHub'
+  })
+
+  const displayName = computed(
+    () => authStore.user?.name || authStore.user?.username || '用户'
+  )
+  const userInitial = computed(() => displayName.value.charAt(0).toUpperCase())
+  const roleLabel = computed(() => (authStore.user?.role === 'admin' ? '管理员' : '普通用户'))
+
+  function handleLogout() {
+    // 二次确认避免误触；确认后清理登录态并跳回登录页
+    Modal.confirm({
+      title: '确认退出登录？',
+      okText: '退出',
+      cancelText: '取消',
+      onOk: () => {
+        authStore.logout()
+        message.success('已退出登录')
+        router.replace('/login')
+      }
+    })
+  }
 </script>
 
-<style scoped lang="scss">
-.default-layout {
-  min-height: 100vh;
-}
+<style scoped>
 
-.header {
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  background: #001529;
+  /* ============ Tokens（与 Login.vue 共享同一套品牌色与圆角） ============ */
+  .app-layout {
+    /* Brand (sidebar) */
+    --brand-bg: #0a0f1e;
+    --brand-text: #f4f6fb;
+    --brand-text-muted: rgba(244, 246, 251, 0.62);
+    --brand-border: rgba(244, 246, 251, 0.08);
 
-  .logo {
-    float: left;
-    margin-right: 40px;
+    /* Surface (topbar / content) */
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --text: #18181b;
+    --text-muted: #52525b;
+    --border: #e4e4e7;
 
-    h1 {
-      color: #fff;
-      font-size: 20px;
-      font-weight: 600;
-      margin: 0;
-      line-height: 64px;
+    /* Locked accent */
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-soft: rgba(37, 99, 235, 0.16);
+    --danger: #dc2626;
+    --danger-soft: #fef2f2;
+    --danger-border: #fecaca;
+
+    /* Shape */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: 64px 1fr;
+    grid-template-areas:
+      'sidebar topbar'
+      'sidebar content';
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+      Arial, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ============ Sidebar ============ */
+  .sidebar {
+    grid-area: sidebar;
+    position: relative;
+    background: var(--brand-bg);
+    color: var(--brand-text);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    isolation: isolate;
+  }
+
+  .sidebar-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .sidebar-grid {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 50% at 30% 0%, black 0%, transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 50% at 30% 0%, black 0%, transparent 70%);
+  }
+
+  .sidebar-glow {
+    position: absolute;
+    width: 360px;
+    height: 360px;
+    top: -120px;
+    left: -80px;
+    background: radial-gradient(circle, #1e40af 0%, transparent 70%);
+    filter: blur(80px);
+    opacity: 0.4;
+  }
+
+  .sidebar-header {
+    position: relative;
+    z-index: 1;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--brand-border);
+    flex-shrink: 0;
+  }
+
+  .logo-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    filter: drop-shadow(0 4px 14px rgba(37, 99, 235, 0.35));
+  }
+
+  .logo-text {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .sidebar-menu {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    color: var(--brand-text-muted);
+    font-size: 15px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.18s ease, color 0.18s ease;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .menu-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--brand-text);
+  }
+
+  .menu-item-active {
+    background: var(--accent-soft);
+    color: #ffffff;
+  }
+
+  .menu-item-active::before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 20px;
+    background: var(--accent);
+    border-radius: 0 3px 3px 0;
+  }
+
+  .menu-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  /* 父级菜单（可展开） */
+  .menu-item-parent {
+    width: 100%;
+    background: transparent;
+    border: none;
+    text-align: left;
+  }
+
+  .menu-item-contains-active {
+    color: var(--brand-text);
+  }
+
+  .menu-chevron {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--brand-text-muted);
+    transition: transform 0.2s ease;
+  }
+
+  .menu-chevron-open {
+    transform: rotate(180deg);
+  }
+
+  /* 二级菜单 */
+  .menu-submenu {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 0 6px 0;
+  }
+
+  .menu-item-child {
+    padding-left: 28px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  /* 子级图标比父级略小，维持视觉层级 */
+  .menu-item-child .menu-icon {
+    font-size: 14px;
+    opacity: 0.85;
+  }
+
+  .menu-item-child.menu-item-active::before {
+    height: 16px;
+  }
+
+  .sidebar-footer {
+    position: relative;
+    z-index: 1;
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--brand-text-muted);
+    border-top: 1px solid var(--brand-border);
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+  }
+
+  /* ============ Topbar ============ */
+  .topbar {
+    grid-area: topbar;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .page-title {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .user-area {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent) 0%, #1e40af 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  }
+
+  .user-meta {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+
+  .user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .user-role {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .logout-btn {
+    border-radius: var(--radius-sm) !important;
+    border-color: var(--border) !important;
+    color: var(--text-muted) !important;
+    background: var(--surface) !important;
+    font-size: 13px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease !important;
+  }
+
+  .logout-btn:hover {
+    color: var(--danger) !important;
+    border-color: var(--danger-border) !important;
+    background: var(--danger-soft) !important;
+  }
+
+  /* ============ Content ============ */
+  .content {
+    grid-area: content;
+    padding: 32px;
+    overflow-y: auto;
+  }
+
+  /* ============ Responsive ============ */
+  @media (max-width: 1024px) {
+    .app-layout {
+      grid-template-columns: 72px 1fr;
+    }
+
+    .sidebar-header {
+      padding: 0;
+      justify-content: center;
+    }
+
+    .logo-text,
+    .menu-label,
+    .menu-chevron,
+    .menu-submenu,
+    .sidebar-footer {
+      display: none !important;
+    }
+
+    .sidebar-menu {
+      padding: 16px 8px;
+      align-items: center;
+    }
+
+    .menu-item {
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .menu-item-active::before {
+      left: -8px;
     }
   }
-}
 
-.content {
-  padding: 24px;
-  margin: 24px;
-  min-height: 280px;
-  background: #fff;
-  border-radius: 4px;
-}
+  @media (max-width: 640px) {
+    .user-meta {
+      display: none;
+    }
 
-.footer {
-  text-align: center;
-  color: rgba(0, 0, 0, 0.45);
-}
+    .logout-label {
+      display: none;
+    }
+
+    .content {
+      padding: 20px;
+    }
+
+    .topbar {
+      padding: 0 20px;
+    }
+  }
+
+  /* ============ Reduced motion ============ */
+  @media (prefers-reduced-motion: reduce) {
+
+    .menu-item,
+    .logout-btn {
+      transition: none !important;
+    }
+  }
 </style>

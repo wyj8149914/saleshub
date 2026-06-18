@@ -1,448 +1,416 @@
 <template>
-  <a-card title="库存管理" :bordered="false">
-    <template #extra>
-      <a-space>
-        <!-- 类型筛选 -->
-        <a-select
-          v-model:value="typeFilter"
-          placeholder="筛选类型"
-          style="width: 120px"
-          @change="handleTypeFilterChange"
-        >
-          <a-select-option value="">全部</a-select-option>
-          <a-select-option value="device">设备</a-select-option>
-          <a-select-option value="common">普通物品</a-select-option>
+  <div class="page">
+    <div class="page-head">
+      <a-space class="filters" :size="12" wrap>
+        <a-input v-model:value="filters.name" placeholder="按名称搜索" allow-clear class="filter-input"
+          @press-enter="handleSearch" @change="handleFilterChange">
+          <template #prefix>
+            <SearchOutlined />
+          </template>
+        </a-input>
+
+        <a-input v-model:value="filters.code" placeholder="按编码精确搜索" allow-clear class="filter-input"
+          @press-enter="handleSearch" @change="handleFilterChange">
+          <template #prefix>
+            <TagOutlined />
+          </template>
+        </a-input>
+
+        <a-select v-model:value="filters.type" placeholder="零件类型" allow-clear class="filter-select"
+          @change="handleSearch">
+          <a-select-option value="device">设备件</a-select-option>
+          <a-select-option value="common">常用件</a-select-option>
         </a-select>
 
-        <!-- 新建按钮 -->
-        <a-button type="primary" @click="handleCreate">
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          新建库存件
-        </a-button>
+        <a-select v-model:value="filters.isWarning" placeholder="预警状态" allow-clear class="filter-select"
+          @change="handleSearch">
+          <a-select-option :value="1">正常库存</a-select-option>
+          <a-select-option :value="2">预警库存</a-select-option>
+        </a-select>
+
+        <a-button @click="handleSearch">查询</a-button>
+        <a-button type="text" @click="handleReset">重置</a-button>
       </a-space>
-    </template>
 
-    <a-table
-      :columns="columns"
-      :data-source="inventoryItems"
-      :loading="loading"
-      :pagination="{ pageSize: 10 }"
-      row-key="itemId"
-    >
-      <template #bodyCell="{ column, record }">
-        <!-- 类型列 -->
-        <template v-if="column.key === 'type'">
-          <a-tag :color="record.type === 'device' ? 'blue' : 'green'">
-            {{ record.type === 'device' ? '设备' : '普通物品' }}
-          </a-tag>
+      <a-button type="primary" class="create-btn" @click="handleCreate">
+        <template #icon>
+          <PlusOutlined />
         </template>
+        新建零件
+      </a-button>
+    </div>
 
-        <!-- 关联产品列 -->
-        <template v-else-if="column.key === 'productName'">
-          {{ record.productName || '-' }}
-        </template>
-
-        <!-- 规格列 -->
-        <template v-else-if="column.key === 'specifications'">
-          <a-space v-if="record.specifications && Object.keys(record.specifications).length > 0" direction="vertical" :size="4">
-            <a-tag
-              v-for="(value, key) in record.specifications"
-              :key="key"
-              color="default"
-            >
-              {{ value }}
+    <a-card :bordered="false" class="table-card">
+      <a-table :columns="columns" :data-source="items" :loading="loading" :pagination="pagination" row-key="item_id"
+        @change="handleTableChange">
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'type'">
+            <a-tag :class="record.type === 'device' ? 'tag-device' : 'tag-common'">
+              {{ record.type === 'device' ? '设备件' : '常用件' }}
             </a-tag>
-          </a-space>
-          <span v-else>-</span>
-        </template>
+          </template>
 
-        <!-- 库存列 -->
-        <template v-else-if="column.key === 'stock'">
-          <span :style="{ color: isStockLow(record) ? '#ff4d4f' : 'inherit' }">
-            {{ record.currentStock || 0 }}
-            <template v-if="record.warnStock && record.warnStock > 0 && isStockLow(record)">
-              (预警: {{ record.warnStock }})
+          <template v-else-if="column.key === 'code'">
+            <span class="cell-code">{{ record.code }}</span>
+          </template>
+
+          <template v-else-if="column.key === 'specs'">
+            <template v-if="record.specs && record.specs.length > 0">
+              <a-tag v-for="spec in record.specs" :key="spec" class="spec-tag">{{ spec }}</a-tag>
             </template>
-          </span>
+            <span v-else class="cell-muted">-</span>
+          </template>
+
+          <template v-else-if="column.key === 'currentStock'">
+            <span class="stock-num" :class="{ 'text-danger': record.isWarning }">
+              {{ record.current_stock }}
+            </span>
+          </template>
+
+          <template v-else-if="column.key === 'warnStock'">
+            <span class="stock-num text-muted">{{ record.warn_stock }}</span>
+          </template>
+
+          <template v-else-if="column.key === 'warningStatus'">
+            <a-tag :class="record.isWarning ? 'tag-warning' : 'tag-normal'">
+              {{ record.isWarning ? '库存不足' : '正常' }}
+            </a-tag>
+          </template>
+
+          <template v-else-if="column.key === 'actions'">
+            <a-space :size="4">
+              <a-button type="link" size="small" @click="handleEdit(record)">编辑</a-button>
+              <a-popconfirm title="确定要删除此零件吗？" ok-text="删除" cancel-text="取消" @confirm="handleDelete(record)">
+                <a-button type="link" size="small" danger>删除</a-button>
+              </a-popconfirm>
+            </a-space>
+          </template>
         </template>
+      </a-table>
+    </a-card>
 
-        <!-- 状态列 -->
-        <template v-else-if="column.key === 'status'">
-          <a-tag :color="record.status === 1 ? 'green' : 'red'">
-            {{ record.status === 1 ? '启用' : '禁用' }}
-          </a-tag>
-        </template>
-
-        <!-- 创建时间列 -->
-        <template v-else-if="column.key === 'createdAt'">
-          {{ formatDate(record.createdAt) }}
-        </template>
-
-        <!-- 操作列 -->
-        <template v-else-if="column.key === 'actions'">
-          <a-space>
-            <a-button
-              type="link"
-              size="small"
-              @click="handleEdit(record)"
-            >
-              编辑
-            </a-button>
-
-            <a-button
-              type="link"
-              size="small"
-              @click="handleViewHistory(record)"
-            >
-              查看历史
-            </a-button>
-
-            <a-button
-              type="link"
-              size="small"
-              @click="handleInventoryCheck(record)"
-            >
-              盘点
-            </a-button>
-
-            <a-button
-              type="link"
-              size="small"
-              @click="handleToggleStatus(record)"
-            >
-              {{ record.status === 1 ? '禁用' : '启用' }}
-            </a-button>
-
-            <a-popconfirm
-              title="确定要删除此库存件吗？"
-              ok-text="确定"
-              cancel-text="取消"
-              @confirm="handleDelete(record)"
-            >
-              <a-button type="link" size="small" danger>
-                删除
-              </a-button>
-            </a-popconfirm>
-          </a-space>
-        </template>
-      </template>
-    </a-table>
-
-    <!-- 库存件表单弹窗 -->
-    <InventoryItemForm
-      v-model:visible="formVisible"
-      :item="currentItem"
-      @success="handleFormSuccess"
-    />
-
-    <!-- 盘点弹窗 -->
-    <a-modal
-      v-model:open="checkModalVisible"
-      title="库存盘点"
-      :confirm-loading="checkLoading"
-      @ok="handleInventoryCheckSubmit"
-      @cancel="handleCheckModalCancel"
-    >
-      <a-form
-        ref="checkFormRef"
-        :model="checkForm"
-        layout="vertical"
-      >
-        <a-form-item label="库存件名称">
-          <a-input :value="currentCheckItem?.name" disabled />
-        </a-form-item>
-
-        <a-form-item label="当前库存">
-          <a-input :value="currentCheckItem?.currentStock || 0" disabled />
-        </a-form-item>
-
-        <a-form-item
-          label="实际数量"
-          name="actualQuantity"
-          :rules="[{ required: true, message: '请输入实际数量' }]"
-        >
-          <a-input-number
-            v-model:value="checkForm.actualQuantity"
-            :min="0"
-            :precision="0"
-            style="width: 100%"
-            placeholder="请输入实际盘点的数量"
-          />
-        </a-form-item>
-
-        <a-form-item label="备注" name="notes">
-          <a-textarea
-            v-model:value="checkForm.notes"
-            :rows="4"
-            placeholder="请输入盘点备注信息"
-            :maxlength="500"
-            show-count
-          />
-        </a-form-item>
-      </a-form>
-    </a-modal>
-  </a-card>
+    <InventoryItemForm v-model:visible="formVisible" :item="currentItem" @success="handleFormSuccess" />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
-import { message } from 'ant-design-vue';
-import { PlusOutlined } from '@ant-design/icons-vue';
-import { inventoryApi } from '@/api/inventory';
-import type { InventoryItem, ItemType } from '@/api/inventory';
-import InventoryItemForm from '@/components/inventory/InventoryItemForm.vue';
+  import { ref, reactive, onMounted } from 'vue'
+  import { message } from 'ant-design-vue'
+  import { PlusOutlined, SearchOutlined, TagOutlined } from '@ant-design/icons-vue'
+  import { inventoryApi } from '@/api/inventory'
+  import type { InventoryItem, ItemType } from '@/api/inventory'
+  import InventoryItemForm from '@/components/inventory/InventoryItemForm.vue'
 
-// 表格列定义
-const columns = [
-  {
-    title: '类型',
-    dataIndex: 'type',
-    key: 'type',
-    width: 100
-  },
-  {
-    title: '名称',
-    dataIndex: 'name',
-    key: 'name'
-  },
-  {
-    title: '代码',
-    dataIndex: 'code',
-    key: 'code'
-  },
-  {
-    title: '关联产品',
-    dataIndex: 'productName',
-    key: 'productName'
-  },
-  {
-    title: '规格',
-    dataIndex: 'specifications',
-    key: 'specifications',
-    width: 150
-  },
-  {
-    title: '库存',
-    key: 'stock',
-    width: 120
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    width: 80
-  },
-  {
-    title: '创建时间',
-    dataIndex: 'createdAt',
-    key: 'createdAt',
-    width: 180
-  },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 300
-  }
-];
+  const columns = [
+    { title: '类型', dataIndex: 'type', key: 'type', width: 100, align: 'center' },
+    { title: '名称', dataIndex: 'name', key: 'name', width: 140, ellipsis: true, align: 'center' },
+    { title: '编码', dataIndex: 'code', key: 'code', width: 130, align: 'center' },
+    { title: '规格', key: 'specs', width: 220, align: 'center' },
+    { title: '库存', key: 'currentStock', width: 100, align: 'center' },
+    { title: '预警库存', key: 'warnStock', width: 110, align: 'center' },
+    { title: '预警状态', key: 'warningStatus', width: 120, align: 'center' },
+    { title: '操作', key: 'actions', width: 140, align: 'center' }
+  ]
 
-// 状态管理
-const loading = ref(false);
-const inventoryItems = ref<InventoryItem[]>([]);
-const formVisible = ref(false);
-const currentItem = ref<InventoryItem | null>(null);
-const typeFilter = ref<ItemType | ''>('');
+  const loading = ref(false)
+  const items = ref<InventoryItem[]>([])
+  const formVisible = ref(false)
+  const currentItem = ref<InventoryItem | null>(null)
 
-// 盘点相关状态
-const checkModalVisible = ref(false);
-const checkLoading = ref(false);
-const checkFormRef = ref();
-const currentCheckItem = ref<InventoryItem | null>(null);
-const checkForm = ref({
-  actualQuantity: 0,
-  notes: ''
-});
+  const filters = reactive<{
+    name: string
+    code: string
+    type: ItemType | undefined
+    isWarning: 1 | 2 | undefined
+  }>({
+    name: '',
+    code: '',
+    type: undefined,
+    isWarning: undefined
+  })
 
-// 判断库存是否过低
-const isStockLow = (item: InventoryItem) => {
-  if (!item.warnStock || !item.currentStock) return false;
-  return item.currentStock <= item.warnStock;
-};
+  const pagination = reactive({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+    showSizeChanger: true,
+    showTotal: (total: number) => `共 ${total} 条`
+  })
 
-// 加载库存列表
-const loadInventoryItems = async () => {
-  loading.value = true;
-  try {
-    const type = typeFilter.value || undefined;
-    const response = await inventoryApi.getInventoryItems(type);
-
-    if (response.result === 0) {
-      // 模拟添加库存信息（实际项目中应该从API获取）
-      inventoryItems.value = response.datas.map(item => ({
-        ...item,
-        currentStock: Math.floor(Math.random() * 100), // 模拟库存数量
-        isWarning: false // 模拟预警状态
-      }));
-    } else {
-      message.error(response.msg || '加载库存列表失败');
+  const loadItems = async () => {
+    loading.value = true
+    try {
+      const res = await inventoryApi.listItems({
+        pageIndex: pagination.current,
+        pageSize: pagination.pageSize,
+        name: filters.name || undefined,
+        code: filters.code || undefined,
+        type: filters.type,
+        isWarning: filters.isWarning
+      })
+      items.value = res.datas.items
+      pagination.total = res.datas.total
+    } catch {
+      // 错误由 request 拦截器统一处理
+    } finally {
+      loading.value = false
     }
-  } catch (error) {
-    console.error('加载库存列表失败:', error);
-    message.error('加载库存列表失败');
-  } finally {
-    loading.value = false;
   }
-};
 
-// 类型筛选变化
-const handleTypeFilterChange = () => {
-  loadInventoryItems();
-};
-
-// 新建库存件
-const handleCreate = () => {
-  currentItem.value = null;
-  formVisible.value = true;
-};
-
-// 编辑库存件
-const handleEdit = (item: InventoryItem) => {
-  currentItem.value = item;
-  formVisible.value = true;
-};
-
-// 删除库存件
-const handleDelete = async (item: InventoryItem) => {
-  try {
-    const response = await inventoryApi.deleteInventoryItem(item.itemId);
-    if (response.result === 0) {
-      message.success('删除成功');
-      await loadInventoryItems();
-    } else {
-      message.error(response.msg || '删除失败');
-    }
-  } catch (error) {
-    console.error('删除库存件失败:', error);
-    message.error('删除库存件失败');
+  const handleSearch = () => {
+    pagination.current = 1
+    loadItems()
   }
-};
 
-// 切换状态
-const handleToggleStatus = async (item: InventoryItem) => {
-  const newStatus = item.status === 1 ? 2 : 1;
-  const statusText = newStatus === 1 ? '启用' : '禁用';
-
-  try {
-    const response = await inventoryApi.updateInventoryItemStatus(item.itemId, newStatus);
-    if (response.result === 0) {
-      message.success(`${statusText}成功`);
-      await loadInventoryItems();
-    } else {
-      message.error(response.msg || `${statusText}失败`);
-    }
-  } catch (error) {
-    console.error('更新状态失败:', error);
-    message.error('更新状态失败');
+  const handleReset = () => {
+    filters.name = ''
+    filters.code = ''
+    filters.type = undefined
+    filters.isWarning = undefined
+    pagination.current = 1
+    loadItems()
   }
-};
 
-// 查看历史
-const handleViewHistory = (item: InventoryItem) => {
-  // TODO: Navigate to stock history view
-  message.info(`查看库存件 "${item.name}" 的历史记录`);
-};
-
-// 库存盘点
-const handleInventoryCheck = (item: InventoryItem) => {
-  currentCheckItem.value = item;
-  checkForm.value = {
-    actualQuantity: item.currentStock || 0,
-    notes: ''
-  };
-  checkModalVisible.value = true;
-};
-
-// 提交盘点
-const handleInventoryCheckSubmit = async () => {
-  if (!currentCheckItem.value) return;
-
-  try {
-    await checkFormRef.value?.validate();
-
-    checkLoading.value = true;
-
-    const response = await inventoryApi.inventoryCheck({
-      itemId: currentCheckItem.value.itemId,
-      actualQuantity: checkForm.value.actualQuantity,
-      notes: checkForm.value.notes
-    });
-
-    if (response.result === 0) {
-      message.success('盘点成功');
-      checkModalVisible.value = false;
-      await loadInventoryItems();
-    } else {
-      message.error(response.msg || '盘点失败');
+  const handleFilterChange = (e: any) => {
+    if (e?.target?.value === '') {
+      handleSearch()
     }
-  } catch (error) {
-    if (error && typeof error === 'object' && 'errorFields' in error) {
-      console.log('表单验证失败:', error);
-    } else {
-      console.error('盘点失败:', error);
-      message.error('盘点失败');
-    }
-  } finally {
-    checkLoading.value = false;
   }
-};
 
-// 取消盘点
-const handleCheckModalCancel = () => {
-  checkModalVisible.value = false;
-  checkFormRef.value?.clearValidate();
-};
+  const handleTableChange = (pag: any) => {
+    pagination.current = pag.current
+    pagination.pageSize = pag.pageSize
+    loadItems()
+  }
 
-// 表单提交成功回调
-const handleFormSuccess = () => {
-  formVisible.value = false;
-  loadInventoryItems();
-};
+  const handleCreate = () => {
+    currentItem.value = null
+    formVisible.value = true
+  }
 
-// 格式化日期
-const formatDate = (date: Date | string) => {
-  if (!date) return '-';
-  const d = new Date(date);
-  return d.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
+  const handleEdit = (item: InventoryItem) => {
+    currentItem.value = item
+    formVisible.value = true
+  }
 
-// 组件挂载时加载数据
-onMounted(() => {
-  loadInventoryItems();
-});
+  const handleDelete = async (item: InventoryItem) => {
+    try {
+      await inventoryApi.deleteItem(item.item_id)
+      message.success('删除成功')
+      if (items.value.length === 1 && pagination.current > 1) {
+        pagination.current -= 1
+      }
+      await loadItems()
+    } catch {
+      // 错误由 request 拦截器统一处理
+    }
+  }
+
+  const handleFormSuccess = () => {
+    formVisible.value = false
+    loadItems()
+  }
+
+  onMounted(() => {
+    loadItems()
+  })
 </script>
 
-<style scoped lang="scss">
-:deep(.ant-card) {
-  .ant-card-head-title {
+<style scoped>
+  .page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .page-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .filters {
+    flex-wrap: wrap;
+  }
+
+  .filter-input {
+    width: 200px;
+  }
+
+  .filter-select {
+    width: 140px;
+  }
+
+  .filter-input :deep(.ant-input-affix-wrapper),
+  .filter-select :deep(.ant-select-selector) {
+    border-radius: 8px !important;
+  }
+
+  .filter-input :deep(.ant-input-affix-wrapper-focused) {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  }
+
+  .create-btn {
+    border-radius: 8px;
+    background: #2563eb;
+    border-color: #2563eb;
+    font-weight: 500;
+    transition: all 0.18s ease;
+  }
+
+  .create-btn:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(37, 99, 235, 0.28);
+  }
+
+  .table-card {
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  .table-card :deep(.ant-card-body) {
+    padding: 0;
+  }
+
+  .table-card :deep(.ant-table-thead > tr > th) {
+    background: #fafafa;
     font-weight: 600;
+    font-size: 16px;
+    color: #52525b;
+    border-bottom: 1px solid #e4e4e7;
   }
-}
 
-:deep(.ant-table) {
-  .ant-table-tbody > tr {
-    cursor: pointer;
+  .table-card :deep(.ant-table-tbody > tr > td) {
+    font-size: 16px;
   }
-}
 
-:deep(.ant-space-item) {
-  display: flex;
-  align-items: center;
-}
+  /* 隔行灰底（偶数行） */
+  .table-card :deep(.ant-table-tbody > tr:nth-child(even) > td) {
+    background: #e8f0f8;
+  }
+
+  /* hover 时覆盖为浅蓝（写在隔行规则之后以确保生效） */
+  .table-card :deep(.ant-table-tbody > tr:hover > td) {
+    background: #cadff9;
+  }
+
+  /* 类型标签 */
+  .tag-device {
+    background: rgba(37, 99, 235, 0.1) !important;
+    color: #2563eb !important;
+    border-color: transparent !important;
+    border-radius: 4px;
+    font-size: 12px;
+    margin: 0;
+  }
+
+  .tag-common {
+    background: rgba(16, 185, 129, 0.1) !important;
+    color: #059669 !important;
+    border-color: transparent !important;
+    border-radius: 4px;
+    font-size: 12px;
+    margin: 0;
+  }
+
+  /* 编码 monospace */
+  .cell-code {
+    font-family: 'Courier New', Consolas, monospace;
+    font-size: 16px;
+    color: #52525b;
+    background: #f4f4f5;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .cell-muted {
+    color: #a1a1aa;
+  }
+
+  /* 规格标签 */
+  .spec-tag {
+    background: #f4f4f5 !important;
+    color: #52525b !important;
+    border-color: transparent !important;
+    border-radius: 4px;
+    font-size: 16px;
+    margin: 2px 4px 2px 0;
+  }
+
+  /* 库存数字（等宽数字，右对齐便于比较） */
+  .stock-num {
+    font-weight: 600;
+    color: #18181b;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stock-num.text-muted {
+    font-weight: 500;
+    color: #71717a;
+  }
+
+  .stock-num.text-danger {
+    color: #dc2626;
+  }
+
+  /* 预警状态标签：绿色正常 / 红色库存不足 */
+  .tag-normal {
+    background: rgba(16, 185, 129, 0.1) !important;
+    color: #059669 !important;
+    border-color: transparent !important;
+    border-radius: 4px;
+    font-size: 13px;
+    margin: 0;
+  }
+
+  .tag-warning {
+    background: rgba(220, 38, 38, 0.1) !important;
+    color: #dc2626 !important;
+    border-color: transparent !important;
+    border-radius: 4px;
+    font-size: 13px;
+    margin: 0;
+  }
+
+  /* 操作按钮 */
+  .table-card :deep(.ant-btn-link) {
+    padding: 4px 8px;
+    height: auto;
+    font-size: 16px;
+  }
+
+  .table-card :deep(.ant-btn-link:hover) {
+    color: #2563eb;
+  }
+
+  .table-card :deep(.ant-btn-link.ant-btn-dangerous:hover) {
+    color: #dc2626;
+  }
+
+  /* 分页器 */
+  .table-card :deep(.ant-pagination) {
+    margin: 16px 24px;
+  }
+
+  @media (max-width: 768px) {
+    .page-head {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .filter-input,
+    .filter-select {
+      width: 100%;
+    }
+
+    .create-btn {
+      width: 100%;
+    }
+  }
 </style>

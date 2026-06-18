@@ -1,312 +1,134 @@
-import axios from 'axios';
+import { http } from '@/utils/request'
 
-// Create axios instance with baseURL from environment variable
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000'
-});
+// ============ 通用类型 ============
+export type ItemType = 'device' | 'common'
 
-// Generic API Response type
-export interface ApiResponse<T = any> {
-  result: number;
-  msg: string;
-  alg: string;
-  datas: T;
+export interface PaginatedData<T> {
+  total: number
+  items: T[]
 }
 
-// Product types
+// ============ 产品 ============
 export interface Product {
-  productId: string;
-  name: string;
-  code: string;
-  description: string;
-  status: number;
-  createdAt: Date;
-  updatedAt: Date;
+  product_id: string
+  name: string
+  code: string
+  description: string
 }
 
-export interface CreateProductRequest {
-  name: string;
-  code: string;
-  description: string;
-  specifications?: Record<string, any>;
+export interface ProductListQuery {
+  pageIndex: number
+  pageSize: number
+  name?: string
+  code?: string
 }
 
-export interface UpdateProductRequest {
-  name?: string;
-  code?: string;
-  description?: string;
-  specifications?: Record<string, any>;
+export interface ProductCreatePayload {
+  name: string
+  description?: string
 }
 
-// Inventory types
-export enum ItemType {
-  DEVICE = 'device',
-  COMMON = 'common'
+export interface ProductUpdatePayload {
+  product_id: string
+  name: string
+  description?: string
 }
 
+// ============ 零件 ============
 export interface InventoryItem {
-  itemId: string;
-  type: ItemType;
-  name: string;
-  code: string;
-  productId?: string;
-  productName?: string;
-  specifications?: Record<string, any>;
-  warnStock?: number;
-  currentStock?: number;
-  status: number;
-  createdAt: Date;
-  updatedAt: Date;
+  item_id: string
+  type: ItemType
+  name: string
+  code: string
+  specs: string[]
+  current_stock: number
+  warn_stock: number
+  isWarning: boolean
 }
 
-export interface CreateInventoryItemRequest {
-  type: ItemType;
-  name: string;
-  code: string;
-  productId?: string;
-  specifications?: Record<string, any>;
-  warnStock?: number;
+export interface ItemListQuery {
+  pageIndex: number
+  pageSize: number
+  type?: ItemType
+  name?: string
+  code?: string
+  isWarning?: 1 | 2
 }
 
-export interface UpdateInventoryItemRequest {
-  type?: ItemType;
-  name?: string;
-  code?: string;
-  productId?: string;
-  specifications?: Record<string, any>;
-  warnStock?: number;
+export interface ItemCreatePayload {
+  type: ItemType
+  name: string
+  specs?: string[]
+  warnStock?: number
 }
 
-// Stock types
-export interface StockInRequest {
-  itemId: string;
-  quantity: number;
-  batchNumber?: string;
-  notes?: string;
+export interface ItemUpdatePayload {
+  item_id: string
+  type: ItemType
+  name: string
+  specs?: string[]
+  warnStock?: number
 }
 
-export interface StockOutRequest {
-  itemId: string;
-  quantity: number;
-  reason?: string;
-  notes?: string;
+// ============ 产品-零件关联 ============
+export interface ProductItemRelation {
+  relation_id: string
+  product_id: string
+  item_id: string
+  quantity_per_product: number
+  remark: string | null
+  item_name: string
+  item_code: string
+  item_type: ItemType
+  current_stock: number
+  warn_stock: number
 }
 
-export interface StockRecord {
-  recordId: string;
-  itemId: string;
-  type: 'in' | 'out';
-  quantity: number;
-  batchNumber?: string;
-  reason?: string;
-  notes?: string;
-  createdAt: Date;
+export interface ProductItemPayload {
+  item_id: string
+  quantity_per_product?: number
+  remark?: string
 }
 
-export interface InventoryCheckRequest {
-  itemId: string;
-  actualQuantity: number;
-  notes?: string;
-}
-
-export interface InventoryWarning {
-  itemId: string;
-  itemName: string;
-  currentQuantity: number;
-  threshold: number;
-  warningLevel: 'low' | 'critical';
-}
-
-// Inventory API object
+// ============ API ============
 export const inventoryApi = {
-  // ==================== Product Methods ====================
-
-  /**
-   * Get all products
-   * GET /api/product
-   */
-  async getProducts(): Promise<ApiResponse<Product[]>> {
-    const { data } = await api.get<ApiResponse<Product[]>>('/api/product');
-    return data;
+  // ---- 产品 ----
+  listProducts(query: ProductListQuery) {
+    return http.get<PaginatedData<Product>>('/saleshub/inventory/listProducts', { params: query })
+  },
+  createProduct(payload: ProductCreatePayload) {
+    return http.post<{ product_id: string }>('/saleshub/inventory/createProduct', payload)
+  },
+  updateProduct(payload: ProductUpdatePayload) {
+    return http.post('/saleshub/inventory/updateProduct', payload)
+  },
+  deleteProduct(product_id: string) {
+    return http.post('/saleshub/inventory/deleteProduct', { product_id })
   },
 
-  /**
-   * Get a single product by ID
-   * GET /api/product/:id
-   */
-  async getProduct(id: string): Promise<ApiResponse<Product>> {
-    const { data } = await api.get<ApiResponse<Product>>(`/api/product/${id}`);
-    return data;
+  // ---- 零件 ----
+  listItems(query: ItemListQuery) {
+    return http.get<PaginatedData<InventoryItem>>('/saleshub/inventory/listItems', { params: query })
+  },
+  createItem(payload: ItemCreatePayload) {
+    return http.post<{ item_id: string }>('/saleshub/inventory/createItem', payload)
+  },
+  updateItem(payload: ItemUpdatePayload) {
+    return http.post('/saleshub/inventory/updateItem', payload)
+  },
+  deleteItem(item_id: string) {
+    return http.post('/saleshub/inventory/deleteItem', { item_id })
   },
 
-  /**
-   * Create a new product
-   * POST /api/product
-   */
-  async createProduct(product: CreateProductRequest): Promise<ApiResponse<Product>> {
-    const { data } = await api.post<ApiResponse<Product>>('/api/product', product);
-    return data;
+  // ---- 产品-零件关联（全量覆盖语义）----
+  setProductItems(product_id: string, items: ProductItemPayload[]) {
+    return http.post('/saleshub/inventory/setProductItems', { product_id, items })
   },
-
-  /**
-   * Update a product
-   * PUT /api/product/:id
-   */
-  async updateProduct(id: string, product: UpdateProductRequest): Promise<ApiResponse<Product>> {
-    const { data } = await api.put<ApiResponse<Product>>(`/api/product/${id}`, product);
-    return data;
-  },
-
-  /**
-   * Delete a product
-   * DELETE /api/product/:id
-   */
-  async deleteProduct(id: string): Promise<ApiResponse<void>> {
-    const { data } = await api.delete<ApiResponse<void>>(`/api/product/${id}`);
-    return data;
-  },
-
-  /**
-   * Update product status
-   * POST /api/product/:id/status
-   */
-  async updateProductStatus(id: string, status: number): Promise<ApiResponse<void>> {
-    const { data } = await api.post<ApiResponse<void>>(`/api/product/${id}/status`, { status });
-    return data;
-  },
-
-  // ==================== Inventory Methods ====================
-
-  /**
-   * Get inventory items with optional filters
-   * GET /api/inventory
-   */
-  async getInventoryItems(type?: ItemType, productId?: string): Promise<ApiResponse<InventoryItem[]>> {
-    const params: Record<string, string> = {};
-    if (type) params.type = type;
-    if (productId) params.productId = productId;
-
-    const { data } = await api.get<ApiResponse<InventoryItem[]>>('/api/inventory', { params });
-    return data;
-  },
-
-  /**
-   * Get a single inventory item by ID
-   * GET /api/inventory/:id
-   */
-  async getInventoryItem(id: string): Promise<ApiResponse<InventoryItem>> {
-    const { data } = await api.get<ApiResponse<InventoryItem>>(`/api/inventory/${id}`);
-    return data;
-  },
-
-  /**
-   * Create a new inventory item
-   * POST /api/inventory
-   */
-  async createInventoryItem(item: CreateInventoryItemRequest): Promise<ApiResponse<InventoryItem>> {
-    const { data } = await api.post<ApiResponse<InventoryItem>>('/api/inventory', item);
-    return data;
-  },
-
-  /**
-   * Update an inventory item
-   * PUT /api/inventory/:id
-   */
-  async updateInventoryItem(id: string, item: UpdateInventoryItemRequest): Promise<ApiResponse<InventoryItem>> {
-    const { data } = await api.put<ApiResponse<InventoryItem>>(`/api/inventory/${id}`, item);
-    return data;
-  },
-
-  /**
-   * Delete an inventory item
-   * DELETE /api/inventory/:id
-   */
-  async deleteInventoryItem(id: string): Promise<ApiResponse<void>> {
-    const { data } = await api.delete<ApiResponse<void>>(`/api/inventory/${id}`);
-    return data;
-  },
-
-  /**
-   * Update inventory item status
-   * POST /api/inventory/:id/status
-   */
-  async updateInventoryItemStatus(id: string, status: number): Promise<ApiResponse<void>> {
-    const { data } = await api.post<ApiResponse<void>>(`/api/inventory/${id}/status`, { status });
-    return data;
-  },
-
-  /**
-   * Get inventory warnings
-   * GET /api/inventory/warnings
-   */
-  async getWarnings(): Promise<ApiResponse<InventoryWarning[]>> {
-    const { data } = await api.get<ApiResponse<InventoryWarning[]>>('/api/inventory/warnings');
-    return data;
-  },
-
-  // ==================== Stock Methods ====================
-
-  /**
-   * Stock in operation
-   * POST /api/stock/in
-   */
-  async stockIn(data: StockInRequest): Promise<ApiResponse<StockRecord>> {
-    const response = await api.post<ApiResponse<StockRecord>>('/api/stock/in', data);
-    return response.data;
-  },
-
-  /**
-   * Stock out operation
-   * POST /api/stock/out
-   */
-  async stockOut(data: StockOutRequest): Promise<ApiResponse<StockRecord>> {
-    const response = await api.post<ApiResponse<StockRecord>>('/api/stock/out', data);
-    return response.data;
-  },
-
-  /**
-   * Get stock history with optional filters
-   * GET /api/stock/history
-   */
-  async getStockHistory(
-    itemId: string,
-    startDate?: Date,
-    endDate?: Date
-  ): Promise<ApiResponse<StockRecord[]>> {
-    const params: Record<string, string> = { itemId };
-    if (startDate) params.startDate = startDate.toISOString();
-    if (endDate) params.endDate = endDate.toISOString();
-
-    const { data } = await api.get<ApiResponse<StockRecord[]>>('/api/stock/history', { params });
-    return data;
-  },
-
-  /**
-   * Perform inventory check
-   * POST /api/stock/check
-   */
-  async inventoryCheck(data: InventoryCheckRequest): Promise<ApiResponse<void>> {
-    const response = await api.post<ApiResponse<void>>('/api/stock/check', data);
-    return response.data;
-  },
-
-  // ==================== File Methods ====================
-
-  /**
-   * Upload photo file
-   * POST /api/file/upload
-   */
-  async uploadPhoto(file: File): Promise<ApiResponse<{ url: string }>> {
-    const formData = new FormData();
-    formData.append('photo', file);
-
-    const { data } = await api.post<ApiResponse<{ url: string }>>('/api/file/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-    return data;
+  listProductItems(product_id: string) {
+    return http.get<{ items: ProductItemRelation[] }>('/saleshub/inventory/listProductItems', {
+      params: { product_id }
+    })
   }
-};
+}
 
-export default inventoryApi;
+export default inventoryApi

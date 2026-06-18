@@ -1,347 +1,242 @@
 <template>
   <a-modal
-    :visible="visible"
-    :title="isEditMode ? '编辑库存件' : '创建库存件'"
+    :open="visible"
+    :title="isEditMode ? '编辑零件' : '新建零件'"
     :confirm-loading="loading"
+    :width="520"
+    :mask-closable="false"
+    wrap-class-name="item-form-modal"
     @ok="handleSubmit"
     @cancel="handleCancel"
-    width="600px"
   >
-    <a-form
-      ref="formRef"
-      :model="form"
-      :rules="rules"
-      layout="vertical"
-    >
+    <a-form ref="formRef" :model="form" :rules="rules" layout="vertical" class="item-form">
       <a-form-item label="类型" name="type">
-        <a-radio-group v-model:value="form.type" button-style="solid">
-          <a-radio-button value="device">设备</a-radio-button>
-          <a-radio-button value="common">普通物品</a-radio-button>
+        <a-radio-group v-model:value="form.type" button-style="solid" class="type-radio">
+          <a-radio-button value="device">设备件</a-radio-button>
+          <a-radio-button value="common">常用件</a-radio-button>
         </a-radio-group>
       </a-form-item>
 
       <a-form-item label="名称" name="name">
         <a-input
           v-model:value="form.name"
-          placeholder="请输入名称"
+          placeholder="请输入零件名称"
           :maxlength="100"
           show-count
         />
       </a-form-item>
 
-      <a-form-item label="代码" name="code">
-        <a-input
-          v-model:value="form.code"
-          placeholder="请输入代码"
-          :maxlength="50"
-          show-count
-        />
+      <!-- 常用件支持规格；设备件规格字段无意义 -->
+      <a-form-item v-if="form.type === 'common'" label="规格选项" name="specs">
+        <spec-editor v-model:value="form.specs" />
       </a-form-item>
 
-      <!-- 设备类型：显示产品选择 -->
-      <a-form-item
-        v-if="form.type === 'device'"
-        label="关联产品"
-        name="productId"
-      >
-        <a-select
-          v-model:value="form.productId"
-          placeholder="请选择关联产品"
-          :loading="productsLoading"
-          :options="productOptions"
-          show-search
-          :filter-option="filterProductOption"
-        />
-      </a-form-item>
-
-      <!-- 普通物品类型：显示规格编辑器 -->
-      <a-form-item
-        v-if="form.type === 'common'"
-        label="规格"
-        name="specifications"
-      >
-        <spec-editor v-model:value="form.specifications" />
-      </a-form-item>
-
-      <a-form-item label="预警库存" name="warnStock">
+      <a-form-item label="预警阈值" name="warnStock" help="库存低于此值会标记为预警状态">
         <a-input-number
           v-model:value="form.warnStock"
-          placeholder="请输入预警库存"
-          :min="0"
+          placeholder="默认 10"
+          :min="1"
           :precision="0"
           style="width: 100%"
         />
       </a-form-item>
+
+      <div v-if="isEditMode" class="form-hint">
+        零件编码（{{ form.code || '-' }}）由系统自动生成，不可修改
+      </div>
     </a-form>
   </a-modal>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
-import { message } from 'ant-design-vue';
-import { inventoryApi } from '@/api/inventory';
-import type { InventoryItem, Product, ItemType } from '@/api/inventory';
-import SpecEditor from './SpecEditor.vue';
+import { ref, reactive, computed, watch } from 'vue'
+import { message } from 'ant-design-vue'
+import { inventoryApi } from '@/api/inventory'
+import type { InventoryItem, ItemType, ItemCreatePayload, ItemUpdatePayload } from '@/api/inventory'
+import SpecEditor from './SpecEditor.vue'
 
-// Props 定义
 interface Props {
-  visible: boolean;
-  item?: InventoryItem | null;
+  visible: boolean
+  item?: InventoryItem | null
 }
 
-const props = defineProps<Props>();
+const props = defineProps<Props>()
 
-// Emits 定义
 interface Emits {
-  (e: 'update:visible', value: boolean): void;
-  (e: 'success'): void;
+  (e: 'update:visible', value: boolean): void
+  (e: 'success'): void
 }
 
-const emit = defineEmits<Emits>();
+const emit = defineEmits<Emits>()
 
-// 表单引用
-const formRef = ref();
+const formRef = ref()
+const loading = ref(false)
 
-// 加载状态
-const loading = ref(false);
-const productsLoading = ref(false);
-
-// 产品列表
-const products = ref<Product[]>([]);
-
-// 表单数据
 interface FormData {
-  type: ItemType;
-  name: string;
-  code: string;
-  productId?: string;
-  specifications?: string[];
-  warnStock?: number;
+  type: ItemType
+  name: string
+  code: string
+  specs: string[]
+  warnStock: number | undefined
 }
 
-const form = ref<FormData>({
+const form = reactive<FormData>({
   type: 'device',
   name: '',
   code: '',
-  productId: undefined,
-  specifications: [],
+  specs: [],
   warnStock: undefined
-});
+})
 
-// 表单验证规则
-const rules = computed(() => ({
-  type: [
-    { required: true, message: '请选择类型', trigger: 'change' }
-  ],
+const rules = {
+  type: [{ required: true, message: '请选择类型', trigger: 'change' }],
   name: [
     { required: true, message: '请输入名称', trigger: 'blur' },
-    { max: 100, message: '名称最多100个字符', trigger: 'blur' }
+    { max: 100, message: '名称最多 100 个字符', trigger: 'blur' }
   ],
-  code: [
-    { required: true, message: '请输入代码', trigger: 'blur' },
-    { max: 50, message: '代码最多50个字符', trigger: 'blur' }
-  ],
-  productId: [
-    {
-      required: form.value.type === 'device',
-      message: '请选择关联产品',
-      trigger: 'change'
-    }
+  warnStock: [
+    { type: 'number', min: 1, message: '预警阈值最小为 1', trigger: 'blur' }
   ]
-}));
+}
 
-// 计算是否为编辑模式
-const isEditMode = computed(() => !!props.item);
+const isEditMode = computed(() => !!props.item)
 
-// 产品选项
-const productOptions = computed(() =>
-  products.value.map(product => ({
-    label: `${product.name} (${product.code})`,
-    value: product.productId
-  }))
-);
+function resetForm() {
+  form.type = 'device'
+  form.name = ''
+  form.code = ''
+  form.specs = []
+  form.warnStock = undefined
+  formRef.value?.clearValidate()
+}
 
-// 产品搜索过滤
-const filterProductOption = (input: string, option: { label: string; value: string }) => {
-  return option.label.toLowerCase().includes(input.toLowerCase());
-};
-
-// 加载产品列表
-const loadProducts = async () => {
-  productsLoading.value = true;
-  try {
-    const response = await inventoryApi.getProducts();
-    if (response.result === 0) {
-      products.value = response.datas.filter(p => p.status === 1); // 只显示启用的产品
-    } else {
-      message.error(response.msg || '加载产品列表失败');
-    }
-  } catch (error) {
-    console.error('加载产品列表失败:', error);
-    message.error('加载产品列表失败');
-  } finally {
-    productsLoading.value = false;
-  }
-};
-
-// 重置表单
-const resetForm = () => {
-  form.value = {
-    type: 'device',
-    name: '',
-    code: '',
-    productId: undefined,
-    specifications: [],
-    warnStock: undefined
-  };
-  formRef.value?.clearValidate();
-};
-
-// 填充表单数据（编辑模式）
-const populateForm = () => {
+function populateForm() {
   if (props.item) {
-    form.value = {
-      type: props.item.type,
-      name: props.item.name,
-      code: props.item.code,
-      productId: props.item.productId,
-      specifications: props.item.specifications ? Object.values(props.item.specifications) : [],
-      warnStock: props.item.warnStock
-    };
+    form.type = props.item.type
+    form.name = props.item.name
+    form.code = props.item.code
+    form.specs = [...(props.item.specs || [])]
+    form.warnStock = props.item.warn_stock
   }
-};
+}
 
-// 监听 visible 变化
-watch(() => props.visible, (newVal) => {
-  if (newVal) {
-    // Modal 打开时
-    if (props.item) {
-      populateForm();
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible) {
+      if (props.item) populateForm()
+      else resetForm()
     } else {
-      resetForm();
+      resetForm()
     }
-    // 加载产品列表
-    loadProducts();
-  } else {
-    // Modal 关闭时重置表单
-    resetForm();
   }
-});
+)
 
-// 监听类型变化，清空相关字段
-watch(() => form.value.type, (newType) => {
-  if (newType === 'device') {
-    form.value.specifications = [];
-  } else {
-    form.value.productId = undefined;
+// 切换类型时清空规格（设备件规格无意义）
+watch(
+  () => form.type,
+  (newType) => {
+    if (newType === 'device') {
+      form.specs = []
+    }
   }
-  // 重新验证
-  formRef.value?.validateFields(['productId']);
-});
+)
 
-// 提交表单
-const handleSubmit = async () => {
+async function handleSubmit() {
   try {
-    // 验证表单
-    await formRef.value?.validate();
+    await formRef.value?.validate()
+  } catch {
+    return
+  }
 
-    loading.value = true;
-
-    // 准备提交数据
-    const submitData: any = {
-      type: form.value.type,
-      name: form.value.name,
-      code: form.value.code,
-      warnStock: form.value.warnStock || 0
-    };
-
-    if (form.value.type === 'device') {
-      submitData.productId = form.value.productId;
-    } else {
-      // 将规格数组转换为对象
-      if (form.value.specifications && form.value.specifications.length > 0) {
-        submitData.specifications = form.value.specifications.reduce((acc, spec, index) => {
-          acc[`spec_${index}`] = spec;
-          return acc;
-        }, {} as Record<string, string>);
-      }
-    }
+  loading.value = true
+  try {
+    // 仅当常用件且规格数组非空时才传 specs
+    const specs = form.type === 'common' && form.specs.length > 0 ? form.specs.filter((s) => s.trim() !== '') : undefined
+    const trimmedSpecs = specs && specs.length > 0 ? specs : undefined
 
     if (isEditMode.value) {
-      // 编辑模式：更新库存件
-      const response = await inventoryApi.updateInventoryItem(
-        props.item!.itemId,
-        submitData
-      );
-
-      if (response.result === 0) {
-        message.success('库存件更新成功');
-        emit('success');
-        emit('update:visible', false);
-      } else {
-        message.error(response.msg || '库存件更新失败');
+      const payload: ItemUpdatePayload = {
+        item_id: props.item!.item_id,
+        type: form.type,
+        name: form.name,
+        specs: trimmedSpecs,
+        warnStock: form.warnStock
       }
+      await inventoryApi.updateItem(payload)
+      message.success('零件更新成功')
     } else {
-      // 创建模式：新建库存件
-      const response = await inventoryApi.createInventoryItem(submitData);
-
-      if (response.result === 0) {
-        message.success('库存件创建成功');
-        emit('success');
-        emit('update:visible', false);
-      } else {
-        message.error(response.msg || '库存件创建失败');
+      const payload: ItemCreatePayload = {
+        type: form.type,
+        name: form.name,
+        specs: trimmedSpecs,
+        warnStock: form.warnStock
       }
+      await inventoryApi.createItem(payload)
+      message.success('零件创建成功')
     }
-  } catch (error) {
-    // 表单验证失败或API调用失败
-    if (error && typeof error === 'object' && 'errorFields' in error) {
-      // 表单验证失败，不显示消息（ant-design-vue会显示错误）
-      console.log('表单验证失败:', error);
-    } else {
-      // API调用失败
-      console.error('提交失败:', error);
-      message.error('操作失败，请稍后重试');
-    }
+    emit('success')
+    emit('update:visible', false)
+  } catch {
+    // 业务错误由 request 拦截器统一弹窗
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
-// 取消操作
-const handleCancel = () => {
-  emit('update:visible', false);
-};
-
-// 组件挂载时加载产品列表
-onMounted(() => {
-  if (props.visible) {
-    loadProducts();
-  }
-});
+function handleCancel() {
+  emit('update:visible', false)
+}
 </script>
 
-<style scoped lang="scss">
-:deep(.ant-modal) {
-  width: 600px;
+<style scoped>
+.item-form :deep(.ant-form-item-label > label) {
+  font-size: 13px;
+  font-weight: 500;
 }
 
-:deep(.ant-form-item) {
-  margin-bottom: 24px;
+.item-form :deep(.ant-input),
+.item-form :deep(.ant-input-affix-wrapper),
+.item-form :deep(textarea.ant-input),
+.item-form :deep(.ant-input-number) {
+  border-radius: 8px;
 }
 
-:deep(.ant-input-textarea-show-count::after) {
-  float: right;
-  margin-top: 4px;
-  color: rgba(0, 0, 0, 0.45);
+.item-form :deep(.ant-input-affix-wrapper-focused),
+.item-form :deep(.ant-input:focus),
+.item-form :deep(.ant-input-number-focused) {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
 }
 
-:deep(.ant-radio-group) {
+.type-radio {
   width: 100%;
+  display: flex;
 }
 
-:deep(.ant-radio-button-wrapper) {
+.type-radio :deep(.ant-radio-button-wrapper) {
   flex: 1;
   text-align: center;
+  border-radius: 8px;
+}
+
+.type-radio :deep(.ant-radio-button-wrapper:first-child) {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.type-radio :deep(.ant-radio-button-wrapper:last-child) {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.form-hint {
+  margin-top: -8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #71717a;
+  background: #f4f4f5;
+  border-radius: 6px;
+  line-height: 1.5;
 }
 </style>

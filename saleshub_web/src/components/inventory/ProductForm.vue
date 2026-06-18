@@ -1,17 +1,15 @@
 <template>
   <a-modal
-    :visible="visible"
-    :title="isEditMode ? '编辑产品' : '创建产品'"
+    :open="visible"
+    :title="isEditMode ? '编辑产品' : '新建产品'"
     :confirm-loading="loading"
+    :width="520"
+    :mask-closable="false"
+    wrap-class-name="product-form-modal"
     @ok="handleSubmit"
     @cancel="handleCancel"
   >
-    <a-form
-      ref="formRef"
-      :model="form"
-      :rules="rules"
-      layout="vertical"
-    >
+    <a-form ref="formRef" :model="form" :rules="rules" layout="vertical" class="product-form">
       <a-form-item label="产品名称" name="name">
         <a-input
           v-model:value="form.name"
@@ -21,192 +19,159 @@
         />
       </a-form-item>
 
-      <a-form-item label="产品代码" name="code">
-        <a-input
-          v-model:value="form.code"
-          placeholder="请输入产品代码"
-          :maxlength="50"
-          show-count
-        />
-      </a-form-item>
-
       <a-form-item label="产品描述" name="description">
         <a-textarea
           v-model:value="form.description"
-          placeholder="请输入产品描述"
+          placeholder="请输入产品描述（可选）"
           :rows="4"
           :maxlength="500"
           show-count
         />
       </a-form-item>
+
+      <div v-if="isEditMode" class="form-hint">
+        产品编码（{{ form.code || '-' }}）由系统自动生成，不可修改
+      </div>
     </a-form>
   </a-modal>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import { message } from 'ant-design-vue';
-import { inventoryApi } from '@/api/inventory';
-import type { Product } from '@/api/inventory';
+import { ref, reactive, computed, watch } from 'vue'
+import { message } from 'ant-design-vue'
+import { inventoryApi } from '@/api/inventory'
+import type { Product, ProductCreatePayload, ProductUpdatePayload } from '@/api/inventory'
 
-// Props 定义
 interface Props {
-  visible: boolean;
-  product?: Product | null;
+  visible: boolean
+  product?: Product | null
 }
 
-const props = defineProps<Props>();
+const props = defineProps<Props>()
 
-// Emits 定义
 interface Emits {
-  (e: 'update:visible', value: boolean): void;
-  (e: 'success'): void;
+  (e: 'update:visible', value: boolean): void
+  (e: 'success'): void
 }
 
-const emit = defineEmits<Emits>();
+const emit = defineEmits<Emits>()
 
-// 表单引用
-const formRef = ref();
+const formRef = ref()
+const loading = ref(false)
 
-// 加载状态
-const loading = ref(false);
+interface FormData {
+  name: string
+  code: string
+  description: string
+}
 
-// 表单数据
-const form = ref({
+const form = reactive<FormData>({
   name: '',
   code: '',
   description: ''
-});
+})
 
-// 表单验证规则
 const rules = {
   name: [
     { required: true, message: '请输入产品名称', trigger: 'blur' },
-    { max: 100, message: '产品名称最多100个字符', trigger: 'blur' }
+    { max: 100, message: '产品名称最多 100 个字符', trigger: 'blur' }
   ],
-  code: [
-    { required: true, message: '请输入产品代码', trigger: 'blur' },
-    { max: 50, message: '产品代码最多50个字符', trigger: 'blur' }
-  ],
-  description: [
-    { max: 500, message: '产品描述最多500个字符', trigger: 'blur' }
-  ]
-};
+  description: [{ max: 500, message: '产品描述最多 500 个字符', trigger: 'blur' }]
+}
 
-// 计算是否为编辑模式
-const isEditMode = computed(() => !!props.product);
+const isEditMode = computed(() => !!props.product)
 
-// 重置表单
-const resetForm = () => {
-  form.value = {
-    name: '',
-    code: '',
-    description: ''
-  };
-  formRef.value?.clearValidate();
-};
+function resetForm() {
+  form.name = ''
+  form.code = ''
+  form.description = ''
+  formRef.value?.clearValidate()
+}
 
-// 填充表单数据（编辑模式）
-const populateForm = () => {
+function populateForm() {
   if (props.product) {
-    form.value = {
-      name: props.product.name || '',
-      code: props.product.code || '',
-      description: props.product.description || ''
-    };
+    form.name = props.product.name || ''
+    form.code = props.product.code || ''
+    form.description = props.product.description || ''
   }
-};
+}
 
-// 监听 visible 变化
-watch(() => props.visible, (newVal) => {
-  if (newVal) {
-    // Modal 打开时
-    if (props.product) {
-      populateForm();
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible) {
+      if (props.product) populateForm()
+      else resetForm()
     } else {
-      resetForm();
+      resetForm()
     }
-  } else {
-    // Modal 关闭时重置表单
-    resetForm();
   }
-});
+)
 
-// 提交表单
-const handleSubmit = async () => {
+async function handleSubmit() {
   try {
-    // 验证表单
-    await formRef.value?.validate();
-
-    loading.value = true;
-
-    if (isEditMode.value) {
-      // 编辑模式：更新产品
-      const response = await inventoryApi.updateProduct(
-        props.product!.productId,
-        {
-          name: form.value.name,
-          code: form.value.code,
-          description: form.value.description
-        }
-      );
-
-      if (response.result === 0) {
-        message.success('产品更新成功');
-        emit('success');
-        emit('update:visible', false);
-      } else {
-        message.error(response.msg || '产品更新失败');
-      }
-    } else {
-      // 创建模式：新建产品
-      const response = await inventoryApi.createProduct({
-        name: form.value.name,
-        code: form.value.code,
-        description: form.value.description
-      });
-
-      if (response.result === 0) {
-        message.success('产品创建成功');
-        emit('success');
-        emit('update:visible', false);
-      } else {
-        message.error(response.msg || '产品创建失败');
-      }
-    }
-  } catch (error) {
-    // 表单验证失败或API调用失败
-    if (error && typeof error === 'object' && 'errorFields' in error) {
-      // 表单验证失败，不显示消息（ant-design-vue会显示错误）
-      console.log('表单验证失败:', error);
-    } else {
-      // API调用失败
-      console.error('提交失败:', error);
-      message.error('操作失败，请稍后重试');
-    }
-  } finally {
-    loading.value = false;
+    await formRef.value?.validate()
+  } catch {
+    return
   }
-};
 
-// 取消操作
-const handleCancel = () => {
-  emit('update:visible', false);
-};
+  loading.value = true
+  try {
+    if (isEditMode.value) {
+      const payload: ProductUpdatePayload = {
+        product_id: props.product!.product_id,
+        name: form.name,
+        description: form.description
+      }
+      await inventoryApi.updateProduct(payload)
+      message.success('产品更新成功')
+    } else {
+      const payload: ProductCreatePayload = {
+        name: form.name,
+        description: form.description
+      }
+      await inventoryApi.createProduct(payload)
+      message.success('产品创建成功')
+    }
+    emit('success')
+    emit('update:visible', false)
+  } catch {
+    // 业务错误由 request 拦截器统一弹窗
+  } finally {
+    loading.value = false
+  }
+}
+
+function handleCancel() {
+  emit('update:visible', false)
+}
 </script>
 
-<style scoped lang="scss">
-:deep(.ant-modal) {
-  width: 600px;
+<style scoped>
+.product-form :deep(.ant-form-item-label > label) {
+  font-size: 13px;
+  font-weight: 500;
 }
 
-:deep(.ant-form-item) {
-  margin-bottom: 24px;
+.product-form :deep(.ant-input),
+.product-form :deep(.ant-input-affix-wrapper),
+.product-form :deep(textarea.ant-input) {
+  border-radius: 8px;
 }
 
-:deep(.ant-input-textarea-show-count::after) {
-  float: right;
-  margin-top: 4px;
-  color: rgba(0, 0, 0, 0.45);
+.product-form :deep(.ant-input-affix-wrapper-focused),
+.product-form :deep(.ant-input:focus) {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.form-hint {
+  margin-top: -8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #71717a;
+  background: #f4f4f5;
+  border-radius: 6px;
+  line-height: 1.5;
 }
 </style>

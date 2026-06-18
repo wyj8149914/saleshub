@@ -10,6 +10,8 @@ export interface ApiResponse<T = unknown> {
   datas: T
 }
 
+const PUBLIC_URLS = ['/saleshub/user/login', '/saleshub/user/refresh']
+
 const instance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
   timeout: 15000,
@@ -21,7 +23,8 @@ const instance = axios.create({
 instance.interceptors.request.use(
   (config) => {
     const authStore = useAuthStore()
-    if (authStore.token) {
+    const isPublic = PUBLIC_URLS.some((u) => config.url?.includes(u))
+    if (authStore.token && !isPublic) {
       config.headers.Authorization = `Bearer ${authStore.token}`
     }
     return config
