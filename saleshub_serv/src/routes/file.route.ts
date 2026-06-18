@@ -1,49 +1,54 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
+import { plainToInstance } from 'class-transformer';
+import { validationMiddleware } from '../middleware/paramsValidator';
 import { asyncHandler } from '../middleware/errorHandler.middleware';
-
-// 导入fileService（需要从service/inventory/index.ts导入单例）
+import { DeleteFileDto } from '../dto/file.dto';
 import { fileService } from '../service/file.service';
 
 const router = Router();
 
-// 配置multer使用内存存储
 const upload = multer({
     storage: multer.memoryStorage(),
 });
 
 /**
  * POST /upload
- * 上传照片文件
+ * 上传文件到 MinIO 并登记到 file 表
  */
 router.post(
     '/upload',
-    upload.single('photo'),
+    upload.single('file'),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-        // 检查文件是否存在
         if (!req.file) {
-            return res.status(400).json({
-                result: 1,
-                msg: '请选择要上传的文件',
-            });
+            res.locals.datas = { result: 1, msg: '请选择要上传的文件' };
+            next();
+            return;
         }
 
-        // 调用fileService上传文件
-        const result = await fileService.uploadPhoto({
+        const result = await fileService.upload({
             buffer: req.file.buffer,
             originalname: req.file.originalname,
+            mimetype: req.file.mimetype,
+            size: req.file.size,
         });
 
-        // 根据任务要求，返回 {result: 0, msg: '上传成功', datas: {url}} 或错误
-        if (result.result === 0) {
-            res.locals.datas = {
-                result: 0,
-                msg: '上传成功',
-                datas: { url: result.datas?.photoUrl },
-            };
-        } else {
-            res.locals.datas = result;
-        }
+        res.locals.datas = result;
+        next();
+    })
+);
+
+/**
+ * POST /delete
+ * 软删文件(status=2)
+ */
+router.post(
+    '/delete',
+    validationMiddleware(DeleteFileDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dto = plainToInstance(DeleteFileDto, req.body);
+        const result = await fileService.deleteByRelationId(dto.relation_id);
+        res.locals.datas = result;
         next();
     })
 );
