@@ -35,20 +35,28 @@
 位置:`src/entity/product.entity.ts`(与 `InventoryItem` 同文件)
 
 ```typescript
-@Entity({ schema: 'card', name: 'inventory_item_spec' })
+@Entity({ schema: 'inventory', name: 'inventory_item_spec' })
 @Unique('uq_item_spec', ['item_id', 'spec'])
 export class InventoryItemSpec {
-    @PrimaryColumn() spec_id: string;
-    @Column() item_id: string;
+    @PrimaryColumn({ type: 'varchar', length: 32 })
+    spec_id: string;
+
+    @Column({ type: 'varchar', length: 32, comment: '零件ID' })
+    item_id: string;
+
     @Column({ type: 'varchar', length: 100, comment: '规格值(空串代表默认 SKU)' })
     spec: string;
+
     @Column({ type: 'int', default: 0, comment: '当前库存' })
     current_stock: number;
+
     @Column({ type: 'int', default: 1, comment: '状态:1-正常,2-停用' })
     status: number;
-    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+
+    @Column({ type: 'timestamp', comment: '创建时间' })
     create_time: Date;
-    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+
+    @Column({ type: 'timestamp', comment: '更新时间' })
     update_time: Date;
 }
 ```
