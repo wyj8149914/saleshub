@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsArray, IsNumber, MaxLength, IsIn, IsInt, Min } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsArray, MaxLength, IsIn, IsInt, Min, IsString } from 'class-validator';
 import { PageDto } from './base.dto';
 
 export class CreateInventoryItemDto {
@@ -12,7 +12,7 @@ export class CreateInventoryItemDto {
     name: string;
 
     @IsOptional()
-    @IsArray()
+    @IsArray({ message: '规格必须是字符串数组' })
     specs: string[];
 
     @IsOptional()
@@ -20,6 +20,11 @@ export class CreateInventoryItemDto {
     @IsInt()
     @Min(1, { message: '预警库存不能小于1' })
     warnStock: number;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(32, { message: '图片ID长度不能超过32' })
+    image_id?: string;
 }
 
 export class UpdateInventoryItemDto extends CreateInventoryItemDto {

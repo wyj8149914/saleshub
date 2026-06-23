@@ -1,10 +1,25 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsInt, Min, IsDateString, MaxLength } from 'class-validator';
+import {
+    IsNotEmpty,
+    IsOptional,
+    IsInt,
+    Min,
+    IsDateString,
+    MaxLength,
+    IsArray,
+    ValidateNested,
+    IsString,
+} from 'class-validator';
 import { PageDto } from './base.dto';
 
 export class StockInDto {
     @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
+
+    @IsNotEmpty({ message: '入库规格不能为空(零件无规格时传空串)' })
+    @IsString()
+    @MaxLength(100, { message: '规格长度不能超过100' })
+    spec: string;
 
     @IsNotEmpty({ message: '入库数量不能为空' })
     @Type(() => Number)
@@ -32,6 +47,11 @@ export class StockOutDto {
     @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
 
+    @IsNotEmpty({ message: '出库规格不能为空(零件无规格时传空串)' })
+    @IsString()
+    @MaxLength(100, { message: '规格长度不能超过100' })
+    spec: string;
+
     @IsNotEmpty({ message: '出库数量不能为空' })
     @Type(() => Number)
     @IsInt({ message: '出库数量必须是整数' })
@@ -47,15 +67,28 @@ export class StockOutDto {
     remark?: string;
 }
 
-export class StockCheckDto {
-    @IsNotEmpty({ message: '零件ID不能为空' })
-    item_id: string;
+export class StockCheckSpecDto {
+    @IsNotEmpty({ message: '盘点规格不能为空(零件无规格时传空串)' })
+    @IsString()
+    @MaxLength(100, { message: '规格长度不能超过100' })
+    spec: string;
 
     @IsNotEmpty({ message: '盘点后库存不能为空' })
     @Type(() => Number)
     @IsInt({ message: '盘点后库存必须是整数' })
     @Min(0, { message: '盘点后库存不能小于0' })
     after_stock: number;
+}
+
+export class StockCheckDto {
+    @IsNotEmpty({ message: '零件ID不能为空' })
+    item_id: string;
+
+    @IsArray({ message: '盘点规格列表必须是数组' })
+    @IsNotEmpty({ message: '盘点规格列表不能为空' })
+    @ValidateNested({ each: true })
+    @Type(() => StockCheckSpecDto)
+    specs: StockCheckSpecDto[];
 
     @IsNotEmpty({ message: '盘点日期不能为空' })
     @IsDateString({}, { message: '盘点日期格式不正确' })

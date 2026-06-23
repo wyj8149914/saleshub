@@ -1,4 +1,4 @@
-import { InventoryItem, ProductItem } from '../../entity/product.entity';
+import { InventoryItem, InventoryItemSpec, ProductItem } from '../../entity/product.entity';
 import { StockInRecord, StockOutRecord, InventoryCheck } from '../../entity/stock.entity';
 import { StockInDto, StockOutDto, StockCheckDto, ListStockHistoryDto } from '../../dto/stock.dto';
 import { AppDataSource } from '../../config/database.config';
@@ -7,6 +7,7 @@ import { v7 } from 'uuid';
 
 export class StockService {
     private inventoryItemRepository = AppDataSource.getRepository(InventoryItem);
+    private inventoryItemSpecRepository = AppDataSource.getRepository(InventoryItemSpec);
     private productItemRepository = AppDataSource.getRepository(ProductItem);
     private stockInRepository = AppDataSource.getRepository(StockInRecord);
     private stockOutRepository = AppDataSource.getRepository(StockOutRecord);
@@ -25,24 +26,38 @@ export class StockService {
                 return { result: 1, msg: '零件不存在' };
             }
 
+            const spec = await this.inventoryItemSpecRepository.findOne({
+                where: { item_id: dto.item_id, spec: dto.spec, status: 1 },
+            });
+            if (!spec) {
+                return { result: 1, msg: `零件不存在规格 "${dto.spec}"` };
+            }
+
             const recordNo = await this.generateStockInRecordNo();
+            const now = new Date();
             const record = new StockInRecord();
             record.record_id = v7().replace(/-/g, '');
             record.record_no = recordNo;
             record.item_id = dto.item_id;
+            record.spec = dto.spec;
             record.quantity = dto.quantity;
             record.date = new Date(dto.date);
             record.photo_id = dto.photo_id;
             if (dto.remark) {
                 record.remark = dto.remark;
             }
+            record.status = 1;
+            record.create_time = now;
 
-            await this.stockInRepository.save(record);
-            const afterStock = item.current_stock + dto.quantity;
-            await this.inventoryItemRepository.update(
-                { item_id: dto.item_id },
-                { current_stock: afterStock }
-            );
+            const newStock = spec.current_stock + dto.quantity;
+            await this.inventoryItemSpecRepository.manager.transaction(async (manager) => {
+                await manager.save(StockInRecord, record);
+                await manager.update(
+                    InventoryItemSpec,
+                    { spec_id: spec.spec_id },
+                    { current_stock: newStock, update_time: now }
+                );
+            });
 
             return { result: 0, msg: '入库成功' };
         } catch (error) {
@@ -68,30 +83,50 @@ export class StockService {
             }
 
             const rel = await this.productItemRepository.findOne({
-                where: { product_id: dto.product_id, item_id: dto.item_id, status: 1 },
+                where: { product_id: dto.product_id, item_id: dto.item_id, spec: dto.spec, status: 1 },
             });
             if (!rel) {
-                return { result: 1, msg: '该零件未关联到此产品' };
+                return { result: 1, msg: '该零件+规格未关联到此产品' };
+            }
+
+            const spec = await this.inventoryItemSpecRepository.findOne({
+                where: { item_id: dto.item_id, spec: dto.spec, status: 1 },
+            });
+            if (!spec) {
+                return { result: 1, msg: `零件不存在规格 "${dto.spec}"` };
+            }
+            if (spec.current_stock < dto.quantity) {
+                return {
+                    result: 1,
+                    msg: `规格 "${dto.spec}" 库存不足(当前 ${spec.current_stock},需要 ${dto.quantity})`,
+                };
             }
 
             const recordNo = await this.generateStockOutRecordNo();
+            const now = new Date();
             const record = new StockOutRecord();
             record.record_id = v7().replace(/-/g, '');
             record.record_no = recordNo;
             record.product_id = dto.product_id;
             record.item_id = dto.item_id;
+            record.spec = dto.spec;
             record.quantity = dto.quantity;
             record.date = new Date(dto.date);
             if (dto.remark) {
                 record.remark = dto.remark;
             }
+            record.status = 1;
+            record.create_time = now;
 
-            await this.stockOutRepository.save(record);
-            const afterStock = item.current_stock - dto.quantity;
-            await this.inventoryItemRepository.update(
-                { item_id: dto.item_id },
-                { current_stock: afterStock }
-            );
+            const newStock = spec.current_stock - dto.quantity;
+            await this.inventoryItemSpecRepository.manager.transaction(async (manager) => {
+                await manager.save(StockOutRecord, record);
+                await manager.update(
+                    InventoryItemSpec,
+                    { spec_id: spec.spec_id },
+                    { current_stock: newStock, update_time: now }
+                );
+            });
 
             return { result: 0, msg: '出库成功' };
         } catch (error) {
@@ -101,7 +136,7 @@ export class StockService {
     }
 
     /**
-     * 查询零件历史记录（入库、出库、盘点）
+     * 查询零件历史记录(入库、出库、盘点)
      */
     async listHistory(dto: ListStockHistoryDto) {
         try {
@@ -125,19 +160,19 @@ export class StockService {
             }
 
             const inRecords = await this.stockInRepository
-                .createQueryBuilder('in')
+                .createQueryBuilder('rec')
                 .where('item_id = :itemId AND status = :status' + dateCondition, params)
                 .orderBy('create_time', 'DESC')
                 .getMany();
 
             const outRecords = await this.stockOutRepository
-                .createQueryBuilder('out')
+                .createQueryBuilder('rec')
                 .where('item_id = :itemId AND status = :status' + dateCondition, params)
                 .orderBy('create_time', 'DESC')
                 .getMany();
 
             const checkRecords = await this.inventoryCheckRepository
-                .createQueryBuilder('check')
+                .createQueryBuilder('rec')
                 .where('item_id = :itemId AND status = :status' + dateCondition, params)
                 .orderBy('create_time', 'DESC')
                 .getMany();
@@ -147,7 +182,6 @@ export class StockService {
                 ...outRecords.map((r: StockOutRecord) => ({ ...r, id: r.record_id, type: 'out' as const })),
                 ...checkRecords.map((r: InventoryCheck) => ({ ...r, id: r.check_id, type: 'check' as const })),
             ];
-
             mergedRecords.sort((a, b) => b.create_time.getTime() - a.create_time.getTime());
 
             const start = (dto.pageIndex - 1) * dto.pageSize;
@@ -162,7 +196,7 @@ export class StockService {
     }
 
     /**
-     * 库存盘点
+     * 库存盘点(批量,事务内执行)
      */
     async stockCheck(dto: StockCheckDto) {
         try {
@@ -173,22 +207,57 @@ export class StockService {
                 return { result: 1, msg: '零件不存在' };
             }
 
-            const beforeStock = item.current_stock;
-            const record = new InventoryCheck();
-            record.check_id = v7().replace(/-/g, '');
-            record.item_id = dto.item_id;
-            record.before_stock = beforeStock;
-            record.after_stock = dto.after_stock;
-            record.date = new Date(dto.date);
-            if (dto.remark) {
-                record.remark = dto.remark;
+            const specValues = dto.specs.map((s) => s.spec);
+            const dedup = new Set(specValues);
+            if (dedup.size !== specValues.length) {
+                return { result: 1, msg: '盘点规格列表存在重复' };
             }
 
-            await this.inventoryCheckRepository.save(record);
-            await this.inventoryItemRepository.update(
-                { item_id: dto.item_id },
-                { current_stock: dto.after_stock }
-            );
+            const specs = await this.inventoryItemSpecRepository
+                .createQueryBuilder('s')
+                .where('s.item_id = :itemId AND s.status = :status AND s.spec IN (:...specValues)', {
+                    itemId: dto.item_id,
+                    status: 1,
+                    specValues,
+                })
+                .getMany();
+            if (specs.length !== specValues.length) {
+                const found = new Set(specs.map((s) => s.spec));
+                const missing = specValues.filter((v) => !found.has(v));
+                return { result: 1, msg: `零件不存在规格: ${missing.join(',')}` };
+            }
+            const specMap = new Map(specs.map((s) => [s.spec, s]));
+
+            const now = new Date();
+            const checkDate = new Date(dto.date);
+
+            await this.inventoryCheckRepository.manager.transaction(async (manager) => {
+                for (const input of dto.specs) {
+                    const target = specMap.get(input.spec);
+                    if (!target) {
+                        throw new Error(`规格 "${input.spec}" 未找到`);
+                    }
+                    const before = target.current_stock;
+                    const checkRecord = new InventoryCheck();
+                    checkRecord.check_id = v7().replace(/-/g, '');
+                    checkRecord.item_id = dto.item_id;
+                    checkRecord.spec = input.spec;
+                    checkRecord.before_stock = before;
+                    checkRecord.after_stock = input.after_stock;
+                    checkRecord.date = checkDate;
+                    if (dto.remark) {
+                        checkRecord.remark = dto.remark;
+                    }
+                    checkRecord.status = 1;
+                    checkRecord.create_time = now;
+                    await manager.save(InventoryCheck, checkRecord);
+                    await manager.update(
+                        InventoryItemSpec,
+                        { spec_id: target.spec_id },
+                        { current_stock: input.after_stock, update_time: now }
+                    );
+                }
+            });
 
             return { result: 0, msg: '盘点成功' };
         } catch (error) {
@@ -198,7 +267,7 @@ export class StockService {
     }
 
     /**
-     * 生成入库记录编号：SI + 6位递增数字（如 SI000001）
+     * 生成入库记录编号:SI + 6位递增数字(如 SI000001)
      */
     private async generateStockInRecordNo() {
         const result = await this.stockInRepository
@@ -211,12 +280,11 @@ export class StockService {
         if (nextNum > 999999) {
             throw new Error('入库记录编号已达上限');
         }
-
         return `SI${String(nextNum).padStart(6, '0')}`;
     }
 
     /**
-     * 生成出库记录编号：SO + 6位递增数字（如 SO000001）
+     * 生成出库记录编号:SO + 6位递增数字(如 SO000001)
      */
     private async generateStockOutRecordNo() {
         const result = await this.stockOutRepository
@@ -229,7 +297,6 @@ export class StockService {
         if (nextNum > 999999) {
             throw new Error('出库记录编号已达上限');
         }
-
         return `SO${String(nextNum).padStart(6, '0')}`;
     }
 }

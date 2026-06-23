@@ -11,6 +11,9 @@ export class StockInRecord {
     @Column({ type: 'varchar', length: 32, comment: '零件ID' })
     item_id: string;
 
+    @Column({ type: 'varchar', length: 100, default: '', comment: '入库规格,空串为默认 SKU' })
+    spec: string;
+
     @Column({ type: 'int', comment: '入库数量' })
     quantity: number;
 
@@ -23,7 +26,7 @@ export class StockInRecord {
     @Column({ type: 'text', nullable: true, comment: '备注' })
     remark: string;
 
-    @Column({ type: 'int', default: 1, comment: '状态：1-正常，2-停用' })
+    @Column({ type: 'int', default: 1, comment: '状态:1-正常,2-停用' })
     status: number;
 
     @Column({ type: 'timestamp', comment: '创建时间' })
@@ -47,6 +50,9 @@ export class StockOutRecord {
     @Column({ type: 'varchar', length: 32, comment: '零件ID' })
     item_id: string;
 
+    @Column({ type: 'varchar', length: 100, default: '', comment: '出库规格,空串为默认 SKU' })
+    spec: string;
+
     @Column({ type: 'int', comment: '出库数量' })
     quantity: number;
 
@@ -56,7 +62,7 @@ export class StockOutRecord {
     @Column({ type: 'text', nullable: true, comment: '备注' })
     remark: string;
 
-    @Column({ type: 'int', default: 1, comment: '状态：1-正常，2-停用' })
+    @Column({ type: 'int', default: 1, comment: '状态:1-正常,2-停用' })
     status: number;
 
     @Column({ type: 'timestamp', comment: '创建时间' })
@@ -77,6 +83,9 @@ export class InventoryCheck {
     @Column({ type: 'varchar', length: 32, comment: '零件ID' })
     item_id: string;
 
+    @Column({ type: 'varchar', length: 100, default: '', comment: '盘点规格,空串为默认 SKU' })
+    spec: string;
+
     @Column({ type: 'int', comment: '盘点前库存' })
     before_stock: number;
 
@@ -89,7 +98,7 @@ export class InventoryCheck {
     @Column({ type: 'text', nullable: true, comment: '备注' })
     remark: string;
 
-    @Column({ type: 'int', default: 1, comment: '状态：1-正常，2-停用' })
+    @Column({ type: 'int', default: 1, comment: '状态:1-正常,2-停用' })
     status: number;
 
     @Column({ type: 'timestamp', comment: '创建时间' })
