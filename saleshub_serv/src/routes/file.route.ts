@@ -10,6 +10,9 @@ const router = Router();
 
 const upload = multer({
     storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 1024 * 1024 * 10, // 10MB
+    },
 });
 
 /**
@@ -25,10 +28,15 @@ router.post(
             next();
             return;
         }
-
+        let originalName = '';
+        try {
+            originalName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+        } catch (error) {
+            originalName = req.file.originalname;
+        }
         const result = await fileService.upload({
             buffer: req.file.buffer,
-            originalname: req.file.originalname,
+            originalname: originalName,
             mimetype: req.file.mimetype,
             size: req.file.size,
         });

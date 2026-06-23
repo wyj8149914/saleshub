@@ -42,7 +42,6 @@ class FileService {
     async upload(file: UploadFileInput): Promise<UploadResult> {
         try {
             const hash = crypto.createHash('sha256').update(file.buffer).digest('hex');
-
             const existing = await this.fileRepository.findOne({ where: { hash } });
             if (existing) {
                 if (existing.status === 2) {
@@ -50,6 +49,7 @@ class FileService {
                     existing.update_time = new Date();
                     await this.fileRepository.save(existing);
                 }
+                this.logger.info(`文件上传命中已有记录，hash=${hash}`);
                 return {
                     result: 0,
                     msg: '上传成功',

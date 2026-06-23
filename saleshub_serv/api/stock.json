@@ -1,0 +1,346 @@
+{
+    "/saleshub/inventory/stockIn": {
+        "method": "POST",
+        "summary": "入库",
+        "description": "对指定零件的指定规格进行入库操作。必须指定 spec（零件无规格时传空串表示默认 SKU）。事务执行：① 校验零件存在（status=1）；② 校验规格在 inventory_item_spec 中存在（status=1）；③ 写入入库记录（record_no 格式 SI + 6 位递增数字，如 SI000001；上限 999999，record_id 为 UUID v7 去连字符）；④ 将该规格库存（inventory_item_spec.current_stock）增加 quantity。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "item_id": {
+                    "type": "string",
+                    "description": "零件主键 UUID"
+                },
+                "spec": {
+                    "type": "string",
+                    "description": "入库规格（必填，需在零件规格列表中存在；零件无规格时传空串表示默认 SKU，最长 100 字符）"
+                },
+                "quantity": {
+                    "type": "number",
+                    "description": "入库数量，正整数（最小 1）"
+                },
+                "date": {
+                    "type": "string",
+                    "description": "入库日期，ISO 8601 格式（如 2026-06-24）"
+                },
+                "photo_id": {
+                    "type": "string",
+                    "description": "入库照片 ID（必填，关联 file.relation_id，最长 32 字符）"
+                },
+                "remark": {
+                    "type": "string",
+                    "description": "备注（可选，最长 500 字符）"
+                }
+            },
+            "required": [
+                "item_id",
+                "spec",
+                "quantity",
+                "date",
+                "photo_id"
+            ]
+        },
+        "example_request": {
+            "item_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "spec": "不锈钢",
+            "quantity": 100,
+            "date": "2026-06-24",
+            "photo_id": "0194b1c0a2d34e5f6789012345678aab",
+            "remark": "供应商A批次到货"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-零件不存在/零件不存在该规格/入库失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息；规格不存在时返回「零件不存在规格 \"xxx\"」"
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/stockOut": {
+        "method": "POST",
+        "summary": "出库",
+        "description": "对指定产品的指定零件+规格进行出库操作。仅设备件（type=device）可出库。必须同时指定 product_id 与 spec。事务执行：① 校验零件存在（status=1）；② 校验零件类型为 device；③ 校验该 (product_id, item_id, spec) 组合在 product_items 中存在有效关联（status=1）；④ 校验规格在 inventory_item_spec 中存在（status=1）；⑤ 校验该规格库存充足；⑥ 写入出库记录（record_no 格式 SO + 6 位递增数字，如 SO000001；上限 999999，record_id 为 UUID v7 去连字符）；⑦ 将该规格库存（inventory_item_spec.current_stock）减少 quantity。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string",
+                    "description": "产品主键 UUID"
+                },
+                "item_id": {
+                    "type": "string",
+                    "description": "零件主键 UUID"
+                },
+                "spec": {
+                    "type": "string",
+                    "description": "出库规格（必填，需在零件规格列表中存在且关联到该产品；零件无规格时传空串表示默认 SKU，最长 100 字符）"
+                },
+                "quantity": {
+                    "type": "number",
+                    "description": "出库数量，正整数（最小 1）"
+                },
+                "date": {
+                    "type": "string",
+                    "description": "出库日期，ISO 8601 格式（如 2026-06-24）"
+                },
+                "remark": {
+                    "type": "string",
+                    "description": "备注（可选，最长 500 字符）"
+                }
+            },
+            "required": [
+                "product_id",
+                "item_id",
+                "spec",
+                "quantity",
+                "date"
+            ]
+        },
+        "example_request": {
+            "product_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "item_id": "0194b1c0a2d34e5f6789012345678abc",
+            "spec": "不锈钢",
+            "quantity": 5,
+            "date": "2026-06-24",
+            "remark": "产线领料"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-零件不存在/非设备件不可出库/该零件+规格未关联到此产品/零件不存在该规格/库存不足/出库失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息；非设备件返回「只有设备件可以出库」；未关联返回「该零件+规格未关联到此产品」；库存不足返回「规格 \"xxx\" 库存不足(当前 N,需要 M)」"
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/stockCheck": {
+        "method": "POST",
+        "summary": "库存盘点",
+        "description": "对指定零件的多个规格批量盘点（事务内原子执行）。每个规格需指定盘点后的库存 after_stock。事务执行：① 校验零件存在（status=1）；② 校验盘点规格列表无重复；③ 校验所有规格在 inventory_item_spec 中存在（status=1）；④ 对每个规格：记录盘点前库存 before_stock 与盘点后库存 after_stock，写入盘点记录（inventory_check），并将该规格库存更新为 after_stock。任一规格失败则整体回滚。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "item_id": {
+                    "type": "string",
+                    "description": "零件主键 UUID"
+                },
+                "specs": {
+                    "type": "array",
+                    "description": "盘点规格列表（至少一条，规格不可重复）",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "spec": {
+                                "type": "string",
+                                "description": "盘点规格（必填，需在零件规格列表中存在；零件无规格时传空串表示默认 SKU，最长 100 字符）"
+                            },
+                            "after_stock": {
+                                "type": "number",
+                                "description": "盘点后的库存数量（非负整数，最小 0）"
+                            }
+                        },
+                        "required": [
+                            "spec",
+                            "after_stock"
+                        ]
+                    }
+                },
+                "date": {
+                    "type": "string",
+                    "description": "盘点日期，ISO 8601 格式（如 2026-06-24）"
+                },
+                "remark": {
+                    "type": "string",
+                    "description": "备注（可选，最长 500 字符，对所有规格共用）"
+                }
+            },
+            "required": [
+                "item_id",
+                "specs",
+                "date"
+            ]
+        },
+        "example_request": {
+            "item_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "specs": [
+                {
+                    "spec": "不锈钢",
+                    "after_stock": 95
+                },
+                {
+                    "spec": "镀锌",
+                    "after_stock": 40
+                }
+            ],
+            "date": "2026-06-24",
+            "remark": "月度盘点"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-零件不存在/盘点规格列表存在重复/零件不存在规格/盘点失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息；规格不存在时返回「零件不存在规格: <缺失规格列表>」"
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/listStockHistory": {
+        "method": "GET",
+        "summary": "库存操作历史",
+        "description": "查询指定零件的库存操作历史记录（入库、出库、盘点合并）。按 create_time 降序排列后分页。支持按日期范围筛选（start_date、end_date，闭区间，应用于各记录的 date 字段）。每条记录通过 type 字段区分类型：in-入库、out-出库、check-盘点。不同类型的记录字段不同：入库记录含 photo_id、record_no；出库记录含 product_id、record_no；盘点记录含 before_stock、after_stock。所有记录均含 spec 字段标识操作的具体规格。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "item_id": {
+                    "type": "string",
+                    "description": "零件主键 UUID（Query 参数）"
+                },
+                "pageIndex": {
+                    "type": "number",
+                    "description": "页码，从 1 开始（Query 参数）"
+                },
+                "pageSize": {
+                    "type": "number",
+                    "description": "每页条数（Query 参数）"
+                },
+                "start_date": {
+                    "type": "string",
+                    "description": "开始日期，ISO 8601 格式（Query 参数，可选，闭区间）"
+                },
+                "end_date": {
+                    "type": "string",
+                    "description": "结束日期，ISO 8601 格式（Query 参数，可选，闭区间）"
+                }
+            },
+            "required": [
+                "item_id",
+                "pageIndex",
+                "pageSize"
+            ]
+        },
+        "example_request": {
+            "item_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "pageIndex": 1,
+            "pageSize": 20,
+            "start_date": "2026-06-01",
+            "end_date": "2026-06-30"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-零件不存在/查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "历史记录分页结果",
+                    "properties": {
+                        "total": {
+                            "type": "number",
+                            "description": "符合条件的总条数（入库+出库+盘点合并后总数）"
+                        },
+                        "items": {
+                            "type": "array",
+                            "description": "历史记录列表，按 create_time 降序",
+                            "items": {
+                                "type": "object",
+                                "description": "历史记录，具体字段因 type 而异",
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "description": "记录主键（入库/出库为 record_id，盘点为 check_id）"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "in",
+                                            "out",
+                                            "check"
+                                        ],
+                                        "description": "记录类型：in-入库，out-出库，check-盘点"
+                                    },
+                                    "item_id": {
+                                        "type": "string",
+                                        "description": "零件 ID"
+                                    },
+                                    "spec": {
+                                        "type": "string",
+                                        "description": "操作的具体规格，空串为默认 SKU"
+                                    },
+                                    "quantity": {
+                                        "type": "number",
+                                        "description": "数量（仅入库 type=in / 出库 type=out 有此字段）"
+                                    },
+                                    "product_id": {
+                                        "type": "string",
+                                        "description": "产品 ID（仅出库 type=out 有此字段）"
+                                    },
+                                    "before_stock": {
+                                        "type": "number",
+                                        "description": "盘点前库存（仅盘点 type=check 有此字段）"
+                                    },
+                                    "after_stock": {
+                                        "type": "number",
+                                        "description": "盘点后库存（仅盘点 type=check 有此字段）"
+                                    },
+                                    "date": {
+                                        "type": "string",
+                                        "description": "操作日期"
+                                    },
+                                    "photo_id": {
+                                        "type": "string",
+                                        "description": "入库照片 ID（仅入库 type=in 有此字段，可能为 null）"
+                                    },
+                                    "remark": {
+                                        "type": "string",
+                                        "description": "备注，可能为 null"
+                                    },
+                                    "record_no": {
+                                        "type": "string",
+                                        "description": "记录编号（仅入库 type=in / 出库 type=out 有此字段；入库格式 SI+6位数字，出库格式 SO+6位数字）"
+                                    },
+                                    "status": {
+                                        "type": "number",
+                                        "description": "记录状态：1-正常，2-停用"
+                                    },
+                                    "create_time": {
+                                        "type": "string",
+                                        "description": "记录创建时间"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -2,7 +2,7 @@
     "/saleshub/inventory/listProducts": {
         "method": "GET",
         "summary": "产品列表",
-        "description": "分页查询当前正常状态（status=1）的产品。支持按名称 name 模糊匹配、编码 code 精确匹配筛选。按 create_time 降序。返回项不含状态与时间字段，仅含基础信息。",
+        "description": "分页查询当前正常状态（status=1）的产品。支持按名称 name 模糊匹配、编码 code 精确匹配筛选。按 create_time 降序。返回项不含状态与时间字段，仅含基础信息（含图片 ID）。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -75,6 +75,10 @@
                                     "description": {
                                         "type": "string",
                                         "description": "产品描述"
+                                    },
+                                    "image_id": {
+                                        "type": "string",
+                                        "description": "产品图片 ID（关联 file.relation_id），可能为 null"
                                     }
                                 }
                             }
@@ -99,6 +103,10 @@
                 "description": {
                     "type": "string",
                     "description": "产品描述（可选，最长 500 字符）"
+                },
+                "image_id": {
+                    "type": "string",
+                    "description": "产品图片 ID（可选，关联 file.relation_id，最长 32 字符）"
                 }
             },
             "required": [
@@ -107,7 +115,8 @@
         },
         "example_request": {
             "name": "智能终端 A1",
-            "description": "面向零售场景的一体化智能终端设备"
+            "description": "面向零售场景的一体化智能终端设备",
+            "image_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
         },
         "response_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
@@ -137,7 +146,7 @@
     "/saleshub/inventory/updateProduct": {
         "method": "POST",
         "summary": "更新产品",
-        "description": "更新产品基础信息（名称、描述）。仅当 product_id 对应的产品存在且 status=1 时可更新。name 为必填字段（直接覆盖原值）；description 传入时更新。",
+        "description": "更新产品基础信息（名称、描述、图片）。仅当 product_id 对应的产品存在且 status=1 时可更新。name 为必填字段（直接覆盖原值）；description 传入时更新（支持传 null 清空）；image_id 传入时更新（支持传 null 清空图片）。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -152,7 +161,11 @@
                 },
                 "description": {
                     "type": "string",
-                    "description": "产品描述（可选，最长 500 字符）"
+                    "description": "产品描述（可选，最长 500 字符；传入 null 可清空）"
+                },
+                "image_id": {
+                    "type": "string",
+                    "description": "产品图片 ID（可选，关联 file.relation_id；传入 null 可清空图片）"
                 }
             },
             "required": [
@@ -183,7 +196,7 @@
     "/saleshub/inventory/deleteProduct": {
         "method": "POST",
         "summary": "删除产品",
-        "description": "软删除产品（将 status 置为 2）。仅当 product_id 对应的产品存在时可操作。注意：当前实现不会同步处理 product_items 关联记录，需调用方自行决定是否清理。",
+        "description": "软删除产品（将 status 置为 2）。仅当 product_id 对应的产品存在时可操作。事务执行：同时将该产品及其所有有效关联记录（product_items.status=1）置为 status=2。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -218,7 +231,7 @@
     "/saleshub/inventory/setProductItems": {
         "method": "POST",
         "summary": "设置产品零件",
-        "description": "全量覆盖语义：传入 product_id 与完整的 item 列表，使该产品的有效关联（product_items.status=1）等价于传入列表。事务执行：① 校验产品存在（status=1）；② 校验 item_id 列表无重复；③ 校验所有 item_id 在 inventory_items 中存在且 status=1；④ 将该产品既有 product_items 全部置为 status=2；⑤ 插入新的关联记录（每条 relation_id 为 UUID v7 去连字符，quantity_per_product 当前固定为 1，remark 取入参）。注意：当前实现未使用入参中的 quantity_per_product，单台数量恒为 1。",
+        "description": "全量覆盖语义：传入 product_id 与完整的 item 列表（含规格），使该产品的有效关联（product_items.status=1）等价于传入列表。事务执行：① 校验产品存在（status=1）；② 校验列表中 (item_id, spec) 组合无重复；③ 校验所有 item_id 在 inventory_items 中存在且 status=1；④ 校验每条记录的 spec 在对应零件的规格列表（inventory_item_spec.status=1）中存在；⑤ 将该产品既有 product_items 全部置为 status=2；⑥ 插入新的关联记录（每条 relation_id 为 UUID v7 去连字符，quantity_per_product 取入参值默认 1，spec 取入参，remark 取入参）。支持同一零件不同规格的多条记录。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -239,7 +252,11 @@
                             },
                             "quantity_per_product": {
                                 "type": "number",
-                                "description": "单台产品所需数量（可选，最小 1；当前服务端实现固定写入 1，入参值未生效）"
+                                "description": "单台产品所需数量（可选，最小 1，默认 1）"
+                            },
+                            "spec": {
+                                "type": "string",
+                                "description": "BOM 指定的零件规格（必填，需在零件规格列表中存在；零件无规格时传空串表示默认 SKU）"
                             },
                             "remark": {
                                 "type": "string",
@@ -247,7 +264,8 @@
                             }
                         },
                         "required": [
-                            "item_id"
+                            "item_id",
+                            "spec"
                         ]
                     }
                 }
@@ -263,10 +281,17 @@
                 {
                     "item_id": "0194b1c0a2d34e5f6789012345678abc",
                     "quantity_per_product": 2,
+                    "spec": "不锈钢",
                     "remark": "主电源模块"
                 },
                 {
+                    "item_id": "0194b1c0a2d34e5f6789012345678abc",
+                    "spec": "镀锌",
+                    "remark": "备用规格"
+                },
+                {
                     "item_id": "0194b1c0a2d34e5f6789012345678abd",
+                    "spec": "",
                     "remark": "外壳"
                 }
             ]
@@ -277,11 +302,11 @@
             "properties": {
                 "result": {
                     "type": "number",
-                    "description": "结果码：0-成功，1-产品不存在/零件列表存在重复项/零件不存在或已停用/设置失败"
+                    "description": "结果码：0-成功，1-产品不存在/(零件+规格)重复/零件不存在或已停用/零件不存在该规格/设置失败"
                 },
                 "msg": {
                     "type": "string",
-                    "description": "提示信息；零件不存在时返回「零件不存在或已停用: <缺失item_id列表>」"
+                    "description": "提示信息；零件不存在时返回「零件不存在或已停用: <缺失item_id列表>」；规格不存在时返回「零件 <item_id> 不存在规格 \"xxx\"」"
                 }
             }
         }
@@ -289,7 +314,7 @@
     "/saleshub/inventory/listProductItems": {
         "method": "GET",
         "summary": "产品零件列表",
-        "description": "查询指定产品关联的零件列表（product_items.status=1），并 innerJoin inventory_items 返回零件详情（名称、编码、类型、当前库存、预警阈值）。按 product_items.create_time 降序。仅返回零件存在的关联记录（inventory_items 中无匹配项的关联会被 innerJoin 过滤）。",
+        "description": "查询指定产品关联的零件列表（product_items.status=1），并 innerJoin inventory_items 返回零件详情（名称、编码、类型、预警阈值），leftJoin inventory_item_spec 返回对应规格的当前库存。按 product_items.create_time 降序。仅返回零件存在的关联记录（inventory_items 中无匹配项的关联会被 innerJoin 过滤）。每条记录包含 BOM 指定的规格 spec 及该规格的独立库存 current_stock。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -344,6 +369,10 @@
                                         "type": "number",
                                         "description": "单台产品所需数量"
                                     },
+                                    "spec": {
+                                        "type": "string",
+                                        "description": "BOM 指定的零件规格，空串为默认 SKU"
+                                    },
                                     "remark": {
                                         "type": "string",
                                         "description": "备注，可能为 null"
@@ -364,13 +393,13 @@
                                         ],
                                         "description": "零件类型（来自 inventory_items.type）"
                                     },
-                                    "current_stock": {
-                                        "type": "number",
-                                        "description": "零件当前库存"
-                                    },
                                     "warn_stock": {
                                         "type": "number",
-                                        "description": "零件预警阈值"
+                                        "description": "零件预警阈值（来自 inventory_items.warn_stock）"
+                                    },
+                                    "current_stock": {
+                                        "type": "number",
+                                        "description": "该规格的当前库存（来自 inventory_item_spec.current_stock，按 BOM 的 spec 关联匹配；无匹配规格时为 0）"
                                     }
                                 }
                             }

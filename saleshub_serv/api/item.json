@@ -2,7 +2,7 @@
     "/saleshub/inventory/listItems": {
         "method": "GET",
         "summary": "零件列表",
-        "description": "分页查询当前正常状态（status=1）的零件。支持按类型 type（device-设备件，common-常用件）、名称 name 模糊匹配、编码 code 精确匹配筛选；支持按预警状态过滤：isWarning=1 仅返回正常库存（current_stock > warn_stock），isWarning=2 仅返回预警库存（current_stock <= warn_stock）。按 create_time 降序。返回项额外计算 isWarning 字段（current_stock <= warn_stock）。",
+        "description": "分页查询当前正常状态（status=1）的零件。支持按类型 type（device-设备件，common-常用件）、名称 name 模糊匹配、编码 code 精确匹配筛选；支持按预警状态过滤：isWarning=1 仅返回正常库存（total_stock > warn_stock），isWarning=2 仅返回预警库存（total_stock <= warn_stock）。按 create_time 降序。库存已下沉到规格表（inventory_item_spec），此处 total_stock 为该零件所有规格库存之和，specs 数组返回每个规格及其独立库存。返回项额外计算 isWarning 字段（1-正常，2-预警）。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -37,7 +37,7 @@
                         1,
                         2
                     ],
-                    "description": "预警状态过滤（Query 参数，可选）：1-正常库存（current_stock > warn_stock），2-预警库存（current_stock <= warn_stock）"
+                    "description": "预警状态过滤（Query 参数，可选）：1-正常库存（total_stock > warn_stock），2-预警库存（total_stock <= warn_stock）"
                 }
             },
             "required": [
@@ -97,24 +97,42 @@
                                         "type": "string",
                                         "description": "编码，格式 IT + 6 位数字（如 IT000001）"
                                     },
-                                    "specs": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "string"
-                                        },
-                                        "description": "规格选项（仅常用件有值）"
-                                    },
-                                    "current_stock": {
-                                        "type": "number",
-                                        "description": "当前库存"
-                                    },
                                     "warn_stock": {
                                         "type": "number",
                                         "description": "预警阈值"
                                     },
+                                    "image_id": {
+                                        "type": "string",
+                                        "description": "零件图片 ID（关联 file.relation_id），可能为 null"
+                                    },
+                                    "total_stock": {
+                                        "type": "number",
+                                        "description": "所有规格库存之和（聚合 inventory_item_spec.current_stock）"
+                                    },
+                                    "specs": {
+                                        "type": "array",
+                                        "description": "规格库存明细列表",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "spec": {
+                                                    "type": "string",
+                                                    "description": "规格值，空串为默认 SKU"
+                                                },
+                                                "current_stock": {
+                                                    "type": "number",
+                                                    "description": "该规格当前库存"
+                                                }
+                                            }
+                                        }
+                                    },
                                     "isWarning": {
-                                        "type": "boolean",
-                                        "description": "是否预警：true-当前库存小于等于预警阈值"
+                                        "type": "number",
+                                        "enum": [
+                                            1,
+                                            2
+                                        ],
+                                        "description": "预警状态：1-正常（total_stock > warn_stock），2-预警（total_stock <= warn_stock）"
                                     }
                                 }
                             }
@@ -127,7 +145,7 @@
     "/saleshub/inventory/createItem": {
         "method": "POST",
         "summary": "创建零件",
-        "description": "创建零件记录。服务端自动生成编码 code（格式 IT + 6 位递增数字，如 IT000001；上限 999999），item_id 由 UUID v7 去连字符生成。type 必须为 device 或 common。specs 仅在常用件（common）时有意义，可传规格选项数组。warnStock 为预警阈值，默认 10。status 默认 1，current_stock 默认 0。",
+        "description": "创建零件记录。服务端自动生成编码 code（格式 IT + 6 位递增数字，如 IT000001；上限 999999），item_id 由 UUID v7 去连字符生成。type 必须为 device 或 common。specs 为规格选项数组：传入后在独立的 inventory_item_spec 表中为每个规格创建一条记录（初始库存为 0）；若不传或传空数组，则自动创建一条默认 SKU（spec 为空串）。warnStock 为预警阈值，默认 10。status 默认 1。事务执行：同时写入零件主表与规格表。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -149,11 +167,15 @@
                     "items": {
                         "type": "string"
                     },
-                    "description": "规格选项数组（可选，仅常用件有意义）"
+                    "description": "规格选项数组（可选，传入后为每个规格创建独立库存记录；不传或空数组则创建默认 SKU，规格为空串）"
                 },
                 "warnStock": {
                     "type": "number",
                     "description": "预警阈值（可选，默认 10，最小 1）"
+                },
+                "image_id": {
+                    "type": "string",
+                    "description": "零件图片 ID（可选，关联 file.relation_id，最长 32 字符）"
                 }
             },
             "required": [
@@ -168,7 +190,8 @@
                 "不锈钢",
                 "镀锌"
             ],
-            "warnStock": 20
+            "warnStock": 20,
+            "image_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
         },
         "response_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
@@ -198,7 +221,7 @@
     "/saleshub/inventory/updateItem": {
         "method": "POST",
         "summary": "更新零件",
-        "description": "更新零件基础信息（类型、名称、规格、预警阈值）。仅当 item_id 对应的零件存在且 status=1 时可更新。type 与 name 为必填字段（直接覆盖原值）；specs 传入非空数组时更新；warnStock 传入时更新。",
+        "description": "更新零件基础信息（类型、名称、规格、预警阈值、图片）。仅当 item_id 对应的零件存在且 status=1 时可更新。type 与 name 为必填字段（直接覆盖原值）；warnStock 传入时更新；image_id 传入时更新（支持传 null 清空图片）。规格同步规则（基于 inventory_item_spec 表）：specs 不传（undefined）则规格保持不变仅更新主表；specs 传空数组则改为默认 SKU（需所有现存规格库存为 0）；specs 传非空数组则同步为该列表（新增的规格初始库存为 0，删除的规格需库存为 0 否则报错）。事务执行。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -224,11 +247,15 @@
                     "items": {
                         "type": "string"
                     },
-                    "description": "规格选项数组（可选，传入非空数组时更新）"
+                    "description": "规格选项数组（可选；不传=保持不变，空数组=改为默认 SKU，非空数组=同步为该列表；删除库存非零的规格会报错）"
                 },
                 "warnStock": {
                     "type": "number",
                     "description": "预警阈值（可选，最小 1）"
+                },
+                "image_id": {
+                    "type": "string",
+                    "description": "零件图片 ID（可选，关联 file.relation_id；传入 null 可清空图片）"
                 }
             },
             "required": [
@@ -241,6 +268,11 @@
             "item_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
             "type": "common",
             "name": "M8 螺栓（更新）",
+            "specs": [
+                "不锈钢",
+                "镀锌",
+                "黑色"
+            ],
             "warnStock": 15
         },
         "response_body": {
@@ -249,11 +281,11 @@
             "properties": {
                 "result": {
                     "type": "number",
-                    "description": "结果码：0-成功，1-零件不存在或更新失败"
+                    "description": "结果码：0-成功，1-零件不存在/规格库存非零不能删除/更新失败"
                 },
                 "msg": {
                     "type": "string",
-                    "description": "提示信息"
+                    "description": "提示信息；删除库存非零规格时返回「规格 \"xxx\" 库存非零,不能删除」"
                 }
             }
         }
@@ -261,7 +293,7 @@
     "/saleshub/inventory/deleteItem": {
         "method": "POST",
         "summary": "删除零件",
-        "description": "软删除零件（将 status 置为 2）。仅当 item_id 对应的零件存在时可操作。注意：当前实现暂未校验该零件是否被产品引用（product_items 关联），后续需补充。",
+        "description": "软删除零件（将 status 置为 2）。仅当 item_id 对应的零件存在时可操作。删除前置校验：① 该零件未被任何产品的有效关联（product_items.status=1）引用；② 该零件的所有规格（inventory_item_spec.status=1）库存均为 0。任一条件不满足则拒绝删除。事务执行：同时将零件主表与所有规格记录置为 status=2。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -284,11 +316,11 @@
             "properties": {
                 "result": {
                     "type": "number",
-                    "description": "结果码：0-成功，1-零件不存在或删除失败"
+                    "description": "结果码：0-成功，1-零件不存在/有产品使用/规格库存非零/删除失败"
                 },
                 "msg": {
                     "type": "string",
-                    "description": "提示信息"
+                    "description": "提示信息；有产品引用时返回「零件有产品使用,不能删除」；规格库存非零时返回「规格 \"xxx\" 库存非零,不能删除」"
                 }
             }
         }
