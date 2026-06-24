@@ -39,7 +39,7 @@ export async function initializeMinIO(): Promise<void> {
 
 // 生成文件URL
 export function generateFileUrl(objectName: string): string {
-    return `${minioConfig.publicUrl}/${objectName}`;
+    return `${minioConfig.publicUrl}/${minioConfig.bucket}/${objectName}`;
 }
 
 // 上传文件

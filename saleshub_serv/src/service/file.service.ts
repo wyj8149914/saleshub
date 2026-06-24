@@ -4,7 +4,7 @@ import { QueryFailedError } from 'typeorm';
 import { v7 } from 'uuid';
 import { AppDataSource } from '../config/database.config';
 import { minioConfig, uploadFile, deleteFile, generateFileUrl } from '../config/minio.config';
-import { File } from '../entity/file.entity';
+import { MinioFile } from '../entity/file.entity';
 import { getLogger } from '../utils/logger.util';
 
 interface UploadFileInput {
@@ -31,7 +31,7 @@ interface DeleteResult {
 }
 
 class FileService {
-    private fileRepository = AppDataSource.getRepository(File);
+    private fileRepository = AppDataSource.getRepository(MinioFile);
     private logger = getLogger('FILE_SERV');
 
     /**
@@ -70,7 +70,7 @@ class FileService {
 
             const relationId = v7().replace(/-/g, '');
             const now = new Date();
-            const entity = new File();
+            const entity = new MinioFile();
             entity.relation_id = relationId;
             entity.hash = hash;
             entity.object_name = objectName;

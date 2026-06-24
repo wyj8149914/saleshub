@@ -1,7 +1,7 @@
 import { Entity, Column, PrimaryColumn } from 'typeorm';
 
 @Entity({ schema: 'public', name: 'minio_file' })
-export class File {
+export class MinioFile {
     @PrimaryColumn({ type: 'varchar', length: 32 })
     relation_id: string;
 

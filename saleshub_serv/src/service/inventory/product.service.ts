@@ -1,15 +1,13 @@
 import { EntityManager } from 'typeorm';
 import { Product, ProductItem, InventoryItem, InventoryItemSpec } from '../../entity/product.entity';
+import { MinioFile } from '../../entity/file.entity';
 import {
-    CreateProductDto,
-    ProductIdDto,
-    ListProductDto,
-    UpdateProductDto,
-    SetProductItemsDto,
+    CreateProductDto, ProductIdDto, ListProductDto, UpdateProductDto, SetProductItemsDto,
 } from '../../dto/product.dto';
 import { AppDataSource } from '../../config/database.config';
 import { getLogger } from '../../utils/logger.util';
 import { v7 } from 'uuid';
+import { generateFileUrl } from '../../config/minio.config';
 
 export class ProductService {
     private productRepository = AppDataSource.getRepository(Product);
@@ -54,14 +52,15 @@ export class ProductService {
      */
     async list(dto: ListProductDto) {
         try {
-            const queryBuilder = this.productRepository
-                .createQueryBuilder('product')
+            const queryBuilder = this.productRepository.createQueryBuilder('product')
+                .leftJoin(MinioFile, 'file', 'file.relation_id = product.image_id')
                 .select([
                     'product.product_id AS product_id',
                     'product.name AS name',
                     'product.code AS code',
                     'product.description AS description',
                     'product.image_id AS image_id',
+                    'file.object_name AS image_object_name',
                 ])
                 .where('product.status = :status', { status: 1 });
 
@@ -79,6 +78,11 @@ export class ProductService {
                 .limit(dto.pageSize)
                 .offset(start)
                 .getRawMany();
+
+            // 查询产品图片
+            products.forEach((product) => {
+                product.image_url = generateFileUrl(product.image_object_name ?? '');
+            });
 
             return { result: 0, msg: 'success', datas: { total, items: products } };
         } catch (error) {
@@ -151,7 +155,7 @@ export class ProductService {
 
     /**
      * 设置产品零件(全量覆盖语义)
-     * 传入 product_id 与完整 item 列表(含 spec),使产品的有效关联(status=1)等于列表
+     * 传入 product_id 与完整 item 列表(含 spec_id),使产品的有效关联(status=1)等于列表
      */
     async setProductItems(dto: SetProductItemsDto) {
         try {
@@ -162,14 +166,14 @@ export class ProductService {
                 return { result: 1, msg: '产品不存在' };
             }
 
-            // 去重校验:(item_id, spec) 必须唯一
-            const keys = dto.items.map((it) => `${it.item_id}||${it.spec}`);
+            // 去重校验:(item_id, spec_id) 必须唯一
+            const keys = dto.items.map((it) => `${it.item_id}||${it.spec_id}`);
             const dedup = new Set(keys);
             if (dedup.size !== keys.length) {
                 return { result: 1, msg: '零件列表存在重复的(零件+规格)' };
             }
 
-            const itemIds = dto.items.map((it) => it.item_id);
+            const itemIds = [...new Set(dto.items.map((it) => it.item_id))];
             const items = await this.inventoryItemRepository
                 .createQueryBuilder('item')
                 .where('item.item_id IN (:...ids) AND item.status = :status', { ids: itemIds, status: 1 })
@@ -180,20 +184,19 @@ export class ProductService {
                 return { result: 1, msg: `零件不存在或已停用: ${missing.join(',')}` };
             }
 
-            // 校验每个 spec 在对应零件的 spec 列表中
-            const itemSpecs = await this.inventoryItemSpecRepository
+            const specIds = dto.items.map((it) => it.spec_id);
+            const specRows = await this.inventoryItemSpecRepository
                 .createQueryBuilder('s')
-                .where('s.item_id IN (:...ids) AND s.status = :status', { ids: itemIds, status: 1 })
+                .where('s.spec_id IN (:...ids) AND s.status = :status', { ids: specIds, status: 1 })
                 .getMany();
-            const itemSpecMap = new Map<string, Set<string>>();
-            for (const s of itemSpecs) {
-                if (!itemSpecMap.has(s.item_id)) itemSpecMap.set(s.item_id, new Set());
-                itemSpecMap.get(s.item_id)?.add(s.spec);
-            }
+            const specMap = new Map(specRows.map((s) => [s.spec_id, s]));
             for (const it of dto.items) {
-                const allowed = itemSpecMap.get(it.item_id);
-                if (!allowed || !allowed.has(it.spec)) {
-                    return { result: 1, msg: `零件 ${it.item_id} 不存在规格 "${it.spec}"` };
+                const specRow = specMap.get(it.spec_id);
+                if (!specRow) {
+                    return { result: 1, msg: `规格不存在或已停用: ${it.spec_id}` };
+                }
+                if (specRow.item_id !== it.item_id) {
+                    return { result: 1, msg: `规格 ${it.spec_id} 不属于零件 ${it.item_id}` };
                 }
             }
 
@@ -204,7 +207,7 @@ export class ProductService {
                 pi.product_id = dto.product_id;
                 pi.item_id = it.item_id;
                 pi.quantity_per_product = it.quantity_per_product ?? 1;
-                pi.spec = it.spec;
+                pi.spec_id = it.spec_id;
                 pi.remark = it.remark ?? null;
                 pi.status = 1;
                 pi.create_time = now;
@@ -231,24 +234,21 @@ export class ProductService {
         try {
             const rows = await this.productItemRepository
                 .createQueryBuilder('pi')
-                .innerJoin(InventoryItem, 'i', 'i.item_id = pi.item_id')
-                .leftJoin(
-                    InventoryItemSpec,
-                    's',
-                    's.item_id = pi.item_id AND s.spec = pi.spec AND s.status = 1'
-                )
+                .leftJoin(InventoryItem, 'i', 'i.item_id = pi.item_id')
+                .leftJoin(InventoryItemSpec, 's', 's.spec_id = pi.spec_id AND s.status = 1')
                 .select([
                     'pi.relation_id AS relation_id',
                     'pi.product_id AS product_id',
                     'pi.item_id AS item_id',
                     'pi.quantity_per_product AS quantity_per_product',
-                    'pi.spec AS spec',
+                    'pi.spec_id AS spec_id',
+                    's.spec AS spec',
                     'pi.remark AS remark',
                     'i.name AS item_name',
                     'i.code AS item_code',
                     'i.type AS item_type',
                     'i.warn_stock AS warn_stock',
-                    'COALESCE(s.current_stock, 0) AS current_stock',
+                    's.current_stock AS current_stock',
                 ])
                 .where('pi.product_id = :productId AND pi.status = :status', {
                     productId: dto.product_id,

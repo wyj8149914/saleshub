@@ -3,6 +3,7 @@ import { CreateInventoryItemDto, ItemIdDto, ListInventoryItemDto, UpdateInventor
 import { AppDataSource } from '../../config/database.config';
 import { getLogger } from '../../utils/logger.util';
 import { v7 } from 'uuid';
+import { generateFileUrl } from '../../config/minio.config';
 
 export class InventoryItemService {
     private inventoryItemRepository = AppDataSource.getRepository(InventoryItem);
@@ -30,9 +31,6 @@ export class InventoryItemService {
             if (dto.image_id) {
                 item.image_id = dto.image_id;
             }
-            item.status = 1;
-            item.create_time = now;
-            item.update_time = now;
 
             const specs = this.normalizeSpecs(dto.specs);
             const specRows: InventoryItemSpec[] = specs.map((spec) => {
@@ -40,10 +38,6 @@ export class InventoryItemService {
                 row.spec_id = v7().replace(/-/g, '');
                 row.item_id = itemId;
                 row.spec = spec;
-                row.current_stock = 0;
-                row.status = 1;
-                row.create_time = now;
-                row.update_time = now;
                 return row;
             });
 
@@ -66,17 +60,6 @@ export class InventoryItemService {
         try {
             const queryBuilder = this.inventoryItemRepository
                 .createQueryBuilder('item')
-                .leftJoin(
-                    (qb) =>
-                        qb
-                            .select('s.item_id', 'item_id')
-                            .addSelect('COALESCE(SUM(s.current_stock), 0)', 'total_stock')
-                            .from(InventoryItemSpec, 's')
-                            .where('s.status = 1')
-                            .groupBy('s.item_id'),
-                    'stock_sum',
-                    'stock_sum.item_id = item.item_id'
-                )
                 .select([
                     'item.item_id AS item_id',
                     'item.type AS type',
@@ -84,7 +67,6 @@ export class InventoryItemService {
                     'item.code AS code',
                     'item.warn_stock AS warn_stock',
                     'item.image_id AS image_id',
-                    'COALESCE(stock_sum.total_stock, 0) AS total_stock',
                 ])
                 .where('item.status = :status', { status: 1 });
 
@@ -96,15 +78,6 @@ export class InventoryItemService {
             }
             if (dto.code) {
                 queryBuilder.andWhere('item.code = :code', { code: dto.code });
-            }
-            if (dto.isWarning === 1) {
-                queryBuilder.andWhere(
-                    '(COALESCE(stock_sum.total_stock, 0) > item.warn_stock OR item.warn_stock = 0)'
-                );
-            } else if (dto.isWarning === 2) {
-                queryBuilder.andWhere(
-                    '(COALESCE(stock_sum.total_stock, 0) <= item.warn_stock AND item.warn_stock <> 0)'
-                );
             }
 
             const start = (dto.pageIndex - 1) * dto.pageSize;
@@ -119,15 +92,15 @@ export class InventoryItemService {
             const specRows =
                 itemIds.length > 0
                     ? await this.inventoryItemSpecRepository
-                          .createQueryBuilder('s')
-                          .select([
-                              's.spec_id AS spec_id',
-                              's.item_id AS item_id',
-                              's.spec AS spec',
-                              's.current_stock AS current_stock',
-                          ])
-                          .where('s.item_id IN (:...ids) AND s.status = :status', { ids: itemIds, status: 1 })
-                          .getRawMany()
+                        .createQueryBuilder('s')
+                        .select([
+                            's.spec_id AS spec_id',
+                            's.item_id AS item_id',
+                            's.spec AS spec',
+                            's.current_stock AS current_stock',
+                        ])
+                        .where('s.item_id IN (:...ids) AND s.status = :status', { ids: itemIds, status: 1 })
+                        .getRawMany()
                     : [];
 
             const specMap = new Map<string, any[]>();
@@ -145,8 +118,9 @@ export class InventoryItemService {
                 image_id: it.image_id,
                 total_stock: Number(it.total_stock),
                 specs: specMap.get(it.item_id) || [],
-                isWarning: Number(it.total_stock) <= it.warn_stock ? 2 : 1,
+                image_url: generateFileUrl(it.image_id ?? ''),
             }));
+
             return { result: 0, msg: 'success', datas: { total, items: datas } };
         } catch (error) {
             this.logger.error('查询零件列表失败:', error);
@@ -207,8 +181,6 @@ export class InventoryItemService {
                 row.spec_id = v7().replace(/-/g, '');
                 row.item_id = dto.item_id;
                 row.spec = spec;
-                row.current_stock = 0;
-                row.status = 1;
                 row.create_time = now;
                 row.update_time = now;
                 return row;

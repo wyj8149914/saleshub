@@ -30,14 +30,6 @@
                 "code": {
                     "type": "string",
                     "description": "零件编码，精确匹配（Query 参数，可选）"
-                },
-                "isWarning": {
-                    "type": "number",
-                    "enum": [
-                        1,
-                        2
-                    ],
-                    "description": "预警状态过滤（Query 参数，可选）：1-正常库存（total_stock > warn_stock），2-预警库存（total_stock <= warn_stock）"
                 }
             },
             "required": [
@@ -104,10 +96,6 @@
                                     "image_id": {
                                         "type": "string",
                                         "description": "零件图片 ID（关联 file.relation_id），可能为 null"
-                                    },
-                                    "total_stock": {
-                                        "type": "number",
-                                        "description": "所有规格库存之和（聚合 inventory_item_spec.current_stock）"
                                     },
                                     "specs": {
                                         "type": "array",

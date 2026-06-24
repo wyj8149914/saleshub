@@ -82,19 +82,25 @@ export class StockService {
                 return { result: 1, msg: '只有设备件可以出库' };
             }
 
-            const rel = await this.productItemRepository.findOne({
-                where: { product_id: dto.product_id, item_id: dto.item_id, spec: dto.spec, status: 1 },
-            });
-            if (!rel) {
-                return { result: 1, msg: '该零件+规格未关联到此产品' };
-            }
-
             const spec = await this.inventoryItemSpecRepository.findOne({
                 where: { item_id: dto.item_id, spec: dto.spec, status: 1 },
             });
             if (!spec) {
                 return { result: 1, msg: `零件不存在规格 "${dto.spec}"` };
             }
+
+            const rel = await this.productItemRepository.findOne({
+                where: {
+                    product_id: dto.product_id,
+                    item_id: dto.item_id,
+                    spec_id: spec.spec_id,
+                    status: 1,
+                },
+            });
+            if (!rel) {
+                return { result: 1, msg: '该零件+规格未关联到此产品' };
+            }
+
             if (spec.current_stock < dto.quantity) {
                 return {
                     result: 1,

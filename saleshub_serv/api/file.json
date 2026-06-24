@@ -1,0 +1,97 @@
+{
+    "/saleshub/file/upload": {
+        "method": "POST",
+        "summary": "上传文件",
+        "description": "上传文件到 MinIO 并在 public.minio_file 表登记元数据。请求体为 multipart/form-data（非 JSON），字段名 file，单文件，最大 10MB。服务端计算 SHA-256 hash 作为全局去重键：若 hash 已存在则直接返回已有记录（status=2 时自动激活为 1，is_duplicate=true），不重复上传 MinIO 对象；若不存在则写入 MinIO（对象键格式：hash 前 2 位/hash.扩展名）并插入新记录。relation_id 由 UUID v7 去连字符生成。返回 url 为公开访问地址（MINIO_URL/bucket/object_name）。业务表（如 product.image_id、inventory_item.image_id、stock_in_record.photo_id）通过 relation_id 引用文件。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "description": "Content-Type: multipart/form-data（非 application/json）",
+            "properties": {
+                "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "待上传文件，表单字段名必须为 file，单文件，最大 10MB"
+                }
+            },
+            "required": [
+                "file"
+            ]
+        },
+        "example_request": {
+            "_note": "实际为 multipart/form-data 请求，curl 示例见 description",
+            "file": "<binary>"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-未选择文件或上传失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「上传成功」「请选择要上传的文件」「上传失败」"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时返回文件引用信息",
+                    "properties": {
+                        "relation_id": {
+                            "type": "string",
+                            "description": "文件关系主键 UUID（无连字符，32 位），供业务表 image_id / photo_id 等字段引用"
+                        },
+                        "url": {
+                            "type": "string",
+                            "description": "文件公开访问 URL（MINIO_URL/bucket/object_name）"
+                        },
+                        "hash": {
+                            "type": "string",
+                            "description": "文件内容 SHA-256 hex（64 位），全局唯一去重键"
+                        },
+                        "is_duplicate": {
+                            "type": "boolean",
+                            "description": "是否为重复上传（true-命中已有 hash 记录，false-新上传）"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/file/delete": {
+        "method": "POST",
+        "summary": "删除文件",
+        "description": "按 relation_id 软删除文件记录（将 minio_file.status 置为 2）。不删除 MinIO 中的实际对象。仅当 relation_id 对应记录存在且 status=1 时可操作。已被业务引用的文件删除后，业务侧 image_id / photo_id 等字段不会自动清空，需调用方自行处理。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "relation_id": {
+                    "type": "string",
+                    "description": "文件关系主键 UUID（上传接口返回的 relation_id），最长 32 字符"
+                }
+            },
+            "required": [
+                "relation_id"
+            ]
+        },
+        "example_request": {
+            "relation_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-文件不存在或删除失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「删除成功」「文件不存在」「删除失败」"
+                }
+            }
+        }
+    }
+}

@@ -231,7 +231,7 @@
     "/saleshub/inventory/setProductItems": {
         "method": "POST",
         "summary": "设置产品零件",
-        "description": "全量覆盖语义：传入 product_id 与完整的 item 列表（含规格），使该产品的有效关联（product_items.status=1）等价于传入列表。事务执行：① 校验产品存在（status=1）；② 校验列表中 (item_id, spec) 组合无重复；③ 校验所有 item_id 在 inventory_items 中存在且 status=1；④ 校验每条记录的 spec 在对应零件的规格列表（inventory_item_spec.status=1）中存在；⑤ 将该产品既有 product_items 全部置为 status=2；⑥ 插入新的关联记录（每条 relation_id 为 UUID v7 去连字符，quantity_per_product 取入参值默认 1，spec 取入参，remark 取入参）。支持同一零件不同规格的多条记录。",
+        "description": "全量覆盖语义：传入 product_id 与完整的 item 列表（含 spec_id），使该产品的有效关联（product_items.status=1）等价于传入列表。事务执行：① 校验产品存在（status=1）；② 校验列表中 (item_id, spec_id) 组合无重复；③ 校验所有 item_id 在 inventory_items 中存在且 status=1；④ 校验每条 spec_id 在 inventory_item_spec 中存在（status=1）且属于对应 item_id；⑤ 将该产品既有 product_items 全部置为 status=2；⑥ 插入新的关联记录（每条 relation_id 为 UUID v7 去连字符，quantity_per_product 取入参值默认 1，spec_id 取入参，remark 取入参）。支持同一零件不同规格的多条记录。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -254,9 +254,9 @@
                                 "type": "number",
                                 "description": "单台产品所需数量（可选，最小 1，默认 1）"
                             },
-                            "spec": {
+                            "spec_id": {
                                 "type": "string",
-                                "description": "BOM 指定的零件规格（必填，需在零件规格列表中存在；零件无规格时传空串表示默认 SKU）"
+                                "description": "BOM 指定的零件规格 ID（inventory_item_spec.spec_id，来自零件列表接口 specs[].spec_id）"
                             },
                             "remark": {
                                 "type": "string",
@@ -265,7 +265,7 @@
                         },
                         "required": [
                             "item_id",
-                            "spec"
+                            "spec_id"
                         ]
                     }
                 }
@@ -281,17 +281,17 @@
                 {
                     "item_id": "0194b1c0a2d34e5f6789012345678abc",
                     "quantity_per_product": 2,
-                    "spec": "不锈钢",
+                    "spec_id": "0194b1d0e3f45a6b7890123456789def",
                     "remark": "主电源模块"
                 },
                 {
                     "item_id": "0194b1c0a2d34e5f6789012345678abc",
-                    "spec": "镀锌",
+                    "spec_id": "0194b1d0e3f45a6b7890123456789deg",
                     "remark": "备用规格"
                 },
                 {
                     "item_id": "0194b1c0a2d34e5f6789012345678abd",
-                    "spec": "",
+                    "spec_id": "0194b1d0e3f45a6b7890123456789deh",
                     "remark": "外壳"
                 }
             ]
@@ -302,11 +302,11 @@
             "properties": {
                 "result": {
                     "type": "number",
-                    "description": "结果码：0-成功，1-产品不存在/(零件+规格)重复/零件不存在或已停用/零件不存在该规格/设置失败"
+                    "description": "结果码：0-成功，1-产品不存在/(零件+规格)重复/零件不存在或已停用/规格不存在或已停用/规格不属于该零件/设置失败"
                 },
                 "msg": {
                     "type": "string",
-                    "description": "提示信息；零件不存在时返回「零件不存在或已停用: <缺失item_id列表>」；规格不存在时返回「零件 <item_id> 不存在规格 \"xxx\"」"
+                    "description": "提示信息；零件不存在时返回「零件不存在或已停用: <缺失item_id列表>」；规格不存在时返回「规格不存在或已停用: <spec_id>」；规格归属错误时返回「规格 <spec_id> 不属于零件 <item_id>」"
                 }
             }
         }
@@ -314,7 +314,7 @@
     "/saleshub/inventory/listProductItems": {
         "method": "GET",
         "summary": "产品零件列表",
-        "description": "查询指定产品关联的零件列表（product_items.status=1），并 innerJoin inventory_items 返回零件详情（名称、编码、类型、预警阈值），leftJoin inventory_item_spec 返回对应规格的当前库存。按 product_items.create_time 降序。仅返回零件存在的关联记录（inventory_items 中无匹配项的关联会被 innerJoin 过滤）。每条记录包含 BOM 指定的规格 spec 及该规格的独立库存 current_stock。",
+        "description": "查询指定产品关联的零件列表（product_items.status=1），并 innerJoin inventory_items 返回零件详情（名称、编码、类型、预警阈值），leftJoin inventory_item_spec（通过 spec_id）返回规格名称 spec 及该规格的当前库存 current_stock。按 product_items.create_time 降序。仅返回零件存在的关联记录（inventory_items 中无匹配项的关联会被 innerJoin 过滤）。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -369,9 +369,13 @@
                                         "type": "number",
                                         "description": "单台产品所需数量"
                                     },
+                                    "spec_id": {
+                                        "type": "string",
+                                        "description": "BOM 指定的零件规格 ID（inventory_item_spec.spec_id）"
+                                    },
                                     "spec": {
                                         "type": "string",
-                                        "description": "BOM 指定的零件规格，空串为默认 SKU"
+                                        "description": "规格名称（来自 inventory_item_spec.spec，便于展示）"
                                     },
                                     "remark": {
                                         "type": "string",
@@ -399,7 +403,7 @@
                                     },
                                     "current_stock": {
                                         "type": "number",
-                                        "description": "该规格的当前库存（来自 inventory_item_spec.current_stock，按 BOM 的 spec 关联匹配；无匹配规格时为 0）"
+                                        "description": "该规格的当前库存（来自 inventory_item_spec.current_stock，按 spec_id 关联匹配；无匹配规格时为 0）"
                                     }
                                 }
                             }

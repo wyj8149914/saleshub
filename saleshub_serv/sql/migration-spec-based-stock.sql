@@ -6,7 +6,7 @@
 --   1. 新增 inventory.inventory_item_spec 规格库存表
 --   2. inventory.inventory_item 新增 image_id 列, 移除 current_stock/specs 列
 --   3. inventory.product 新增 image_id 列
---   4. inventory.product_item 新增 spec 列, 唯一约束改为 (product_id, item_id, spec)
+--   4. inventory.product_item 新增 spec_id 列, 唯一约束改为 (product_id, item_id, spec_id)
 --   5. inventory.stock_in_record / stock_out_record / inventory_check 新增 spec 列
 -- 开发环境清理: 需先清空 stock_in_record / stock_out_record / inventory_check / product_item / inventory_item 数据
 -- 依赖: 先执行 create-inventory-schema.sql v1.0、migration-product-items.sql v1.1、migration-file-upload.sql v1.1
@@ -73,13 +73,14 @@ COMMENT ON COLUMN inventory.product.image_id IS '产品图片 file.relation_id';
 -- ============================================
 -- 5. product_item 表字段调整
 -- ============================================
-ALTER TABLE inventory.product_item ADD COLUMN IF NOT EXISTS spec VARCHAR(100) NOT NULL DEFAULT '';
-COMMENT ON COLUMN inventory.product_item.spec IS 'BOM 指定的零件规格,无规格零件传空串';
+ALTER TABLE inventory.product_item ADD COLUMN IF NOT EXISTS spec_id VARCHAR(32) NOT NULL DEFAULT '';
+COMMENT ON COLUMN inventory.product_item.spec_id IS 'BOM 指定的零件规格 inventory_item_spec.spec_id';
 
--- 替换唯一约束:(product_id, item_id) → (product_id, item_id, spec)
+-- 替换唯一约束:(product_id, item_id) → (product_id, item_id, spec_id)
 ALTER TABLE inventory.product_item DROP CONSTRAINT IF EXISTS uk_product_items_product_item;
-ALTER TABLE inventory.product_item ADD CONSTRAINT uk_product_item_product_item_spec
-    UNIQUE (product_id, item_id, spec);
+ALTER TABLE inventory.product_item DROP CONSTRAINT IF EXISTS uk_product_item_product_item_spec;
+ALTER TABLE inventory.product_item ADD CONSTRAINT uk_product_item_product_item_spec_id
+    UNIQUE (product_id, item_id, spec_id);
 
 -- ============================================
 -- 6. stock_in_record / stock_out_record / inventory_check 新增 spec

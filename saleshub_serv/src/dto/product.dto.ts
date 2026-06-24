@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsOptional, MaxLength, IsArray, IsInt, Min, ValidateNested, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, MaxLength, IsArray, IsInt, Min, ValidateNested } from 'class-validator';
 import { PageDto } from './base.dto';
 
 export class CreateProductDto {
@@ -12,7 +12,6 @@ export class CreateProductDto {
     description?: string;
 
     @IsOptional()
-    @IsString()
     @MaxLength(32, { message: '图片ID长度不能超过32' })
     image_id?: string;
 }
@@ -45,10 +44,9 @@ export class ProductItemEntryDto {
     @Min(1, { message: '单台数量不能小于1' })
     quantity_per_product?: number;
 
-    @IsNotEmpty({ message: '规格不能为空(零件无规格时传空串)' })
-    @IsString()
-    @MaxLength(100, { message: '规格长度不能超过100' })
-    spec: string;
+    @IsNotEmpty({ message: '规格ID不能为空' })
+    @MaxLength(32, { message: '规格ID长度不能超过32' })
+    spec_id: string;
 
     @IsOptional()
     @MaxLength(500, { message: '备注长度不能超过500' })

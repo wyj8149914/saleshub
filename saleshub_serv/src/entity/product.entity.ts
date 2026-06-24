@@ -71,8 +71,8 @@ export class ProductItem {
     @Column({ type: 'int', default: 1, comment: '单台产品所需数量' })
     quantity_per_product: number;
 
-    @Column({ type: 'varchar', length: 100, default: '', comment: 'BOM 指定的零件规格,空串为默认 SKU' })
-    spec: string;
+    @Column({ type: 'varchar', length: 32, comment: 'BOM 指定的零件规格 inventory_item_spec.spec_id' })
+    spec_id: string;
 
     @Column({ type: 'text', nullable: true, comment: '备注' })
     remark: string | null;
