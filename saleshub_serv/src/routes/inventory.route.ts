@@ -11,7 +11,7 @@ import {
     SetProductItemsDto,
     ProductItemIdDto,
 } from '../dto/product.dto';
-import { StockInDto, StockOutDto, StockCheckDto, ListStockHistoryDto } from '../dto/stock.dto';
+import { StockInDto, StockOutDto, StockOutBatchDto, StockOutByProductDto, StockCheckDto, ListStockHistoryDto } from '../dto/stock.dto';
 import { productService, inventoryItemService, stockService } from '../service/inventory';
 
 const router = Router();
@@ -138,12 +138,34 @@ router.post('/stockIn',
     })
 );
 
-// 出库操作
+// 出库操作(单条)
 router.post('/stockOut',
     validationMiddleware(StockOutDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(StockOutDto, req.body);
         const result = await stockService.stockOut(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 按零件批量出库(同一 record_no)
+router.post('/stockOutBatch',
+    validationMiddleware(StockOutBatchDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(StockOutBatchDto, req.body);
+        const result = await stockService.stockOutBatch(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 按产品出库(按 BOM 扣减,同一 record_no)
+router.post('/stockOutByProduct',
+    validationMiddleware(StockOutByProductDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(StockOutByProductDto, req.body);
+        const result = await stockService.stockOutByProduct(dtoObj);
         res.locals.datas = result;
         next();
     })

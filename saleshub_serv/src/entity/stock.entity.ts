@@ -11,8 +11,8 @@ export class StockInRecord {
     @Column({ type: 'varchar', length: 32, comment: '零件ID' })
     item_id: string;
 
-    @Column({ type: 'varchar', length: 100, default: '', comment: '入库规格,空串为默认 SKU' })
-    spec: string;
+    @Column({ type: 'varchar', length: 32, comment: '入库规格ID' })
+    spec_id: string;
 
     @Column({ type: 'int', comment: '入库数量' })
     quantity: number;
@@ -50,8 +50,8 @@ export class StockOutRecord {
     @Column({ type: 'varchar', length: 32, comment: '零件ID' })
     item_id: string;
 
-    @Column({ type: 'varchar', length: 100, default: '', comment: '出库规格,空串为默认 SKU' })
-    spec: string;
+    @Column({ type: 'varchar', length: 32, comment: '出库规格ID' })
+    spec_id: string;
 
     @Column({ type: 'int', comment: '出库数量' })
     quantity: number;
