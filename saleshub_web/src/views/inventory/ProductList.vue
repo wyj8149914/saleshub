@@ -1,5 +1,7 @@
 <template>
+  <!-- 产品管理列表页：筛选、分页、新建/编辑/删除、关联零件 -->
   <div class="page">
+    <!-- 顶部筛选栏与新建按钮 -->
     <div class="page-head">
       <a-space class="filters" :size="12" wrap>
         <a-input v-model:value="filters.name" placeholder="按名称搜索" allow-clear class="filter-input"
@@ -16,8 +18,8 @@
           </template>
         </a-input>
 
-        <a-button @click="handleSearch">查询</a-button>
-        <a-button type="text" @click="handleReset">重置</a-button>
+        <a-button type="primary" @click="handleSearch">查询</a-button>
+        <a-button type="primary" @click="handleReset">重置</a-button>
       </a-space>
 
       <a-button type="primary" class="create-btn" @click="handleCreate">
@@ -28,11 +30,19 @@
       </a-button>
     </div>
 
+    <!-- 产品数据表格，分页变更由 handleTableChange 处理 -->
     <a-card :bordered="false" class="table-card">
-      <a-table :columns="columns" :data-source="products" :loading="loading" :pagination="pagination"
+      <a-table :columns="columns" :data-source="products" :loading="loading" :pagination="pagination" bordered
         row-key="product_id" @change="handleTableChange">
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'code'">
+          <!-- 产品缩略图，无图显示占位 -->
+          <template v-if="column.key === 'image'">
+            <a-image v-if="record.image_url" :src="record.image_url" :width="50" :height="50" :preview="true"
+              style="border-radius: 4px; object-fit: cover;" />
+            <span v-else class="cell-muted">-</span>
+          </template>
+
+          <template v-else-if="column.key === 'code'">
             <span class="cell-code">{{ record.code }}</span>
           </template>
 
@@ -40,6 +50,7 @@
             <span class="cell-desc">{{ record.description || '-' }}</span>
           </template>
 
+          <!-- 行操作：编辑、关联零件、删除（带二次确认） -->
           <template v-else-if="column.key === 'actions'">
             <a-space :size="4">
               <a-button type="link" size="small" @click="handleEdit(record)">编辑</a-button>
@@ -53,13 +64,21 @@
       </a-table>
     </a-card>
 
+    <!-- 新建/编辑产品弹窗 -->
     <ProductForm v-model:visible="formVisible" :product="currentProduct" @success="handleFormSuccess" />
 
+    <!-- 管理产品关联零件弹窗 -->
     <ProductItemsManager v-model:visible="itemsManagerVisible" :product="currentProductForItems" />
   </div>
 </template>
 
 <script setup lang="ts">
+  /**
+   * ProductList — 产品管理列表页
+   *
+   * 职责：展示产品分页列表，支持按名称/编码筛选，
+   * 并提供新建、编辑、删除及「关联零件」入口。
+   */
   import { ref, reactive, onMounted } from 'vue'
   import { message } from 'ant-design-vue'
   import { PlusOutlined, SearchOutlined, TagOutlined } from '@ant-design/icons-vue'
@@ -68,25 +87,35 @@
   import ProductForm from '@/components/inventory/ProductForm.vue'
   import ProductItemsManager from '@/components/inventory/ProductItemsManager.vue'
 
+  /** 表格列定义，key 与模板 #bodyCell 中的 column.key 对应 */
   const columns = [
+    { title: '图片', dataIndex: 'image_url', key: 'image', width: 80, align: 'center' },
     { title: '产品名称', dataIndex: 'name', key: 'name', width: 240, ellipsis: true, align: 'center' },
     { title: '产品编码', dataIndex: 'code', key: 'code', width: 200, align: 'center' },
     { title: '产品描述', dataIndex: 'description', key: 'description', ellipsis: true, align: 'center' },
     { title: '操作', key: 'actions', width: 280, align: 'center' }
   ]
 
+  /** 表格数据加载中 */
   const loading = ref(false)
+  /** 当前页产品列表 */
   const products = ref<Product[]>([])
+  /** 产品表单弹窗显隐 */
   const formVisible = ref(false)
+  /** 当前编辑的产品；null 表示新建模式 */
   const currentProduct = ref<Product | null>(null)
+  /** 零件关联管理弹窗显隐 */
   const itemsManagerVisible = ref(false)
+  /** 当前要管理零件关联的产品 */
   const currentProductForItems = ref<Product | null>(null)
 
+  /** 筛选条件：名称模糊、编码精确 */
   const filters = reactive({
     name: '',
     code: ''
   })
 
+  /** 分页配置，与 a-table pagination 双向联动 */
   const pagination = reactive({
     current: 1,
     pageSize: 10,
@@ -95,6 +124,10 @@
     showTotal: (total: number) => `共 ${total} 条`
   })
 
+  /**
+   * 加载产品列表
+   * 根据当前分页与 filters 调用 listProducts API
+   */
   const loadProducts = async () => {
     loading.value = true
     try {
@@ -113,11 +146,13 @@
     }
   }
 
+  /** 查询：重置到第一页并重新加载 */
   const handleSearch = () => {
     pagination.current = 1
     loadProducts()
   }
 
+  /** 重置筛选条件并重新加载第一页 */
   const handleReset = () => {
     filters.name = ''
     filters.code = ''
@@ -125,34 +160,45 @@
     loadProducts()
   }
 
-  // 输入框 clearable 时，清空后立即触发查询
+  /**
+   * 筛选输入框 change 回调
+   * 点击 clearable 清空时立即触发查询，无需再点「查询」
+   */
   const handleFilterChange = (e: any) => {
     if (e?.target?.value === '') {
       handleSearch()
     }
   }
 
+  /** 表格分页/每页条数变化时更新 pagination 并重新加载 */
   const handleTableChange = (pag: any) => {
     pagination.current = pag.current
     pagination.pageSize = pag.pageSize
     loadProducts()
   }
 
+  /** 打开新建产品弹窗 */
   const handleCreate = () => {
     currentProduct.value = null
     formVisible.value = true
   }
 
+  /** 打开编辑产品弹窗，传入当前行数据 */
   const handleEdit = (product: Product) => {
     currentProduct.value = product
     formVisible.value = true
   }
 
+  /** 打开零件关联管理弹窗 */
   const handleManageItems = (product: Product) => {
     currentProductForItems.value = product
     itemsManagerVisible.value = true
   }
 
+  /**
+   * 删除产品
+   * 若当前页删至最后一条且不在第一页，自动回退一页再刷新
+   */
   const handleDelete = async (product: Product) => {
     try {
       await inventoryApi.deleteProduct(product.product_id)
@@ -167,11 +213,13 @@
     }
   }
 
+  /** 产品表单保存成功后关闭弹窗并刷新列表 */
   const handleFormSuccess = () => {
     formVisible.value = false
     loadProducts()
   }
 
+  /** 页面挂载时加载首屏数据 */
   onMounted(() => {
     loadProducts()
   })
@@ -266,6 +314,10 @@
 
   .cell-desc {
     color: #52525b;
+  }
+
+  .cell-muted {
+    color: #a1a1aa;
   }
 
   /* 操作按钮去掉内边距，更紧凑 */

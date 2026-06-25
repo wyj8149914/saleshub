@@ -5,7 +5,7 @@
         :loading="itemsLoading" :options="itemOptions" style="width: 300px" @change="handleItemChange" />
     </template>
 
-    <a-table :columns="columns" :data-source="historyRecords" :loading="loading" :pagination="{ pageSize: 20 }"
+    <a-table :columns="columns" :data-source="historyRecords" :loading="loading" :pagination="{ pageSize: 20 }" bordered
       row-key="recordId">
       <template #bodyCell="{ column, record }">
         <!-- 类型列 -->

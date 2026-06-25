@@ -8,12 +8,29 @@ export interface PaginatedData<T> {
     items: T[]
 }
 
+// ============ 文件上传 ============
+export interface FileUploadResponse {
+    relation_id: string
+    url: string
+    hash: string
+    is_duplicate: boolean
+}
+
+// ============ 零件规格 ============
+export interface ItemSpec {
+    spec_id: string
+    spec: string
+    current_stock: number
+}
+
 // ============ 产品 ============
 export interface Product {
     product_id: string
     name: string
     code: string
     description: string
+    image_id: string | null
+    image_url: string | null
 }
 
 export interface ProductListQuery {
@@ -26,12 +43,14 @@ export interface ProductListQuery {
 export interface ProductCreatePayload {
     name: string
     description?: string
+    image_id?: string
 }
 
 export interface ProductUpdatePayload {
     product_id: string
     name: string
     description?: string
+    image_id?: string
 }
 
 // ============ 零件 ============
@@ -40,10 +59,10 @@ export interface InventoryItem {
     type: ItemType
     name: string
     code: string
-    specs: string[]
-    current_stock: number
+    specs: ItemSpec[]
+    image_id: string | null
+    image_url: string | null
     warn_stock: number
-    isWarning: boolean
 }
 
 export interface ItemListQuery {
@@ -60,6 +79,7 @@ export interface ItemCreatePayload {
     name: string
     specs?: string[]
     warnStock?: number
+    image_id?: string
 }
 
 export interface ItemUpdatePayload {
@@ -68,6 +88,7 @@ export interface ItemUpdatePayload {
     name: string
     specs?: string[]
     warnStock?: number
+    image_id?: string
 }
 
 // ============ 产品-零件关联 ============
@@ -75,6 +96,8 @@ export interface ProductItemRelation {
     relation_id: string
     product_id: string
     item_id: string
+    spec_id: string
+    spec: string
     quantity_per_product: number
     remark: string | null
     item_name: string
@@ -86,6 +109,7 @@ export interface ProductItemRelation {
 
 export interface ProductItemPayload {
     item_id: string
+    spec_id: string
     quantity_per_product?: number
     remark?: string
 }
@@ -97,6 +121,21 @@ export interface StockRecord {
     type: 'in' | 'out' | 'check'
     created_at: string
     notes: string
+}
+
+// ============ 文件上传 API ============
+export const fileApi = {
+    uploadFile(file: File): Promise<FileUploadResponse> {
+        const formData = new FormData()
+        formData.append('file', file)
+        return http.post<FileUploadResponse>('/saleshub/file/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        }).then(res => res.datas)
+    },
+
+    deleteFile(relation_id: string): Promise<void> {
+        return http.post('/saleshub/file/delete', { relation_id }).then(() => undefined)
+    }
 }
 
 // ============ API ============

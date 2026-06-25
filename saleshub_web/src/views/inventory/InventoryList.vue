@@ -22,14 +22,8 @@
           <a-select-option value="common">常用件</a-select-option>
         </a-select>
 
-        <a-select v-model:value="filters.isWarning" placeholder="预警状态" allow-clear class="filter-select"
-          @change="handleSearch">
-          <a-select-option :value="1">正常库存</a-select-option>
-          <a-select-option :value="2">预警库存</a-select-option>
-        </a-select>
-
-        <a-button @click="handleSearch">查询</a-button>
-        <a-button type="text" @click="handleReset">重置</a-button>
+        <a-button type="primary" @click="handleSearch">查询</a-button>
+        <a-button type="primary" @click="handleReset">重置</a-button>
       </a-space>
 
       <a-button type="primary" class="create-btn" @click="handleCreate">
@@ -41,10 +35,36 @@
     </div>
 
     <a-card :bordered="false" class="table-card">
-      <a-table :columns="columns" :data-source="items" :loading="loading" :pagination="pagination" row-key="item_id"
-        @change="handleTableChange">
+      <a-table :columns="columns" :data-source="items" :loading="loading" :pagination="pagination" bordered
+        row-key="item_id" expand-row-by-click :row-expandable="isRowExpandable" @change="handleTableChange">
+        <template #expandedRowRender="{ record: item }">
+          <a-table :columns="specColumns" :data-source="item.specs" :pagination="false" row-key="spec_id" size="small"
+            bordered class="spec-sub-table">
+            <template #bodyCell="{ column, record: spec }">
+              <template v-if="column.key === 'spec'">
+                <span class="cell-spec">{{ spec.spec }}</span>
+              </template>
+              <template v-else-if="column.key === 'current_stock'">
+                <span class="stock-num" :class="{ 'text-danger': isSpecWarning(item, spec) }">
+                  {{ spec.current_stock }}
+                </span>
+              </template>
+              <template v-else-if="column.key === 'warningStatus'">
+                <a-tag :class="isSpecWarning(item, spec) ? 'tag-warning' : 'tag-normal'">
+                  {{ isSpecWarning(item, spec) ? '库存不足' : '正常' }}
+                </a-tag>
+              </template>
+            </template>
+          </a-table>
+        </template>
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'type'">
+          <template v-if="column.key === 'image'">
+            <a-image v-if="record.image_url" :src="record.image_url" :width="50" :height="50" :preview="true"
+              style="border-radius: 4px; object-fit: cover;" />
+            <span v-else class="cell-muted">-</span>
+          </template>
+
+          <template v-else-if="column.key === 'type'">
             <a-tag :class="record.type === 'device' ? 'tag-device' : 'tag-common'">
               {{ record.type === 'device' ? '设备件' : '常用件' }}
             </a-tag>
@@ -54,16 +74,18 @@
             <span class="cell-code">{{ record.code }}</span>
           </template>
 
-          <template v-else-if="column.key === 'specs'">
-            <template v-if="record.specs && record.specs.length > 0">
-              <a-tag v-for="spec in record.specs" :key="spec" class="spec-tag">{{ spec }}</a-tag>
-            </template>
-            <span v-else class="cell-muted">-</span>
+          <template v-else-if="column.key === 'allSpecs'">
+            <span v-if="isDefaultSpec(record)" class="cell-muted">-</span>
+            <div v-else class="spec-summary">
+              <span v-for="spec in record.specs" :key="spec.spec_id" class="spec-summary-item">
+                {{ spec.spec }}: {{ spec.current_stock }}
+              </span>
+            </div>
           </template>
 
-          <template v-else-if="column.key === 'currentStock'">
-            <span class="stock-num" :class="{ 'text-danger': record.isWarning }">
-              {{ record.current_stock }}
+          <template v-else-if="column.key === 'totalStock'">
+            <span class="stock-num" :class="{ 'text-danger': isItemWarning(record) }">
+              {{ getTotalStock(record) }}
             </span>
           </template>
 
@@ -72,8 +94,8 @@
           </template>
 
           <template v-else-if="column.key === 'warningStatus'">
-            <a-tag :class="record.isWarning ? 'tag-warning' : 'tag-normal'">
-              {{ record.isWarning ? '库存不足' : '正常' }}
+            <a-tag :class="isItemWarning(record) ? 'tag-warning' : 'tag-normal'">
+              {{ isItemWarning(record) ? '库存不足' : '正常' }}
             </a-tag>
           </template>
 
@@ -98,18 +120,26 @@
   import { message } from 'ant-design-vue'
   import { PlusOutlined, SearchOutlined, TagOutlined } from '@ant-design/icons-vue'
   import { inventoryApi } from '@/api/inventory'
-  import type { InventoryItem, ItemType } from '@/api/inventory'
+  import type { InventoryItem, ItemType, ItemSpec } from '@/api/inventory'
   import InventoryItemForm from '@/components/inventory/InventoryItemForm.vue'
 
   const columns = [
+    { title: '图片', dataIndex: 'image_url', key: 'image', width: 80, align: 'center' },
     { title: '类型', dataIndex: 'type', key: 'type', width: 100, align: 'center' },
     { title: '名称', dataIndex: 'name', key: 'name', width: 140, ellipsis: true, align: 'center' },
     { title: '编码', dataIndex: 'code', key: 'code', width: 130, align: 'center' },
-    { title: '规格', key: 'specs', width: 220, align: 'center' },
-    { title: '库存', key: 'currentStock', width: 100, align: 'center' },
+    { title: '所有规格', key: 'allSpecs', width: 200, ellipsis: true, align: 'center' },
+    { title: '总库存', key: 'totalStock', width: 100, align: 'center' },
     { title: '预警库存', key: 'warnStock', width: 110, align: 'center' },
     { title: '预警状态', key: 'warningStatus', width: 120, align: 'center' },
     { title: '操作', key: 'actions', width: 140, align: 'center' }
+  ]
+
+  /** 规格子表格列定义（多规格展开时展示） */
+  const specColumns = [
+    { title: '规格名称', dataIndex: 'spec', key: 'spec', width: 120, align: 'center' },
+    { title: '当前库存', dataIndex: 'current_stock', key: 'current_stock', width: 100, align: 'center' },
+    { title: '预警状态', key: 'warningStatus', width: 100, align: 'center' }
   ]
 
   const loading = ref(false)
@@ -117,16 +147,42 @@
   const formVisible = ref(false)
   const currentItem = ref<InventoryItem | null>(null)
 
+  /** 计算零件的总库存（所有规格库存之和） */
+  const getTotalStock = (item: InventoryItem): number => {
+    if (!item.specs || item.specs.length === 0) return 0
+    return item.specs.reduce((sum, spec) => sum + spec.current_stock, 0)
+  }
+
+  /** 仅一条且 spec 为空串 → 默认 SKU，无需展开子行 */
+  const isDefaultSpec = (item: InventoryItem): boolean => {
+    const spec = item.specs?.[0]
+    return item.specs?.length === 1 && spec?.spec === ''
+  }
+
+  /** 多规格或具名规格时才允许展开 */
+  const isRowExpandable = (item: InventoryItem): boolean => {
+    if (!item.specs?.length) return false
+    return !isDefaultSpec(item)
+  }
+
+  /** 零件级预警：总库存 ≤ 预警阈值 */
+  const isItemWarning = (item: InventoryItem): boolean => {
+    return getTotalStock(item) <= item.warn_stock
+  }
+
+  /** 规格级预警：该规格库存 ≤ 零件预警阈值 */
+  const isSpecWarning = (item: InventoryItem, spec: ItemSpec): boolean => {
+    return spec.current_stock <= item.warn_stock
+  }
+
   const filters = reactive<{
     name: string
     code: string
     type: ItemType | undefined
-    isWarning: 1 | 2 | undefined
   }>({
     name: '',
     code: '',
-    type: undefined,
-    isWarning: undefined
+    type: undefined
   })
 
   const pagination = reactive({
@@ -146,7 +202,6 @@
         name: filters.name || undefined,
         code: filters.code || undefined,
         type: filters.type,
-        isWarning: filters.isWarning
       })
       items.value = res.datas.items
       pagination.total = res.datas.total
@@ -166,7 +221,6 @@
     filters.name = ''
     filters.code = ''
     filters.type = undefined
-    filters.isWarning = undefined
     pagination.current = 1
     loadItems()
   }
@@ -330,6 +384,63 @@
 
   .cell-muted {
     color: #a1a1aa;
+  }
+
+  .cell-spec {
+    font-size: 13px;
+    color: #52525b;
+  }
+
+  /* 父行：多规格库存摘要 */
+  .spec-summary {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .spec-summary-item {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 13px;
+    color: #52525b;
+    background: #f4f4f5;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  /* 展开行：规格子表格 */
+  .spec-sub-table {
+    margin: 0 16px 8px 48px;
+  }
+
+  /* 规格列表样式（备用） */
+  .spec-list {
+    padding: 8px 24px;
+    background: #fafafa;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .spec-item {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+
+  .spec-name {
+    color: #52525b;
+    font-weight: 500;
+  }
+
+  .spec-stock {
+    color: #71717a;
+    margin-left: 4px;
   }
 
   /* 规格标签 */
