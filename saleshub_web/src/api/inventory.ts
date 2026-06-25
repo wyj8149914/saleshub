@@ -117,10 +117,23 @@ export interface ProductItemPayload {
 export interface StockRecord {
     record_id: string
     item_id: string
+    spec_id?: string
     quantity: number
+    before_stock?: number
+    after_stock?: number
     type: 'in' | 'out' | 'check'
-    created_at: string
-    notes: string
+    date?: string
+    remark?: string
+    create_time: string
+    record_no?: string
+}
+
+export interface StockHistoryQuery {
+    item_id: string
+    pageIndex: number
+    pageSize: number
+    start_date?: string
+    end_date?: string
 }
 
 // ============ 文件上传 API ============
@@ -176,6 +189,11 @@ export const inventoryApi = {
         return http.get<{ items: ProductItemRelation[] }>('/saleshub/inventory/listProductItems', {
             params: { product_id }
         })
+    },
+
+    // ---- 库存历史 ----
+    listStockHistory(query: StockHistoryQuery) {
+        return http.get<PaginatedData<StockRecord>>('/saleshub/inventory/listStockHistory', { params: query })
     }
 }
 

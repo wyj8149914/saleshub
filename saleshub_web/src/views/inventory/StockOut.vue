@@ -69,6 +69,7 @@
     itemId: string;
     quantity: number;
     date: Dayjs;
+    specId: string;
     remark?: string;
   }
 
@@ -78,7 +79,8 @@
     itemId: '',
     quantity: 1,
     date: dayjs(),
-    remark: ''
+    remark: '',
+    specId: ''
   });
 
   // 表单验证规则
@@ -97,9 +99,9 @@
           if (!value || !form.value.itemId) return Promise.resolve();
 
           const selectedItem = deviceItems.value.find((item: InventoryItem) => item.item_id === form.value.itemId);
-          if (selectedItem && selectedItem.current_stock !== undefined && value > selectedItem.current_stock) {
-            return Promise.reject(`出库数量不能超过当前库存 (${selectedItem.current_stock})`);
-          }
+          // if (selectedItem && selectedItem.specs.find((spec) => spec.spec_id === form.value.specId)?.current_stock !== undefined && value > selectedItem.specs.find((spec: ItemSpec) => spec.spec_id === form.value.specId)?.current_stock) {
+          //   return Promise.reject(`出库数量不能超过当前库存`);
+          // }
           return Promise.resolve();
         },
         trigger: 'blur'
@@ -123,7 +125,7 @@
   const itemOptions = computed(() =>
     deviceItems.value
       .map(item => ({
-        label: `${item.name} (${item.code}) - 库存: ${item.current_stock ?? 0}`,
+        label: `${item.name} (${item.code}) - 库存: ${item.specs.reduce((sum, spec) => sum + spec.current_stock, 0)}`,
         value: item.item_id
       }))
   );
@@ -223,7 +225,8 @@
       itemId: '',
       quantity: 1,
       date: dayjs(),
-      remark: ''
+      remark: '',
+      specId: ''
     };
     deviceItems.value = [];
     formRef.value?.clearValidate();

@@ -5,38 +5,34 @@
         :loading="itemsLoading" :options="itemOptions" style="width: 300px" @change="handleItemChange" />
     </template>
 
-    <a-table :columns="columns" :data-source="historyRecords" :loading="loading" :pagination="{ pageSize: 20 }" bordered
-      row-key="recordId">
+    <a-table :columns="columns" :data-source="historyRecords" :loading="loading"
+      :pagination="{ current: pageIndex, pageSize, total, showSizeChanger: true, onChange: handlePageChange }" bordered
+      :row-key="(record: StockHistoryRecord) => record.id">
       <template #bodyCell="{ column, record }">
-        <!-- 类型列 -->
         <template v-if="column.key === 'type'">
           <a-tag :color="getTypeColor(record.type)">
             {{ getTypeText(record.type) }}
           </a-tag>
         </template>
 
-        <!-- 数量列 -->
         <template v-else-if="column.key === 'quantity'">
-          <span :style="{ color: record.type === 'in' ? '#52c41a' : '#ff4d4f', fontWeight: 500 }">
-            {{ record.type === 'in' ? '+' : '-' }}{{ record.quantity }}
+          <span
+            :style="{ color: record.type === 'in' ? '#52c41a' : record.type === 'out' ? '#ff4d4f' : '#1677ff', fontWeight: 500 }">
+            <template v-if="record.type === 'in'">+{{ record.quantity }}</template>
+            <template v-else-if="record.type === 'out'">-{{ record.quantity }}</template>
+            <template v-else>{{ record.quantity ?? '-' }}</template>
           </span>
         </template>
 
-        <!-- 盘点差异列 -->
-        <template v-else-if="column.key === 'checkDiff'">
-          <span v-if="record.type === 'check' && record.checkDiff">
-            {{ record.beforeQuantity }} → {{ record.afterQuantity }}
-            <a-tag :color="record.checkDiff > 0 ? 'green' : record.checkDiff < 0 ? 'red' : 'default'"
-              style="margin-left: 8px">
-              {{ record.checkDiff > 0 ? '+' : '' }}{{ record.checkDiff }}
-            </a-tag>
+        <template v-else-if="column.key === 'stockChange'">
+          <span v-if="record.before_stock != null && record.after_stock != null">
+            {{ record.before_stock }} → {{ record.after_stock }}
           </span>
           <span v-else>-</span>
         </template>
 
-        <!-- 日期列 -->
-        <template v-else-if="column.key === 'createdAt'">
-          {{ formatDate(record.createdAt) }}
+        <template v-else-if="column.key === 'create_time'">
+          {{ formatDate(record.create_time) }}
         </template>
       </template>
     </a-table>
@@ -44,184 +40,145 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue';
-  import { message } from 'ant-design-vue';
-  import { inventoryApi } from '@/api/inventory';
-  import type { InventoryItem, StockRecord } from '@/api/inventory';
+  import { ref, computed, onMounted } from 'vue'
+  import { message } from 'ant-design-vue'
+  import { inventoryApi } from '@/api/inventory'
+  import type { InventoryItem, StockRecord } from '@/api/inventory'
 
-  // 扩展库存记录类型以支持盘点差异
   interface StockHistoryRecord extends StockRecord {
-    itemName?: string;
-    checkDiff?: number;
-    beforeQuantity?: number;
-    afterQuantity?: number;
+    id: string
+    itemName?: string
   }
 
-  // 表格列定义
   const columns = [
-    {
-      title: '类型',
-      dataIndex: 'type',
-      key: 'type',
-      width: 100
-    },
-    {
-      title: '零件名称',
-      dataIndex: 'itemName',
-      key: 'itemName'
-    },
-    {
-      title: '数量',
-      dataIndex: 'quantity',
-      key: 'quantity',
-      width: 120
-    },
-    {
-      title: '盘点差异',
-      key: 'checkDiff',
-      width: 180
-    },
-    {
-      title: '日期',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      width: 180
-    },
-    {
-      title: '备注',
-      dataIndex: 'notes',
-      key: 'notes'
-    }
-  ];
+    { title: '类型', dataIndex: 'type', key: 'type', width: 90 },
+    { title: '零件名称', dataIndex: 'itemName', key: 'itemName', width: 140 },
+    { title: '变更数量', dataIndex: 'quantity', key: 'quantity', width: 100 },
+    { title: '库存变更', key: 'stockChange', width: 140 },
+    { title: '操作时间', dataIndex: 'create_time', key: 'create_time', width: 170 },
+    { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true }
+  ]
 
-  // 状态管理
-  const loading = ref(false);
-  const itemsLoading = ref(false);
-  const inventoryItems = ref<InventoryItem[]>([]);
-  const selectedItemId = ref<string>('');
-  const historyRecords = ref<StockHistoryRecord[]>([]);
+  const loading = ref(false)
+  const itemsLoading = ref(false)
+  const inventoryItems = ref<InventoryItem[]>([])
+  const selectedItemId = ref<string>('')
+  const historyRecords = ref<StockHistoryRecord[]>([])
+  const pageIndex = ref(1)
+  const pageSize = ref(20)
+  const total = ref(0)
 
-  // 零件选项
   const itemOptions = computed(() =>
     inventoryItems.value.map((item: InventoryItem) => ({
       label: `${item.name} (${item.code})`,
       value: item.item_id
     }))
-  );
+  )
 
-  // 零件搜索过滤
   const filterItemOption = (input: string, option: { label: string; value: string }) => {
-    return option.label.toLowerCase().includes(input.toLowerCase());
-  };
+    return option.label.toLowerCase().includes(input.toLowerCase())
+  }
 
-  // 获取类型颜色
   const getTypeColor = (type: string): string => {
     switch (type) {
-      case 'in':
-        return 'green';
-      case 'out':
-        return 'red';
-      case 'check':
-        return 'blue';
-      default:
-        return 'default';
+      case 'in': return 'green'
+      case 'out': return 'red'
+      case 'check': return 'blue'
+      default: return 'default'
     }
-  };
+  }
 
-  // 获取类型文本
   const getTypeText = (type: string): string => {
     switch (type) {
-      case 'in':
-        return '入库';
-      case 'out':
-        return '出库';
-      case 'check':
-        return '盘点';
-      default:
-        return '未知';
+      case 'in': return '入库'
+      case 'out': return '出库'
+      case 'check': return '盘点'
+      default: return '未知'
     }
-  };
+  }
 
-  // 格式化日期
   const formatDate = (date: Date | string): string => {
-    if (!date) return '-';
-    const d = new Date(date);
+    if (!date) return '-'
+    const d = new Date(date)
     return d.toLocaleString('zh-CN', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit'
-    });
-  };
+    })
+  }
 
-  // 加载零件列表
   const loadInventoryItems = async () => {
-    itemsLoading.value = true;
+    itemsLoading.value = true
     try {
       const response = await inventoryApi.listItems({
         pageIndex: 1,
         pageSize: 1000
-      });
+      })
       if (response.result === 0) {
-        inventoryItems.value = response.datas.items;
+        inventoryItems.value = response.datas.items
       } else {
-        message.error(response.msg || '加载零件列表失败');
+        message.error(response.msg || '加载零件列表失败')
       }
     } catch (error) {
-      console.error('加载零件列表失败:', error);
-      message.error('加载零件列表失败');
+      console.error('加载零件列表失败:', error)
+      message.error('加载零件列表失败')
     } finally {
-      itemsLoading.value = false;
+      itemsLoading.value = false
     }
-  };
+  }
 
-  // 加载库存历史记录
-  const loadHistory = async (itemId: string) => {
-    // if (!itemId) {
-    //   historyRecords.value = [];
-    //   return;
-    // }
+  const loadHistory = async () => {
+    if (!selectedItemId.value) {
+      historyRecords.value = []
+      total.value = 0
+      return
+    }
 
-    // loading.value = true;
-    // try {
-    //   const response = await inventoryApi.listStockHistory({
-    //     itemId: itemId,
-    //     pageIndex: 1,
-    //     pageSize: 1000
-    //   });
-    //   if (response.result === 0) {
-    //     const item = inventoryItems.value.find((i: InventoryItem) => i.item_id === itemId);
+    loading.value = true
+    try {
+      const response = await inventoryApi.listStockHistory({
+        item_id: selectedItemId.value,
+        pageIndex: pageIndex.value,
+        pageSize: pageSize.value
+      })
+      if (response.result === 0) {
+        const item = inventoryItems.value.find((i: InventoryItem) => i.item_id === selectedItemId.value)
+        historyRecords.value = response.datas.items.map((record: StockRecord & { id?: string }) => ({
+          ...record,
+          id: record.id || record.record_id,
+          itemName: item?.name || '-',
+          quantity: record.type === 'check'
+            ? Math.abs((record.after_stock ?? 0) - (record.before_stock ?? 0))
+            : record.quantity
+        }))
+        total.value = response.datas.total
+      } else {
+        message.error(response.msg || '加载库存历史失败')
+      }
+    } catch (error) {
+      console.error('加载库存历史失败:', error)
+      message.error('加载库存历史失败')
+    } finally {
+      loading.value = false
+    }
+  }
 
-    //     // 处理历史记录，添加零件名称
-    //     historyRecords.value = response.datas.map((record: StockRecord) => ({
-    //       ...record,
-    //       itemName: item?.name || '-',
-    //       // 盘点记录的模拟数据（实际应从API获取）
-    //       checkDiff: record.type === 'check' ? (Math.random() > 0.5 ? Math.floor(Math.random() * 10) - 5 : 0) : undefined,
-    //       beforeQuantity: record.type === 'check' ? Math.floor(Math.random() * 50) : undefined,
-    //       afterQuantity: record.type === 'check' ? Math.floor(Math.random() * 50) : undefined
-    //     }));
-    //   } else {
-    //     message.error(response.msg || '加载库存历史失败');
-    //   }
-    // } catch (error) {
-    //   console.error('加载库存历史失败:', error);
-    //   message.error('加载库存历史失败');
-    // } finally {
-    //   loading.value = false;
-    // }
-  };
+  const handleItemChange = () => {
+    pageIndex.value = 1
+    loadHistory()
+  }
 
-  // 处理零件选择变化
-  const handleItemChange = (itemId: string) => {
-    loadHistory(itemId);
-  };
+  const handlePageChange = (page: number, size: number) => {
+    pageIndex.value = page
+    pageSize.value = size
+    loadHistory()
+  }
 
-  // 组件挂载时加载数据
   onMounted(() => {
-    loadInventoryItems();
-  });
+    loadInventoryItems()
+  })
 </script>
 
 <style scoped lang="scss">

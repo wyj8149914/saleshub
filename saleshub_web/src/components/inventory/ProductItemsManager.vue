@@ -10,7 +10,7 @@
 
     <!-- 添加面板：搜索未关联的「零件+规格」，设置单台数量与备注后加入列表 -->
     <div class="add-panel">
-      <a-select v-model:value="addForm.item_id" placeholder="搜索零件或规格" show-search allow-clear
+      <a-select v-model:value="addForm.selectedKey" placeholder="搜索零件或规格" show-search allow-clear
         :filter-option="filterItem" :options="availableOptions" :loading="loadingAvailable"
         :field-names="{ label: 'label', value: 'value' }" class="add-select" />
       <a-input-number v-model:value="addForm.quantity_per_product" :min="1" :precision="0" :max="9999"
@@ -18,13 +18,13 @@
         <template #addonBefore>单台数量</template>
       </a-input-number>
       <a-input v-model:value="addForm.remark" placeholder="备注（可选，最长 100 字符）" :maxlength="100" class="add-remark" />
-      <a-button type="primary" class="add-btn" :disabled="!addForm.item_id" @click="handleAdd">
+      <a-button type="primary" class="add-btn" :disabled="!addForm.selectedKey" @click="handleAdd">
         添加
       </a-button>
     </div>
 
     <!-- 已关联零件列表；row-key 使用 item_id+spec_id 保证同零件不同规格行唯一 -->
-    <a-table :columns="columns" :data-source="selectedItems" :loading="loading" :pagination="false" bordered
+    <a-table :columns="columns" :data-source="selectedItems" :loading="loading" :pagination="false"
       :row-key="(record: SelectedItem) => `${record.item_id}_${record.spec_id}`" size="middle" class="items-table"
       :locale="{ emptyText: '暂未关联任何零件，使用上方搜索框添加' }">
       <template #bodyCell="{ column, record }">
@@ -54,7 +54,6 @@
           </span>
         </template>
 
-        <!-- 行内可编辑：单台数量、备注 -->
         <template v-else-if="column.key === 'quantity_per_product'">
           <a-input-number v-model:value="record.quantity_per_product" :min="1" :precision="0" :max="9999" size="small"
             class="qty-input" />
@@ -141,13 +140,12 @@
 
   /** 顶部「添加」面板的表单状态 */
   const addForm = reactive<{
-    item_id: string | undefined
-    spec_id: string | undefined
+    /** 下拉选中项，格式 item_id_spec_id，唯一标识「零件+规格」 */
+    selectedKey: string | undefined
     quantity_per_product: number
     remark: string
   }>({
-    item_id: undefined,
-    spec_id: undefined,
+    selectedKey: undefined,
     quantity_per_product: 1,
     remark: ''
   })
@@ -166,11 +164,12 @@
 
   /**
    * 下拉选项结构
-   * 注意：value 仅为 item_id，规格信息存放在 specId / specName 中
+   * value 为 item_id + spec_id 复合键，保证同零件不同规格选项唯一
    */
   interface SelectOption {
     label: string
     value: string
+    itemId: string
     specId: string
     specName: string
   }
@@ -194,7 +193,8 @@
           const displaySpec = spec.spec ? ` - ${spec.spec}` : ''
           options.push({
             label: `${item.name}${displaySpec}（${item.code}）`,
-            value: item.item_id,
+            value: key,
+            itemId: item.item_id,
             specId: spec.spec_id,
             specName: spec.spec
           })
@@ -267,25 +267,22 @@
    * 4. 重置添加表单
    */
   const handleAdd = () => {
-    if (!addForm.item_id || !addForm.spec_id) {
-      console.log(addForm.item_id, addForm.spec_id)
+    if (!addForm.selectedKey) {
       message.error('请选择零件和规格')
       return
     }
 
-    const option = availableOptions.value.find(
-      opt => opt.value === addForm.item_id && opt.specId === addForm.spec_id
-    )
+    const option = availableOptions.value.find(opt => opt.value === addForm.selectedKey)
     if (!option) return
 
-    const item = availableItems.value.find(i => i.item_id === addForm.item_id)
+    const item = availableItems.value.find(i => i.item_id === option.itemId)
     if (!item) return
 
-    const spec = item.specs?.find(s => s.spec_id === addForm.spec_id)
+    const spec = item.specs?.find(s => s.spec_id === option.specId)
 
     selectedItems.value.push({
       item_id: item.item_id,
-      spec_id: addForm.spec_id,
+      spec_id: option.specId,
       spec: option.specName,
       item_name: item.name,
       item_code: item.code,
@@ -296,8 +293,7 @@
       remark: addForm.remark
     })
 
-    addForm.item_id = undefined
-    addForm.spec_id = undefined
+    addForm.selectedKey = undefined
     addForm.quantity_per_product = 1
     addForm.remark = ''
   }
@@ -349,22 +345,6 @@
   }
 
   /**
-   * 监听添加面板的零件选择变化
-   *
-   * 下拉 value 仅绑定 item_id，选中后自动从 availableOptions 中取第一个
-   * 匹配项的 specId 写入 addForm.spec_id（与所选「零件+规格」选项对应）
-   */
-  watch(
-    () => addForm.item_id,
-    (newItemId) => {
-      const option = availableOptions.value.find(opt => opt.value === newItemId)
-      if (option) {
-        addForm.spec_id = option.specId
-      }
-    }
-  )
-
-  /**
    * 监听弹窗显隐，负责数据加载与清理
    *
    * - 打开：并行加载已关联列表和全库零件，并重置添加表单
@@ -376,8 +356,7 @@
       if (visible && props.product) {
         loadCurrentItems()
         loadAvailableItems()
-        addForm.item_id = undefined
-        addForm.spec_id = undefined
+        addForm.selectedKey = undefined
         addForm.quantity_per_product = 1
         addForm.remark = ''
       } else {

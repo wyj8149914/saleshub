@@ -100,12 +100,14 @@
           </template>
 
           <template v-else-if="column.key === 'actions'">
-            <a-space :size="4">
-              <a-button type="link" size="small" @click="handleEdit(record)">编辑</a-button>
-              <a-popconfirm title="确定要删除此零件吗？" ok-text="删除" cancel-text="取消" @confirm="handleDelete(record)">
-                <a-button type="link" size="small" danger>删除</a-button>
-              </a-popconfirm>
-            </a-space>
+            <div class="actions-cell" @click.stop>
+              <a-space :size="4">
+                <a-button type="link" size="small" @click="handleEdit(record)">编辑</a-button>
+                <a-popconfirm title="确定要删除此零件吗？" ok-text="删除" cancel-text="取消" @confirm="handleDelete(record)">
+                  <a-button type="link" size="small" danger>删除</a-button>
+                </a-popconfirm>
+              </a-space>
+            </div>
           </template>
         </template>
       </a-table>
