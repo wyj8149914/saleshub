@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SalesHub 更新日志</title>
+  <style>
+    :root {
+      --bg: #0c0e14;
+      --surface: #141820;
+      --surface-hover: #1a1f2b;
+      --border: #252b38;
+      --text: #e8eaed;
+      --text-muted: #8b93a7;
+      --accent: #4f8cff;
+      --accent-dim: rgba(79, 140, 255, 0.12);
+      --green: #3dd68c;
+      --green-dim: rgba(61, 214, 140, 0.12);
+      --amber: #f5a623;
+      --amber-dim: rgba(245, 166, 35, 0.12);
+      --red: #f56565;
+      --red-dim: rgba(245, 101, 101, 0.12);
+      --radius: 10px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    .page-header {
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #12151c 0%, var(--bg) 100%);
+      padding: 48px 24px 40px;
+      text-align: center;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .logo svg {
+      color: var(--accent);
+    }
+
+    .logo-text {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .page-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+
+    .page-header p {
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+
+    .current-version {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 6px 16px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    .release {
+      margin-bottom: 48px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .release-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-hover);
+    }
+
+    .release-version {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .release-version.latest {
+      color: var(--accent);
+    }
+
+    .release-date {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .release-body {
+      padding: 8px 0;
+    }
+
+    .section {
+      padding: 16px 24px;
+    }
+
+    .section+.section {
+      border-top: 1px solid var(--border);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+
+    .section-title.added {
+      color: var(--green);
+    }
+
+    .section-title.changed {
+      color: var(--amber);
+    }
+
+    .section-title.removed {
+      color: var(--red);
+    }
+
+    .section-title.tech {
+      color: var(--accent);
+    }
+
+    .section-title::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .section-title.added::before {
+      background: var(--green);
+    }
+
+    .section-title.changed::before {
+      background: var(--amber);
+    }
+
+    .section-title.removed::before {
+      background: var(--red);
+    }
+
+    .section-title.tech::before {
+      background: var(--accent);
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      position: relative;
+      padding: 6px 0 6px 20px;
+      color: var(--text);
+      font-size: 14.5px;
+    }
+
+    li::before {
+      content: '·';
+      position: absolute;
+      left: 4px;
+      color: var(--text-muted);
+      font-weight: bold;
+    }
+
+    .version-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+      font-size: 14px;
+    }
+
+    .version-table th,
+    .version-table td {
+      padding: 10px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .version-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .version-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .version-table tr:hover td {
+      background: var(--surface-hover);
+    }
+
+    .footer {
+      text-align: center;
+      padding: 32px 24px;
+      color: var(--text-muted);
+      font-size: 13px;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 600px) {
+      .page-header {
+        padding: 32px 16px 28px;
+      }
+
+      .page-header h1 {
+        font-size: 22px;
+      }
+
+      .container {
+        padding: 24px 16px 60px;
+      }
+
+      .release-header {
+        padding: 16px 18px;
+      }
+
+      .section {
+        padding: 14px 18px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="page-header">
+    <div class="logo">
+      <svg viewBox="0 0 32 32" width="28" height="28">
+        <rect x="2" y="2" width="13" height="13" rx="3" fill="currentColor" />
+        <rect x="17" y="2" width="13" height="13" rx="3" fill="currentColor" opacity="0.5" />
+        <rect x="2" y="17" width="13" height="13" rx="3" fill="currentColor" opacity="0.5" />
+        <rect x="17" y="17" width="13" height="13" rx="3" fill="currentColor" opacity="0.85" />
+      </svg>
+      <span class="logo-text">SalesHub</span>
+    </div>
+    <h1>更新日志</h1>
+    <p>了解 SalesHub 前端各版本的新功能与改进</p>
+    <span class="current-version">当前版本 v0.5.0</span>
+  </header>
+
+  <main class="container">
+    <!-- v0.5.0 -->
+    <article class="release">
+      <div class="release-header">
+        <span class="release-version latest">v0.5.0</span>
+        <time class="release-date" datetime="2026-06-25">2026 年 6 月 25 日</time>
+      </div>
+      <div class="release-body">
+        <div class="section">
+          <div class="section-title added">新增</div>
+          <ul>
+            <li>零件与产品支持图片上传，可在表单中预览与管理图片</li>
+            <li>常用件支持多规格管理，库存按规格维度独立统计</li>
+            <li>新增图片上传工具模块，内置类型与大小校验（默认最大 10MB）</li>
+          </ul>
+        </div>
+        <div class="section">
+          <div class="section-title changed">改进</div>
+          <ul>
+            <li>重构零件表单、产品表单、产品零件关联管理组件，适配规格级库存</li>
+            <li>优化规格编辑器交互，支持动态添加与删除规格项</li>
+            <li>零件列表支持按规格展示库存数量</li>
+            <li>库存历史记录关联规格信息</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- v0.4.0 -->
+    <article class="release">
+      <div class="release-header">
+        <span class="release-version">v0.4.0</span>
+        <time class="release-date" datetime="2026-06-18">2026 年 6 月 18 日</time>
+      </div>
+      <div class="release-body">
+        <div class="section">
+          <div class="section-title changed">变更</div>
+          <ul>
+            <li>统一业务术语：「零部件」统一为「零件」，与后端及数据库命名保持一致</li>
+            <li>重构入库、出库、库存历史页面，优化表单与列表交互</li>
+            <li>精简库存管理 API 接口定义，移除冗余调用</li>
+          </ul>
+        </div>
+        <div class="section">
+          <div class="section-title removed">移除</div>
+          <ul>
+            <li>侧边栏移除「库存预警」菜单入口（路由保留，可直接访问 URL）</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- v0.3.0 -->
+    <article class="release">
+      <div class="release-header">
+        <span class="release-version">v0.3.0</span>
+        <time class="release-date" datetime="2026-06-18">2026 年 6 月 18 日</time>
+      </div>
+      <div class="release-body">
+        <div class="section">
+          <div class="section-title added">新增</div>
+          <ul>
+            <li>登录页对接后端认证接口，支持账号密码登录与 Token 持久化</li>
+            <li>产品管理：产品列表、新建/编辑产品、关联零件管理</li>
+            <li>零件管理：零件列表、新建/编辑零件（设备件 / 常用件）</li>
+            <li>入库管理：选择零件与数量，记录入库操作</li>
+            <li>出库管理：选择零件与数量，校验库存后出库</li>
+            <li>库存历史：查看出入库流水记录</li>
+            <li>主布局：侧边栏导航、顶部用户信息、退出登录</li>
+            <li>产品零件关联管理组件：管理产品与零件的绑定关系</li>
+          </ul>
+        </div>
+        <div class="section">
+          <div class="section-title changed">改进</div>
+          <ul>
+            <li>完善路由鉴权，未登录自动跳转登录页并保留重定向地址</li>
+            <li>统一 Axios 请求封装与错误处理</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- v0.2.0 -->
+    <article class="release">
+      <div class="release-header">
+        <span class="release-version">v0.2.0</span>
+        <time class="release-date" datetime="2026-06-17">2026 年 6 月 17 日</time>
+      </div>
+      <div class="release-body">
+        <div class="section">
+          <div class="section-title added">新增</div>
+          <ul>
+            <li>集成 Ant Design Vue 4.x 组件库</li>
+            <li>集成 Pinia 状态管理</li>
+            <li>登录模块与认证状态管理</li>
+            <li>路由守卫：基于登录状态的访问控制</li>
+            <li>Axios HTTP 客户端封装</li>
+            <li>登录页面基础 UI</li>
+          </ul>
+        </div>
+        <div class="section">
+          <div class="section-title tech">技术栈</div>
+          <ul>
+            <li>Vue 3（Composition API）</li>
+            <li>TypeScript · Vite 8 · Vue Router 5</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- v0.1.0 -->
+    <article class="release">
+      <div class="release-header">
+        <span class="release-version">v0.1.0</span>
+        <time class="release-date" datetime="2026-06-15">2026 年 6 月 15 日</time>
+      </div>
+      <div class="release-body">
+        <div class="section">
+          <div class="section-title added">新增</div>
+          <ul>
+            <li>基于 Vite 的 Vue 3 + TypeScript 项目初始化</li>
+            <li>ESLint + Prettier + Oxlint 代码规范配置</li>
+            <li>Vitest 单元测试框架配置</li>
+            <li>基础路由与应用入口</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- 版本一览 -->
+    <article class="release">
+      <div class="release-header">
+        <span class="release-version">版本一览</span>
+      </div>
+      <div class="release-body">
+        <div class="section">
+          <table class="version-table">
+            <thead>
+              <tr>
+                <th>版本</th>
+                <th>发布日期</th>
+                <th>摘要</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>v0.5.0</td>
+                <td>2026-06-25</td>
+                <td>图片上传、规格级库存</td>
+              </tr>
+              <tr>
+                <td>v0.4.0</td>
+                <td>2026-06-18</td>
+                <td>术语统一、库存模块重构</td>
+              </tr>
+              <tr>
+                <td>v0.3.0</td>
+                <td>2026-06-18</td>
+                <td>登录对接、完整库存管理功能</td>
+              </tr>
+              <tr>
+                <td>v0.2.0</td>
+                <td>2026-06-17</td>
+                <td>前端基础设施与登录模块</td>
+              </tr>
+              <tr>
+                <td>v0.1.0</td>
+                <td>2026-06-15</td>
+                <td>项目初始化</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </article>
+  </main>
+
+  <footer class="footer">
+    <p>SalesHub Inventory Platform &copy; 2024–2026</p>
+    <p style="margin-top: 8px;">
+      <a href="/CHANGELOG.md">Markdown 版本</a>
+    </p>
+  </footer>
+</body>
+
+</html>
