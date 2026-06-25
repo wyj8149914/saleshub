@@ -4,21 +4,11 @@ import { validationMiddleware } from '../middleware/paramsValidator';
 import { asyncHandler } from '../middleware/errorHandler.middleware';
 import { CreateInventoryItemDto, ItemIdDto, ListInventoryItemDto, UpdateInventoryItemDto } from '../dto/item.dto';
 import {
-    CreateProductDto,
-    ProductIdDto,
-    ListProductDto,
-    UpdateProductDto,
-    SetProductItemsDto,
-    ProductItemIdDto,
+    CreateProductDto, ProductIdDto, ListProductDto, UpdateProductDto, SetProductItemsDto, ProductItemIdDto,
 } from '../dto/product.dto';
 import {
-    StockInDto,
-    StockInBatchDto,
-    StockOutDto,
-    StockOutBatchDto,
-    StockOutByProductDto,
-    StockCheckDto,
-    ListStockHistoryDto,
+    StockInDto, StockInBatchDto, StockOutDto, StockOutBatchDto, StockOutByProductDto, StockCheckDto, ListStockHistoryDto,
+    ListStockInRecordsDto, ListStockOutRecordsDto,
 } from '../dto/stock.dto';
 import { productService, inventoryItemService, stockService } from '../service/inventory';
 
@@ -34,7 +24,6 @@ router.get('/listItems',
         next();
     })
 );
-
 
 // 创建新零件
 router.post('/createItem',
@@ -196,6 +185,28 @@ router.get('/listStockHistory',
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ListStockHistoryDto, req.query);
         const result = await stockService.listHistory(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 查询入库记录列表
+router.get('/stockInList',
+    validationMiddleware(ListStockInRecordsDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(ListStockInRecordsDto, req.query);
+        const result = await stockService.listStockInRecords(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 查询出库记录列表
+router.get('/stockOutList',
+    validationMiddleware(ListStockOutRecordsDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(ListStockOutRecordsDto, req.query);
+        const result = await stockService.listStockOutRecords(dtoObj);
         res.locals.datas = result;
         next();
     })

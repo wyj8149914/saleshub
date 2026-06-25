@@ -8,10 +8,14 @@ import {
     StockCheckDto,
     ListStockHistoryDto,
     StockInBatchDto,
+    ListStockInRecordsDto,
+    ListStockOutRecordsDto,
 } from '../../dto/stock.dto';
 import { AppDataSource } from '../../config/database.config';
 import { getLogger } from '../../utils/logger.util';
 import { v7 } from 'uuid';
+import { MinioFile } from '../../entity/file.entity';
+import { generateFileUrl } from '../../config/minio.config';
 
 interface StockItem {
     item_id: string;
@@ -299,6 +303,119 @@ export class StockService {
             return { result: 0, msg: 'success', datas: { total, items } };
         } catch (error) {
             this.logger.error('查询历史记录失败:', error);
+            return { result: 1, msg: '查询失败' };
+        }
+    }
+
+    /**
+     * 查询入库记录列表
+     */
+    async listStockInRecords(dto: ListStockInRecordsDto) {
+        try {
+            const queryBuilder = this.stockInRepository.createQueryBuilder('rec')
+                .leftJoin(InventoryItem, 'item', 'item.item_id = rec.item_id AND item.status = 1')
+                .leftJoin(InventoryItemSpec, 'spec', 'spec.spec_id = rec.spec_id AND spec.status = 1')
+                .leftJoin(MinioFile, 'file', 'file.relation_id = rec.photo_id')
+                .select([
+                    'rec.record_id AS record_id',
+                    'rec.record_no AS record_no',
+                    'to_char(rec.date, \'YYYY-MM-DD\') AS date',
+                    'rec.quantity AS quantity',
+                    'rec.remark AS remark',
+                    'rec.photo_id AS photo_id',
+                    'file.object_name AS object_name',
+                    'rec.before_stock AS before_stock',
+                    'rec.after_stock AS after_stock',
+                    'item.name AS item_name',
+                    'spec.spec AS spec',
+                    'to_char(rec.create_time, \'YYYY-MM-DD HH24:MI:SS\') AS create_time',
+                ])
+                .where('rec.status = :status', { status: 1 });
+
+            if (dto.start_date) {
+                queryBuilder.andWhere('rec.date >= to_date(:startDate, \'YYYY-MM-DD\')', { startDate: dto.start_date });
+            }
+            if (dto.end_date) {
+                queryBuilder.andWhere('rec.date <= to_date(:endDate, \'YYYY-MM-DD\') + Interval \'1 day\'', { endDate: dto.end_date });
+            }
+            if (dto.item_id) {
+                queryBuilder.andWhere('rec.item_id = :itemId', { itemId: dto.item_id });
+            }
+            if (dto.spec_id) {
+                queryBuilder.andWhere('rec.spec_id = :specId', { specId: dto.spec_id });
+            }
+            if (dto.record_no) {
+                queryBuilder.andWhere('rec.record_no = :recordNo', { recordNo: dto.record_no });
+            }
+
+            const start = (dto.pageIndex - 1) * dto.pageSize;
+            const total = await queryBuilder.getCount();
+            const items = await queryBuilder
+                .orderBy('rec.create_time', 'DESC')
+                .limit(dto.pageSize)
+                .offset(start)
+                .getRawMany();
+
+            for (const item of items) {
+                item.photo_url = generateFileUrl(item.object_name ?? '');
+            }
+
+            return { result: 0, msg: 'success', datas: { total, items } };
+        } catch (error) {
+            this.logger.error('查询入库记录列表失败:', error);
+            return { result: 1, msg: '查询失败' };
+        }
+    }
+
+    /**
+     * 查询出库记录列表
+     */
+    async listStockOutRecords(dto: ListStockOutRecordsDto) {
+        try {
+            const queryBuilder = this.stockOutRepository.createQueryBuilder('rec')
+                .leftJoin(InventoryItem, 'item', 'item.item_id = rec.item_id AND item.status = 1')
+                .leftJoin(InventoryItemSpec, 'spec', 'spec.spec_id = rec.spec_id AND spec.status = 1')
+                .select([
+                    'rec.record_id AS record_id',
+                    'rec.record_no AS record_no',
+                    'to_char(rec.date, \'YYYY-MM-DD\') AS date',
+                    'rec.quantity AS quantity',
+                    'rec.remark AS remark',
+                    'rec.before_stock AS before_stock',
+                    'rec.after_stock AS after_stock',
+                    'item.name AS item_name',
+                    'spec.spec AS spec',
+                    'to_char(rec.create_time, \'YYYY-MM-DD HH24:MI:SS\') AS create_time',
+                ])
+                .where('rec.status = :status', { status: 1 });
+
+            if (dto.start_date) {
+                queryBuilder.andWhere('rec.date >= to_date(:startDate, \'YYYY-MM-DD\')', { startDate: dto.start_date });
+            }
+            if (dto.end_date) {
+                queryBuilder.andWhere('rec.date <= to_date(:endDate, \'YYYY-MM-DD\') + Interval \'1 day\'', { endDate: dto.end_date });
+            }
+            if (dto.item_id) {
+                queryBuilder.andWhere('rec.item_id = :itemId', { itemId: dto.item_id });
+            }
+            if (dto.spec_id) {
+                queryBuilder.andWhere('rec.spec_id = :specId', { specId: dto.spec_id });
+            }
+            if (dto.record_no) {
+                queryBuilder.andWhere('rec.record_no = :recordNo', { recordNo: dto.record_no });
+            }
+
+            const start = (dto.pageIndex - 1) * dto.pageSize;
+            const total = await queryBuilder.getCount();
+            const items = await queryBuilder
+                .orderBy('rec.create_time', 'DESC')
+                .limit(dto.pageSize)
+                .offset(start)
+                .getRawMany();
+
+            return { result: 0, msg: 'success', datas: { total, items } };
+        } catch (error) {
+            this.logger.error('查询出库记录列表失败:', error);
             return { result: 1, msg: '查询失败' };
         }
     }
