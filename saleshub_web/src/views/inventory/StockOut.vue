@@ -1,260 +1,310 @@
 <template>
-  <a-card title="出库操作" :bordered="false">
-    <a-form ref="formRef" :model="form" :rules="rules" layout="vertical" @finish="handleSubmit">
-      <a-form-item label="产品" name="productId">
-        <a-select v-model:value="form.productId" placeholder="请选择产品" show-search :filter-option="filterProductOption"
-          :loading="productsLoading" :options="productOptions" @change="handleProductChange" />
-      </a-form-item>
+  <div class="page">
+    <div class="page-head">
+      <a-space class="filters" :size="12" wrap>
+        <a-input v-model:value="filters.record_no" placeholder="按出库单号精确搜索" allow-clear class="filter-input"
+          @press-enter="handleSearch" @change="handleFilterChange">
+          <template #prefix>
+            <SearchOutlined />
+          </template>
+        </a-input>
 
-      <a-form-item label="设备件" name="itemId">
-        <a-select v-model:value="form.itemId" placeholder="请先选择产品" show-search :filter-option="filterItemOption"
-          :loading="itemsLoading" :disabled="!form.productId" :options="itemOptions" />
-      </a-form-item>
+        <a-range-picker v-model:value="dateRange" :format="'YYYY-MM-DD'" @change="handleSearch" />
 
-      <a-row :gutter="16">
-        <a-col :span="12">
-          <a-form-item label="数量" name="quantity">
-            <a-input-number v-model:value="form.quantity" placeholder="请输入数量" :min="1" :precision="0"
-              style="width: 100%" />
-          </a-form-item>
-        </a-col>
+        <a-button type="primary" @click="handleSearch">查询</a-button>
+        <a-button @click="handleReset">重置</a-button>
+      </a-space>
 
-        <a-col :span="12">
-          <a-form-item label="出库日期" name="date">
-            <a-date-picker v-model:value="form.date" placeholder="请选择出库日期" style="width: 100%" :format="'YYYY-MM-DD'" />
-          </a-form-item>
-        </a-col>
-      </a-row>
+      <a-button type="primary" class="action-btn" @click="handleStockOut">
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        出库
+      </a-button>
+    </div>
 
-      <a-form-item label="备注" name="remark">
-        <a-textarea v-model:value="form.remark" placeholder="请输入备注" :rows="4" :maxlength="500" show-count />
-      </a-form-item>
+    <a-card :bordered="false" class="table-card">
+      <a-table :columns="columns" :data-source="records" :loading="loading" :pagination="pagination" bordered
+        row-key="record_id" @change="handleTableChange">
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'record_no'">
+            <span class="cell-code">{{ record.record_no }}</span>
+          </template>
 
-      <a-form-item>
-        <a-space>
-          <a-button type="primary" html-type="submit" :loading="loading">
-            提交出库
-          </a-button>
-          <a-button @click="handleReset">重置</a-button>
-        </a-space>
-      </a-form-item>
-    </a-form>
-  </a-card>
+          <template v-else-if="column.key === 'item'">
+            <span>{{ record.item_name || '-' }}</span>
+          </template>
+
+          <template v-else-if="column.key === 'spec'">
+            <span v-if="record.spec">{{ record.spec }}</span>
+            <span v-else class="cell-muted">-</span>
+          </template>
+
+          <template v-else-if="column.key === 'quantity'">
+            <span class="stock-num text-out">-{{ record.quantity }}</span>
+          </template>
+
+          <template v-else-if="column.key === 'stockChange'">
+            <span v-if="record.before_stock != null && record.after_stock != null">
+              {{ record.before_stock }} → {{ record.after_stock }}
+            </span>
+            <span v-else class="cell-muted">-</span>
+          </template>
+
+          <template v-else-if="column.key === 'remark'">
+            <span v-if="record.remark">{{ record.remark }}</span>
+            <span v-else class="cell-muted">-</span>
+          </template>
+
+          <template v-else-if="column.key === 'create_time'">
+            {{ formatDate(record.create_time) }}
+          </template>
+        </template>
+      </a-table>
+    </a-card>
+
+    <StockOutModal v-model:visible="modalVisible" @success="handleStockOutSuccess" />
+  </div>
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue';
-  import { message } from 'ant-design-vue';
-  import dayjs, { type Dayjs } from 'dayjs';
-  import { inventoryApi } from '@/api/inventory';
-  import type { Product, InventoryItem } from '@/api/inventory';
+  import { ref, reactive, onMounted } from 'vue'
+  import type { Dayjs } from 'dayjs'
+  import { PlusOutlined, SearchOutlined } from '@ant-design/icons-vue'
+  import { inventoryApi } from '@/api/inventory'
+  import type { StockOutRecord } from '@/api/inventory'
+  import StockOutModal from '@/components/inventory/StockOutModal.vue'
 
-  // 表单引用
-  const formRef = ref();
+  const columns = [
+    { title: '出库单号', dataIndex: 'record_no', key: 'record_no', width: 140, align: 'center' as const },
+    { title: '零件', key: 'item', width: 180, ellipsis: true, align: 'center' as const },
+    { title: '规格', dataIndex: 'spec', key: 'spec', width: 120, align: 'center' as const },
+    { title: '出库数量', dataIndex: 'quantity', key: 'quantity', width: 110, align: 'center' as const },
+    { title: '库存变更', key: 'stockChange', width: 150, align: 'center' as const },
+    { title: '出库日期', dataIndex: 'date', key: 'date', width: 130, align: 'center' as const },
+    { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true, align: 'center' as const },
+    { title: '操作时间', dataIndex: 'create_time', key: 'create_time', width: 170, align: 'center' as const }
+  ]
 
-  // 加载状态
-  const loading = ref(false);
-  const productsLoading = ref(false);
-  const itemsLoading = ref(false);
+  const loading = ref(false)
+  const records = ref<StockOutRecord[]>([])
+  const modalVisible = ref(false)
 
-  // 产品列表
-  const products = ref<Product[]>([]);
+  const filters = reactive({
+    record_no: ''
+  })
+  const dateRange = ref<[Dayjs, Dayjs] | null>(null)
 
-  // 设备件列表
-  const deviceItems = ref<InventoryItem[]>([]);
+  const pagination = reactive({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+    showSizeChanger: true,
+    showTotal: (total: number) => `共 ${total} 条`
+  })
 
-  // 表单数据接口
-  interface FormData {
-    productId: string;
-    itemId: string;
-    quantity: number;
-    date: Dayjs;
-    specId: string;
-    remark?: string;
+  const formatDate = (date: string): string => {
+    if (!date) return '-'
+    return new Date(date).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
-  // 表单数据
-  const form = ref<FormData>({
-    productId: '',
-    itemId: '',
-    quantity: 1,
-    date: dayjs(),
-    remark: '',
-    specId: ''
-  });
-
-  // 表单验证规则
-  const rules = computed(() => ({
-    productId: [
-      { required: true, message: '请选择产品', trigger: 'change' }
-    ],
-    itemId: [
-      { required: true, message: '请选择设备件', trigger: 'change' }
-    ],
-    quantity: [
-      { required: true, message: '请输入数量', trigger: 'blur' },
-      { type: 'number', min: 1, message: '数量必须大于0', trigger: 'blur' },
-      {
-        validator: (_rule: any, value: number) => {
-          if (!value || !form.value.itemId) return Promise.resolve();
-
-          const selectedItem = deviceItems.value.find((item: InventoryItem) => item.item_id === form.value.itemId);
-          // if (selectedItem && selectedItem.specs.find((spec) => spec.spec_id === form.value.specId)?.current_stock !== undefined && value > selectedItem.specs.find((spec: ItemSpec) => spec.spec_id === form.value.specId)?.current_stock) {
-          //   return Promise.reject(`出库数量不能超过当前库存`);
-          // }
-          return Promise.resolve();
-        },
-        trigger: 'blur'
-      }
-    ],
-    date: [
-      { required: true, message: '请选择出库日期', trigger: 'change' }
-    ]
-  }));
-
-  // 产品选项
-  const productOptions = computed(() =>
-    products.value
-      .map(product => ({
-        label: `${product.name} (${product.code})`,
-        value: product.product_id
-      }))
-  );
-
-  // 设备件选项
-  const itemOptions = computed(() =>
-    deviceItems.value
-      .map(item => ({
-        label: `${item.name} (${item.code}) - 库存: ${item.specs.reduce((sum, spec) => sum + spec.current_stock, 0)}`,
-        value: item.item_id
-      }))
-  );
-
-  // 产品搜索过滤
-  const filterProductOption = (input: string, option: { label: string; value: string }) => {
-    return option.label.toLowerCase().includes(input.toLowerCase());
-  };
-
-  // 设备件搜索过滤
-  const filterItemOption = (input: string, option: { label: string; value: string }) => {
-    return option.label.toLowerCase().includes(input.toLowerCase());
-  };
-
-  // 加载产品列表
-  const loadProducts = async () => {
-    productsLoading.value = true;
+  const loadRecords = async () => {
+    loading.value = true
     try {
-      const response = await inventoryApi.listProducts({
-        pageIndex: 1,
-        pageSize: 1000
-      });
-      if (response.result === 0) {
-        products.value = response.datas.items;
-      } else {
-        message.error(response.msg || '加载产品列表失败');
-      }
-    } catch (error) {
-      console.error('加载产品列表失败:', error);
-      message.error('加载产品列表失败');
+      const res = await inventoryApi.listStockOutRecords({
+        pageIndex: pagination.current,
+        pageSize: pagination.pageSize,
+        record_no: filters.record_no || undefined,
+        start_date: dateRange.value?.[0]?.format('YYYY-MM-DD'),
+        end_date: dateRange.value?.[1]?.format('YYYY-MM-DD')
+      })
+      records.value = res.datas.items
+      pagination.total = res.datas.total
+    } catch {
+      records.value = []
+      pagination.total = 0
     } finally {
-      productsLoading.value = false;
+      loading.value = false
     }
-  };
+  }
 
-  // 处理产品变更
-  const handleProductChange = async (productId: string) => {
-    // 清空设备件选择
-    form.value.itemId = '';
-    deviceItems.value = [];
+  const handleSearch = () => {
+    pagination.current = 1
+    loadRecords()
+  }
 
-    if (!productId) return;
-
-    // 加载该产品的设备件
-    itemsLoading.value = true;
-    try {
-      const response = await inventoryApi.listProductItems(productId);
-      if (response.result === 0) {
-        // deviceItems.value = response.datas.items;
-      } else {
-        message.error(response.msg || '加载设备件列表失败');
-      }
-    } catch (error) {
-      console.error('加载设备件列表失败:', error);
-      message.error('加载设备件列表失败');
-    } finally {
-      itemsLoading.value = false;
-    }
-  };
-
-  // 提交表单
-  const handleSubmit = async () => {
-    try {
-      loading.value = true;
-
-      // 准备提交数据
-      const submitData = {
-        itemId: form.value.itemId,
-        quantity: form.value.quantity,
-        notes: form.value.remark || undefined
-      };
-
-      // const response = await inventoryApi.stockOut(submitData);
-
-      // if (response.result === 0) {
-      //   message.success('出库操作成功');
-      //   handleReset();
-      //   // 重新加载设备件列表以更新库存显示
-      //   if (form.value.productId) {
-      //     await handleProductChange(form.value.productId);
-      //   }
-      // } else {
-      //   message.error(response.msg || '出库操作失败');
-      // }
-    } catch (error) {
-      console.error('提交失败:', error);
-      message.error('操作失败，请稍后重试');
-    } finally {
-      loading.value = false;
-    }
-  };
-
-  // 重置表单
   const handleReset = () => {
-    form.value = {
-      productId: '',
-      itemId: '',
-      quantity: 1,
-      date: dayjs(),
-      remark: '',
-      specId: ''
-    };
-    deviceItems.value = [];
-    formRef.value?.clearValidate();
-  };
+    filters.record_no = ''
+    dateRange.value = null
+    pagination.current = 1
+    loadRecords()
+  }
 
-  // 组件挂载时加载数据
+  const handleFilterChange = (e: any) => {
+    if (e?.target?.value === '') {
+      handleSearch()
+    }
+  }
+
+  const handleTableChange = (pag: any) => {
+    pagination.current = pag.current
+    pagination.pageSize = pag.pageSize
+    loadRecords()
+  }
+
+  const handleStockOut = () => {
+    modalVisible.value = true
+  }
+
+  const handleStockOutSuccess = () => {
+    modalVisible.value = false
+    pagination.current = 1
+    loadRecords()
+  }
+
   onMounted(() => {
-    loadProducts();
-  });
+    loadRecords()
+  })
 </script>
 
-<style scoped lang="scss">
-  :deep(.ant-card) {
-    max-width: 800px;
-    margin: 0 auto;
+<style scoped>
+  .page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
 
-    .ant-card-head-title {
-      font-weight: 600;
+  .page-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .filters {
+    flex-wrap: wrap;
+  }
+
+  .filter-input {
+    width: 240px;
+  }
+
+  .filter-input :deep(.ant-input-affix-wrapper),
+  .filter-input :deep(.ant-input-affix-wrapper-focused) {
+    border-radius: 8px;
+  }
+
+  .filter-input :deep(.ant-input-affix-wrapper-focused) {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  }
+
+  .action-btn {
+    border-radius: 8px;
+    background: #dc2626;
+    border-color: #dc2626;
+    font-weight: 500;
+    transition: all 0.18s ease;
+  }
+
+  .action-btn:hover {
+    background: #b91c1c;
+    border-color: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(220, 38, 38, 0.28);
+  }
+
+  .table-card {
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  .table-card :deep(.ant-card-body) {
+    padding: 0;
+  }
+
+  .table-card :deep(.ant-table-thead>tr>th) {
+    background: #fafafa;
+    font-weight: 600;
+    font-size: 16px;
+    color: #52525b;
+    border-bottom: 1px solid #e4e4e7;
+  }
+
+  .table-card :deep(.ant-table-tbody>tr>td) {
+    font-size: 16px;
+  }
+
+  .table-card :deep(.ant-table-tbody>tr:nth-child(even)>td) {
+    background: #f7f0f0;
+  }
+
+  .table-card :deep(.ant-table-tbody>tr:hover>td) {
+    background: #f5dcdc;
+  }
+
+  .cell-code {
+    font-family: 'Courier New', Consolas, monospace;
+    font-size: 15px;
+    color: #52525b;
+    background: #f4f4f5;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .cell-item {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.35;
+  }
+
+  .item-name {
+    font-weight: 500;
+    color: #18181b;
+  }
+
+  .item-code {
+    font-size: 13px;
+    color: #a1a1aa;
+  }
+
+  .cell-muted {
+    color: #a1a1aa;
+  }
+
+  .stock-num {
+    font-weight: 600;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .text-out {
+    color: #dc2626;
+  }
+
+  .table-card :deep(.ant-pagination) {
+    margin: 16px 24px;
+  }
+
+  @media (max-width: 768px) {
+    .page-head {
+      flex-direction: column;
+      align-items: stretch;
     }
-  }
 
-  :deep(.ant-form-item) {
-    margin-bottom: 24px;
-  }
+    .filter-input {
+      width: 100%;
+    }
 
-  :deep(.ant-input-textarea-show-count::after) {
-    float: right;
-    margin-top: 4px;
-    color: rgba(0, 0, 0, 0.45);
+    .action-btn {
+      width: 100%;
+    }
   }
 </style>

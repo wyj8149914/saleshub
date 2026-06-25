@@ -436,10 +436,6 @@
                                         "type": "string",
                                         "description": "入库照片 ID（关联 public.minio_file.relation_id），可能为 null"
                                     },
-                                    "object_name": {
-                                        "type": "string",
-                                        "description": "入库照片 MinIO 对象键（LEFT JOIN minio_file 取得），无照片或未关联时为 null；公开访问 URL 拼接规则与文件上传接口返回的 url 相同（MINIO_URL/bucket/object_name）"
-                                    },
                                     "before_stock": {
                                         "type": "number",
                                         "description": "入库前该规格库存数量"
@@ -459,6 +455,10 @@
                                     "create_time": {
                                         "type": "string",
                                         "description": "记录创建时间，格式 YYYY-MM-DD HH:mm:ss"
+                                    },
+                                    "photo_url": {
+                                        "type": "string",
+                                        "description": "入库照片 URL，可能为 null"
                                     }
                                 }
                             }

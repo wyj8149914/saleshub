@@ -21,7 +21,7 @@ export class StockInDto {
     @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '入库日期格式不正确' })
     date: string;
 
-    @IsNotEmpty({ message: '照片ID不能为空' })
+    @IsOptional()
     @MaxLength(32, { message: '照片ID长度不能超过32' })
     photo_id: string;
 
@@ -55,7 +55,7 @@ export class StockInBatchDto {
     @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '入库日期格式不正确' })
     date: string;
 
-    @IsNotEmpty({ message: '照片ID不能为空' })
+    @IsOptional()
     @MaxLength(32, { message: '照片ID长度不能超过32' })
     photo_id: string;
 

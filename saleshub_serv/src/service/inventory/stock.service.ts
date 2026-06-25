@@ -64,7 +64,9 @@ export class StockService {
             record.before_stock = spec.current_stock;
             record.after_stock = spec.current_stock + dto.quantity;
             record.date = new Date(dto.date);
-            record.photo_id = dto.photo_id;
+            if (dto.photo_id) {
+                record.photo_id = dto.photo_id;
+            }
             if (dto.remark) {
                 record.remark = dto.remark;
             }
@@ -358,6 +360,7 @@ export class StockService {
 
             for (const item of items) {
                 item.photo_url = generateFileUrl(item.object_name ?? '');
+                delete item.object_name;
             }
 
             return { result: 0, msg: 'success', datas: { total, items } };
@@ -566,7 +569,9 @@ export class StockService {
                 record.before_stock = spec.current_stock;
                 record.after_stock = spec.current_stock + itemSpec.quantity;
                 record.date = inDate;
-                record.photo_id = photoId;
+                if (photoId) {
+                    record.photo_id = photoId;
+                }
                 if (remark) {
                     record.remark = remark;
                 }
