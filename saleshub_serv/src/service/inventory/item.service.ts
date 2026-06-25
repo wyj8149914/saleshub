@@ -4,6 +4,7 @@ import { AppDataSource } from '../../config/database.config';
 import { getLogger } from '../../utils/logger.util';
 import { v7 } from 'uuid';
 import { generateFileUrl } from '../../config/minio.config';
+import { MinioFile } from '../../entity/file.entity';
 
 export class InventoryItemService {
     private inventoryItemRepository = AppDataSource.getRepository(InventoryItem);
@@ -58,8 +59,8 @@ export class InventoryItemService {
      */
     async list(dto: ListInventoryItemDto) {
         try {
-            const queryBuilder = this.inventoryItemRepository
-                .createQueryBuilder('item')
+            const queryBuilder = this.inventoryItemRepository.createQueryBuilder('item')
+                .leftJoin(MinioFile, 'file', 'file.relation_id = item.image_id')
                 .select([
                     'item.item_id AS item_id',
                     'item.type AS type',
@@ -67,6 +68,7 @@ export class InventoryItemService {
                     'item.code AS code',
                     'item.warn_stock AS warn_stock',
                     'item.image_id AS image_id',
+                    'file.object_name AS image_object_name',
                 ])
                 .where('item.status = :status', { status: 1 });
 
@@ -105,8 +107,10 @@ export class InventoryItemService {
 
             const specMap = new Map<string, any[]>();
             for (const row of specRows) {
-                if (!specMap.has(row.item_id)) specMap.set(row.item_id, []);
-                specMap.get(row.item_id)?.push({ spec: row.spec, current_stock: Number(row.current_stock) });
+                if (!specMap.has(row.item_id)) {
+                    specMap.set(row.item_id, []);
+                }
+                specMap.get(row.item_id)?.push({ spec_id: row.spec_id, spec: row.spec, current_stock: Number(row.current_stock) });
             }
 
             const datas = items.map((it: any) => ({
@@ -116,9 +120,8 @@ export class InventoryItemService {
                 code: it.code,
                 warn_stock: it.warn_stock,
                 image_id: it.image_id,
-                total_stock: Number(it.total_stock),
                 specs: specMap.get(it.item_id) || [],
-                image_url: generateFileUrl(it.image_id ?? ''),
+                image_url: generateFileUrl(it.image_object_name ?? ''),
             }));
 
             return { result: 0, msg: 'success', datas: { total, items: datas } };
