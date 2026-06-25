@@ -2,7 +2,7 @@
     "/saleshub/inventory/stockIn": {
         "method": "POST",
         "summary": "入库",
-        "description": "对指定零件的指定规格进行入库操作。事务执行：① 校验零件存在（inventory_item.status=1）；② 校验规格存在（inventory_item_spec 中 item_id+spec_id 匹配且 status=1）；③ 写入入库记录（record_id 为 UUID v7 去连字符，record_no 格式 SI + 6 位递增数字如 SI000001，上限 999999）；④ 将该规格库存 inventory_item_spec.current_stock 增加 quantity。photo_id 关联 public.minio_file.relation_id（须先通过文件上传接口获取）。",
+        "description": "对指定零件的指定规格进行入库操作。事务执行：① 校验零件存在（inventory_item.status=1）；② 校验规格存在（inventory_item_spec 中 item_id+spec_id 匹配且 status=1）；③ 写入入库记录（record_id 为 UUID v7 去连字符，record_no 格式 SI + 6 位递增数字如 SI000001，上限 999999），同时记录 before_stock（入库前库存）与 after_stock（入库后库存）；④ 将该规格库存 inventory_item_spec.current_stock 增加 quantity。photo_id 关联 public.minio_file.relation_id（须先通过文件上传接口获取）。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -63,10 +63,95 @@
             }
         }
     },
+    "/saleshub/inventory/stockInBatch": {
+        "method": "POST",
+        "summary": "按零件批量入库",
+        "description": "一次性入库多条零件+规格明细，同一批次内所有入库记录共用同一个 record_no。事务内原子执行：① 校验列表中 (item_id, spec_id) 组合无重复；② 校验所有零件存在（inventory_item.status=1）；③ 校验所有规格存在且属于对应零件（inventory_item_spec.status=1）；④ 全部通过后写入多条 stock_in_record（共用 record_no，每条记录含 before_stock/after_stock），并增加对应规格库存 inventory_item_spec.current_stock，任一环节失败整体回滚。photo_id 为本批次共用入库照片，关联 public.minio_file.relation_id（须先通过文件上传接口获取）。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "description": "入库明细列表（至少一条，item_id+spec_id 不可重复）",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "item_id": {
+                                "type": "string",
+                                "description": "零件主键 UUID（无连字符，32 位）"
+                            },
+                            "spec_id": {
+                                "type": "string",
+                                "description": "入库规格 ID（inventory_item_spec.spec_id，来自零件列表接口 specs[].spec_id）"
+                            },
+                            "quantity": {
+                                "type": "number",
+                                "description": "入库数量，正整数（最小 1）"
+                            }
+                        },
+                        "required": [
+                            "item_id",
+                            "spec_id",
+                            "quantity"
+                        ]
+                    }
+                },
+                "date": {
+                    "type": "string",
+                    "description": "入库日期，格式 YYYY-MM-DD（如 2026-06-24）"
+                },
+                "photo_id": {
+                    "type": "string",
+                    "description": "入库照片 ID（必填，本批次所有记录共用，关联 file.relation_id，最长 32 字符）"
+                },
+                "remark": {
+                    "type": "string",
+                    "description": "备注（可选，最长 500 字符，本批次所有记录共用）"
+                }
+            },
+            "required": [
+                "items",
+                "date",
+                "photo_id"
+            ]
+        },
+        "example_request": {
+            "items": [
+                {
+                    "item_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+                    "spec_id": "0194b1d0e3f45a6b7890123456789def",
+                    "quantity": 100
+                },
+                {
+                    "item_id": "0194b1c0a2d34e5f6789012345678abd",
+                    "spec_id": "0194b1d0e3f45a6b7890123456789deh",
+                    "quantity": 50
+                }
+            ],
+            "date": "2026-06-24",
+            "photo_id": "0194b1c0a2d34e5f6789012345678aab",
+            "remark": "供应商A批次到货"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-入库列表存在重复/零件不存在或已停用/零件不存在规格/入库失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息；重复时返回「入库列表存在重复的(零件+规格)」；零件缺失时返回「零件不存在或已停用: <id列表>」；规格缺失时返回「零件 <item_id> 不存在规格 <spec_id>」"
+                }
+            }
+        }
+    },
     "/saleshub/inventory/stockOut": {
         "method": "POST",
         "summary": "出库（单条）",
-        "description": "对指定零件的指定规格进行单条出库操作。事务执行：① 校验零件存在（inventory_item.status=1）；② 校验规格存在（inventory_item_spec 中 item_id+spec_id 匹配且 status=1）；③ 校验该规格库存充足（current_stock >= quantity）；④ 写入出库记录（record_id 为 UUID v7 去连字符，record_no 格式 SO + 6 位递增数字如 SO000001，上限 999999）；⑤ 将该规格库存减少 quantity。本接口每次调用生成独立 record_no。",
+        "description": "对指定零件的指定规格进行单条出库操作。事务执行：① 校验零件存在（inventory_item.status=1）；② 校验规格存在（inventory_item_spec 中 item_id+spec_id 匹配且 status=1）；③ 校验该规格库存充足（current_stock >= quantity）；④ 写入出库记录（record_id 为 UUID v7 去连字符，record_no 格式 SO + 6 位递增数字如 SO000001，上限 999999），同时记录 before_stock（出库前库存）与 after_stock（出库后库存）；⑤ 将该规格库存减少 quantity。本接口每次调用生成独立 record_no。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -124,7 +209,7 @@
     "/saleshub/inventory/stockOutBatch": {
         "method": "POST",
         "summary": "按零件批量出库",
-        "description": "一次性出库多条零件+规格明细，同一批次内所有出库记录共用同一个 record_no。事务内原子执行：① 校验列表中 (item_id, spec_id) 组合无重复；② 校验所有零件存在（status=1）；③ 校验所有规格存在且属于对应零件（status=1）；④ 校验每条明细库存充足；⑤ 全部通过后写入多条 stock_out_record（共用 record_no）并扣减对应规格库存，任一环节失败整体回滚。",
+        "description": "一次性出库多条零件+规格明细，同一批次内所有出库记录共用同一个 record_no。事务内原子执行：① 校验列表中 (item_id, spec_id) 组合无重复；② 校验所有零件存在（status=1）；③ 校验所有规格存在且属于对应零件（status=1）；④ 校验每条明细库存充足；⑤ 全部通过后写入多条 stock_out_record（共用 record_no，每条记录含 before_stock/after_stock）并扣减对应规格库存，任一环节失败整体回滚。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -203,7 +288,7 @@
     "/saleshub/inventory/stockOutByProduct": {
         "method": "POST",
         "summary": "按产品出库",
-        "description": "按产品 BOM 自动计算并批量出库，同一批次所有出库记录共用同一个 record_no。事务执行：① 校验产品存在（product.status=1）；② 读取该产品有效 BOM（product_item.status=1）；③ 若 BOM 为空返回「产品未配置零件」；④ 按 BOM 生成出库明细，每条出库数量 = 入参 quantity（产品台数）× quantity_per_product；⑤ 执行与批量出库相同的校验与扣减逻辑。",
+        "description": "按产品 BOM 自动计算并批量出库，同一批次所有出库记录共用同一个 record_no。事务执行：① 校验产品存在（product.status=1）；② 读取该产品有效 BOM（product_item.status=1）；③ 若 BOM 为空返回「产品未配置零件」；④ 按 BOM 生成出库明细，每条出库数量 = 入参 quantity（产品台数）× quantity_per_product；⑤ 执行与批量出库相同的校验与扣减逻辑，每条记录写入 before_stock/after_stock。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",

@@ -11,7 +11,15 @@ import {
     SetProductItemsDto,
     ProductItemIdDto,
 } from '../dto/product.dto';
-import { StockInDto, StockOutDto, StockOutBatchDto, StockOutByProductDto, StockCheckDto, ListStockHistoryDto } from '../dto/stock.dto';
+import {
+    StockInDto,
+    StockInBatchDto,
+    StockOutDto,
+    StockOutBatchDto,
+    StockOutByProductDto,
+    StockCheckDto,
+    ListStockHistoryDto,
+} from '../dto/stock.dto';
 import { productService, inventoryItemService, stockService } from '../service/inventory';
 
 const router = Router();
@@ -127,12 +135,23 @@ router.get('/listProductItems',
     })
 );
 
-// 入库操作
+// 入库操作(单条)
 router.post('/stockIn',
     validationMiddleware(StockInDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(StockInDto, req.body);
         const result = await stockService.stockIn(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 按零件批量入库(同一 record_no)
+router.post('/stockInBatch',
+    validationMiddleware(StockInBatchDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(StockInBatchDto, req.body);
+        const result = await stockService.stockInBatch(dtoObj);
         res.locals.datas = result;
         next();
     })

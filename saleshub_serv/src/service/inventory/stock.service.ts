@@ -57,6 +57,8 @@ export class StockService {
             record.item_id = dto.item_id;
             record.spec_id = dto.spec_id;
             record.quantity = dto.quantity;
+            record.before_stock = spec.current_stock;
+            record.after_stock = spec.current_stock + dto.quantity;
             record.date = new Date(dto.date);
             record.photo_id = dto.photo_id;
             if (dto.remark) {
@@ -96,7 +98,7 @@ export class StockService {
                 return { result: 1, msg: validated.msg };
             }
 
-            await this.executeStockIn(itemSpecs, dto.date, dto.remark);
+            await this.executeStockIn(itemSpecs, dto.date, dto.photo_id, dto.remark);
             return { result: 0, msg: '入库成功' };
         } catch (error) {
             this.logger.error('批量入库失败:', error);
@@ -126,7 +128,7 @@ export class StockService {
             if (spec.current_stock < dto.quantity) {
                 return {
                     result: 1,
-                    msg: `规格 ${dto.spec_id} 库存不足(当前 ${spec.current_stock},需要 ${dto.quantity})`,
+                    msg: `规格 ${spec.spec} 库存不足(当前 ${spec.current_stock},需要 ${dto.quantity})`,
                 };
             }
 
@@ -138,6 +140,8 @@ export class StockService {
             record.item_id = dto.item_id;
             record.spec_id = dto.spec_id;
             record.quantity = dto.quantity;
+            record.before_stock = spec.current_stock;
+            record.after_stock = spec.current_stock - dto.quantity;
             record.date = new Date(dto.date);
             if (dto.remark) {
                 record.remark = dto.remark;
@@ -412,7 +416,7 @@ export class StockService {
     /**
      * 执行入库(同一批次共用 record_no,事务原子)
      */
-    private async executeStockIn(itemSpecs: StockItem[], date: string, remark?: string) {
+    private async executeStockIn(itemSpecs: StockItem[], date: string, photoId: string, remark?: string) {
         const recordNo = await this.generateStockInRecordNo();
         const now = new Date();
         const inDate = new Date(date);
@@ -432,13 +436,20 @@ export class StockService {
 
         await this.stockInRepository.manager.transaction(async (manager) => {
             for (const itemSpec of itemSpecs) {
+                const spec = specById.get(itemSpec.spec_id);
+                if (!spec) {
+                    throw new Error(`规格 ${itemSpec.spec_id} 未找到`);
+                }
                 const record = new StockInRecord();
                 record.record_id = v7().replace(/-/g, '');
                 record.record_no = recordNo;
                 record.item_id = itemSpec.item_id;
                 record.spec_id = itemSpec.spec_id;
                 record.quantity = itemSpec.quantity;
+                record.before_stock = spec.current_stock;
+                record.after_stock = spec.current_stock + itemSpec.quantity;
                 record.date = inDate;
+                record.photo_id = photoId;
                 if (remark) {
                     record.remark = remark;
                 }
@@ -495,10 +506,10 @@ export class StockService {
                 return { ok: false, msg: `零件 ${itemSpec.item_id} 不存在规格 ${itemSpec.spec_id}` };
             }
             if (spec.current_stock < itemSpec.quantity) {
-                this.logger.error(`规格 ${itemSpec.spec_id} 库存不足(当前 ${spec.current_stock},需要 ${itemSpec.quantity})`);
+                this.logger.error(`规格 ${spec.spec} 库存不足(当前 ${spec.current_stock},需要 ${itemSpec.quantity})`);
                 return {
                     ok: false,
-                    msg: `规格 ${itemSpec.spec_id} 库存不足(当前 ${spec.current_stock},需要 ${itemSpec.quantity})`,
+                    msg: `规格 ${spec.spec} 库存不足(当前 ${spec.current_stock},需要 ${itemSpec.quantity})`,
                 };
             }
         }
@@ -529,16 +540,23 @@ export class StockService {
 
         await this.stockOutRepository.manager.transaction(async (manager) => {
             for (const itemSpec of itemSpecs) {
+                const spec = specById.get(itemSpec.spec_id);
+                if (!spec) {
+                    throw new Error(`规格 ${itemSpec.spec_id} 未找到`);
+                }
                 const record = new StockOutRecord();
                 record.record_id = v7().replace(/-/g, '');
                 record.record_no = recordNo;
                 record.item_id = itemSpec.item_id;
                 record.spec_id = itemSpec.spec_id;
                 record.quantity = itemSpec.quantity;
+                record.before_stock = spec.current_stock;
+                record.after_stock = spec.current_stock - itemSpec.quantity;
                 record.date = outDate;
                 if (remark) {
                     record.remark = remark;
                 }
+                record.status = 1;
                 record.create_time = now;
                 await manager.save(StockOutRecord, record);
             }

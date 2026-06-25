@@ -17,6 +17,12 @@ export class StockInRecord {
     @Column({ type: 'int', comment: '入库数量' })
     quantity: number;
 
+    @Column({ type: 'int', comment: '入库前该规格库存数量' })
+    before_stock: number;
+
+    @Column({ type: 'int', comment: '入库后该规格库存数量' })
+    after_stock: number;
+
     @Column({ type: 'date', comment: '入库日期' })
     date: Date;
 
@@ -55,6 +61,12 @@ export class StockOutRecord {
 
     @Column({ type: 'int', comment: '出库数量' })
     quantity: number;
+
+    @Column({ type: 'int', comment: '出库前该规格库存数量' })
+    before_stock: number;
+
+    @Column({ type: 'int', comment: '出库后该规格库存数量' })
+    after_stock: number;
 
     @Column({ type: 'date', comment: '出库日期' })
     date: Date;
