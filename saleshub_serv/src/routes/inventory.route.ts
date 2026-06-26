@@ -8,7 +8,7 @@ import {
 } from '../dto/product.dto';
 import {
     StockInDto, StockInBatchDto, StockOutDto, StockOutBatchDto, StockOutByProductDto, StockCheckDto, ListStockHistoryDto,
-    ListStockInRecordsDto, ListStockOutRecordsDto,
+    ListStockInRecordsDto, ListStockOutRecordsDto, ListStockCheckRecordsDto, StockCheckBatchDto,
 } from '../dto/stock.dto';
 import { productService, inventoryItemService, stockService } from '../service/inventory';
 
@@ -212,12 +212,34 @@ router.get('/stockOutList',
     })
 );
 
+// 查询盘点记录列表
+router.get('/stockCheckList',
+    validationMiddleware(ListStockCheckRecordsDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(ListStockCheckRecordsDto, req.query);
+        const result = await stockService.listStockCheckRecords(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
 // 库存盘点
 router.post('/stockCheck',
     validationMiddleware(StockCheckDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(StockCheckDto, req.body);
         const result = await stockService.stockCheck(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 批量盘点
+router.post('/stockCheckBatch',
+    validationMiddleware(StockCheckBatchDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(StockCheckBatchDto, req.body);
+        const result = await stockService.stockCheckBatch(dtoObj);
         res.locals.datas = result;
         next();
     })
