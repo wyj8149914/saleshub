@@ -53,27 +53,40 @@
     <header class="topbar">
       <h1 class="page-title">{{ currentTitle }}</h1>
 
-      <div class="user-area">
-        <div class="user-info">
-          <div class="user-avatar" :aria-label="displayName">{{ userInitial }}</div>
-          <div class="user-meta">
-            <span class="user-name">{{ displayName }}</span>
-            <span class="user-role">{{ roleLabel }}</span>
-          </div>
-        </div>
+      <div class="topbar-actions">
+        <button type="button" class="version-badge" title="查看更新日志" @click="openChangelog">
+          <InfoCircleOutlined class="version-icon" />
+          <span class="version-text">v{{ appVersion }}</span>
+          <span class="version-label">更新日志</span>
+        </button>
 
-        <a-button class="logout-btn" @click="handleLogout">
-          <template #icon>
-            <LogoutOutlined />
-          </template>
-          <span class="logout-label">退出登录</span>
-        </a-button>
+        <div class="user-area">
+          <div class="user-info">
+            <div class="user-avatar" :aria-label="displayName">{{ userInitial }}</div>
+            <div class="user-meta">
+              <span class="user-name">{{ displayName }}</span>
+              <span class="user-role">{{ roleLabel }}</span>
+            </div>
+          </div>
+
+          <a-button class="logout-btn" @click="handleLogout">
+            <template #icon>
+              <LogoutOutlined />
+            </template>
+            <span class="logout-label">退出登录</span>
+          </a-button>
+        </div>
       </div>
     </header>
 
     <main class="content">
       <router-view />
     </main>
+
+    <a-modal v-model:open="changelogVisible" title="更新日志" :footer="null" width="860px"
+      wrap-class-name="changelog-modal-wrap" class="changelog-modal" destroy-on-close>
+      <iframe :src="changelogEmbedUrl" class="changelog-iframe" title="SalesHub 更新日志" />
+    </a-modal>
   </div>
 </template>
 
@@ -83,7 +96,7 @@
    * 通过 CSS Grid Areas 实现，sidebar / topbar / content 三块独立布局
    * 设计 token 与 Login.vue 共享，确保品牌一致
    */
-  import { computed, reactive, watch } from 'vue'
+  import { computed, reactive, ref, watch } from 'vue'
   import type { Component } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import { Modal, message } from 'ant-design-vue'
@@ -95,9 +108,12 @@
     BlockOutlined,
     ImportOutlined,
     ExportOutlined,
-    HistoryOutlined
+    AuditOutlined,
+    HistoryOutlined,
+    InfoCircleOutlined
   } from '@ant-design/icons-vue'
   import { useAuthStore } from '@/stores/auth'
+  import { APP_VERSION, CHANGELOG_EMBED_URL } from '@/constants/app'
 
   interface MenuItem {
     path?: string
@@ -109,6 +125,13 @@
   const route = useRoute()
   const router = useRouter()
   const authStore = useAuthStore()
+  const appVersion = APP_VERSION
+  const changelogEmbedUrl = CHANGELOG_EMBED_URL
+  const changelogVisible = ref(false)
+
+  function openChangelog() {
+    changelogVisible.value = true
+  }
 
   /**
    * 菜单配置：无 children 为一级菜单（直接跳路由），含 children 为可展开父级
@@ -123,6 +146,7 @@
         { path: '/inventory/items', label: '零件管理', icon: BlockOutlined },
         { path: '/inventory/stock-in', label: '入库管理', icon: ImportOutlined },
         { path: '/inventory/stock-out', label: '出库管理', icon: ExportOutlined },
+        { path: '/inventory/stock-check', label: '盘点管理', icon: AuditOutlined },
         { path: '/inventory/history', label: '库存历史', icon: HistoryOutlined }
       ]
     }
@@ -134,6 +158,7 @@
     InventoryList: '零件管理',
     StockIn: '入库管理',
     StockOut: '出库管理',
+    StockCheck: '盘点管理',
     StockHistory: '库存历史',
     StockWarning: '库存预警'
   }
@@ -439,6 +464,51 @@
     line-height: 1.2;
   }
 
+  .topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: auto;
+  }
+
+  .version-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--bg);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    font-family: inherit;
+  }
+
+  .version-badge:hover {
+    color: var(--accent);
+    border-color: rgba(37, 99, 235, 0.35);
+    background: var(--accent-soft);
+  }
+
+  .version-icon {
+    font-size: 13px;
+    color: var(--accent);
+  }
+
+  .version-text {
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .version-label {
+    padding-left: 6px;
+    border-left: 1px solid var(--border);
+  }
+
   .user-area {
     display: flex;
     align-items: center;
@@ -510,6 +580,52 @@
     overflow-y: auto;
   }
 
+  .changelog-modal :deep(.ant-modal-content) {
+    background: #0c0e14;
+    border: 1px solid #252b38;
+    border-radius: 12px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .changelog-modal :deep(.ant-modal-header) {
+    background: #141820;
+    border-bottom: 1px solid #252b38;
+    margin-bottom: 0;
+    padding: 14px 20px;
+  }
+
+  .changelog-modal :deep(.ant-modal-title) {
+    color: #e8eaed;
+    font-weight: 600;
+  }
+
+  .changelog-modal :deep(.ant-modal-close) {
+    top: 14px;
+    color: #8b93a7;
+  }
+
+  .changelog-modal :deep(.ant-modal-close:hover) {
+    color: #e8eaed;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .changelog-modal :deep(.ant-modal-body) {
+    padding: 0;
+    overflow: hidden;
+    background: #0c0e14;
+  }
+
+  .changelog-iframe {
+    display: block;
+    width: 100%;
+    height: 75vh;
+    max-height: 720px;
+    border: none;
+    background: #0c0e14;
+  }
+
   /* ============ Responsive ============ */
   @media (max-width: 1024px) {
     .app-layout {
@@ -546,6 +662,10 @@
 
   @media (max-width: 640px) {
     .user-meta {
+      display: none;
+    }
+
+    .version-label {
       display: none;
     }
 

@@ -90,7 +90,7 @@
   import { ref, reactive, computed, watch } from 'vue'
   import { message } from 'ant-design-vue'
   import { inventoryApi } from '@/api/inventory'
-  import type { Product, InventoryItem, ItemType } from '@/api/inventory'
+  import type { Product, InventoryItem, ItemType } from '@/types/inventory'
 
   /** 弹窗显隐，由父组件 v-model:visible 控制 */
   interface Props {

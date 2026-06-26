@@ -237,3 +237,36 @@ export interface StockOutByProductPayload {
     date: string
     remark?: string
 }
+
+// ============ 盘点记录 ============
+export interface StockCheckRecord {
+    check_id: string
+    record_no: string
+    date: string
+    remark: string | null
+    before_stock: number
+    after_stock: number
+    item_name: string | null
+    spec: string | null
+    create_time: string
+}
+
+export interface StockCheckPayload {
+    item_id: string
+    spec_id: string
+    after_stock: number
+    date: string
+    remark?: string
+}
+
+export interface StockCheckBatchItem {
+    item_id: string
+    spec_id: string
+    after_stock: number
+}
+
+export interface StockCheckBatchPayload {
+    items: StockCheckBatchItem[]
+    date: string
+    remark?: string
+}

@@ -83,7 +83,7 @@
   import { message } from 'ant-design-vue'
   import { PlusOutlined, SearchOutlined, TagOutlined } from '@ant-design/icons-vue'
   import { inventoryApi } from '@/api/inventory'
-  import type { Product } from '@/api/inventory'
+  import type { Product } from '@/types/inventory'
   import ProductForm from '@/components/inventory/ProductForm.vue'
   import ProductItemsManager from '@/components/inventory/ProductItemsManager.vue'
 

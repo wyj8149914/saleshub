@@ -39,8 +39,7 @@
       <template v-else>
         <a-row :gutter="12">
           <a-col :span="12">
-            <a-form-item label="产品" name="product_id"
-              :rules="[{ required: true, message: '请选择产品' }]">
+            <a-form-item label="产品" name="product_id" :rules="[{ required: true, message: '请选择产品' }]">
               <a-select v-model:value="form.product_id" placeholder="请选择产品" show-search :filter-option="filterOption"
                 :loading="productsLoading" :options="productOptions" @change="handleProductChange" />
             </a-form-item>
@@ -98,8 +97,7 @@
       </a-row>
 
       <a-form-item label="备注" name="remark">
-        <a-textarea v-model:value="form.remark" placeholder="请输入备注（可选，本批次共用）" :rows="3" :maxlength="500"
-          show-count />
+        <a-textarea v-model:value="form.remark" placeholder="请输入备注（可选，本批次共用）" :rows="3" :maxlength="500" show-count />
       </a-form-item>
     </a-form>
   </a-modal>
@@ -111,7 +109,7 @@
   import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue'
   import dayjs, { type Dayjs } from 'dayjs'
   import { inventoryApi } from '@/api/inventory'
-  import type { InventoryItem, Product, ProductItemRelation } from '@/api/inventory'
+  import type { InventoryItem, Product, ProductItemRelation } from '@/types/inventory'
 
   interface Props {
     visible: boolean

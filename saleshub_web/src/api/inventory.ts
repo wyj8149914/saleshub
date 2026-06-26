@@ -2,8 +2,8 @@ import { http } from '@/utils/request'
 import type {
     FileUploadResponse, ProductListQuery, ProductCreatePayload, ProductUpdatePayload, ItemListQuery, ItemCreatePayload,
     ItemUpdatePayload, ProductItemPayload, StockHistoryQuery, StockHistoryRecord, StockInRecord, StockOutRecord, StockInPayload,
-    StockInBatchPayload, StockOutPayload, StockOutBatchPayload, StockOutByProductPayload, PaginatedData, Product, InventoryItem,
-    ProductItemRelation, StockRecordListQuery
+    StockInBatchPayload, StockOutPayload, StockOutBatchPayload, StockOutByProductPayload, StockCheckRecord, StockCheckPayload,
+    StockCheckBatchPayload, PaginatedData, Product, InventoryItem, ProductItemRelation, StockRecordListQuery
 } from '@/types/inventory'
 
 // ============ 文件上传 API ============
@@ -76,6 +76,11 @@ export const inventoryApi = {
         return http.get<PaginatedData<StockOutRecord>>('/saleshub/inventory/stockOutList', { params: query })
     },
 
+    // ---- 盘点记录列表 ----
+    listStockCheckRecords(query: StockRecordListQuery) {
+        return http.get<PaginatedData<StockCheckRecord>>('/saleshub/inventory/stockCheckList', { params: query })
+    },
+
     // ---- 出入库操作 ----
     stockIn(payload: StockInPayload) {
         return http.post('/saleshub/inventory/stockIn', payload)
@@ -95,6 +100,15 @@ export const inventoryApi = {
 
     stockOutByProduct(payload: StockOutByProductPayload) {
         return http.post('/saleshub/inventory/stockOutByProduct', payload)
+    },
+
+    // ---- 盘点操作 ----
+    stockCheck(payload: StockCheckPayload) {
+        return http.post('/saleshub/inventory/stockCheck', payload)
+    },
+
+    stockCheckBatch(payload: StockCheckBatchPayload) {
+        return http.post('/saleshub/inventory/stockCheckBatch', payload)
     }
 }
 

@@ -72,7 +72,7 @@
   import type { Dayjs } from 'dayjs'
   import { PlusOutlined, SearchOutlined } from '@ant-design/icons-vue'
   import { inventoryApi } from '@/api/inventory'
-  import type { StockOutRecord } from '@/api/inventory'
+  import type { StockOutRecord } from '@/types/inventory'
   import StockOutModal from '@/components/inventory/StockOutModal.vue'
 
   const columns = [
