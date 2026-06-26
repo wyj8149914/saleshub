@@ -1,5 +1,5 @@
 import { Product, InventoryItem, InventoryItemSpec, ProductItem } from '../../entity/product.entity';
-import { StockInRecord, StockOutRecord, InventoryCheck } from '../../entity/stock.entity';
+import { StockInRecord, StockOutRecord, InventoryCheck, StockHistory } from '../../entity/stock.entity';
 import {
     StockInDto,
     StockOutDto,
@@ -31,6 +31,7 @@ export class StockService {
     private stockInRepository = AppDataSource.getRepository(StockInRecord);
     private stockOutRepository = AppDataSource.getRepository(StockOutRecord);
     private inventoryCheckRepository = AppDataSource.getRepository(InventoryCheck);
+    private stockHistoryRepository = AppDataSource.getRepository(StockHistory);
     private logger = getLogger('INVENTORY_SERV');
 
     /**
@@ -261,46 +262,48 @@ export class StockService {
                 return { result: 1, msg: '零件不存在' };
             }
 
-            let dateCondition = '';
-            const params: Record<string, unknown> = { itemId: dto.item_id, status: 1 };
+            const queryBuilder = this.stockHistoryRepository.createQueryBuilder('rec')
+                .leftJoin(InventoryItem, 'item', 'item.item_id = rec.item_id AND item.status = 1')
+                .leftJoin(InventoryItemSpec, 'spec', 'spec.spec_id = rec.spec_id AND spec.status = 1')
+                .select([
+                    'rec.id AS id',
+                    'rec.type AS type',
+                    'item.name AS item_name',
+                    'spec.spec AS spec',
+                    'rec.quantity AS quantity',
+                    'rec.before_stock AS before_stock',
+                    'rec.after_stock AS after_stock',
+                    'to_char(rec.date, \'YYYY-MM-DD\') AS date',
+                    'rec.remark AS remark',
+                    'to_char(rec.create_time, \'YYYY-MM-DD HH24:MI:SS\') AS create_time',
+                ])
+                .where('rec.item_id = :itemId AND rec.status = :status', {
+                    itemId: dto.item_id,
+                    status: 1,
+                });
 
             if (dto.start_date) {
-                dateCondition += ' AND date >= :startDate';
-                params.startDate = new Date(dto.start_date);
+                queryBuilder.andWhere('rec.date >= to_date(:startDate, \'YYYY-MM-DD\')', {
+                    startDate: dto.start_date,
+                });
             }
             if (dto.end_date) {
-                dateCondition += ' AND date <= :endDate';
-                params.endDate = new Date(dto.end_date);
+                queryBuilder.andWhere('rec.date <= to_date(:endDate, \'YYYY-MM-DD\') + Interval \'1 day\'', {
+                    endDate: dto.end_date,
+                });
             }
-
-            const inRecords = await this.stockInRepository
-                .createQueryBuilder('rec')
-                .where('item_id = :itemId AND status = :status' + dateCondition, params)
-                .orderBy('create_time', 'DESC')
-                .getMany();
-
-            const outRecords = await this.stockOutRepository
-                .createQueryBuilder('rec')
-                .where('item_id = :itemId AND status = :status' + dateCondition, params)
-                .orderBy('create_time', 'DESC')
-                .getMany();
-
-            const checkRecords = await this.inventoryCheckRepository
-                .createQueryBuilder('rec')
-                .where('item_id = :itemId AND status = :status' + dateCondition, params)
-                .orderBy('create_time', 'DESC')
-                .getMany();
-
-            const mergedRecords = [
-                ...inRecords.map((r: StockInRecord) => ({ ...r, id: r.record_id, type: 'in' as const })),
-                ...outRecords.map((r: StockOutRecord) => ({ ...r, id: r.record_id, type: 'out' as const })),
-                ...checkRecords.map((r: InventoryCheck) => ({ ...r, id: r.check_id, type: 'check' as const })),
-            ];
-            mergedRecords.sort((a, b) => b.create_time.getTime() - a.create_time.getTime());
+            if (dto.spec_id) {
+                queryBuilder.andWhere('rec.spec_id = :specId', { specId: dto.spec_id });
+            }
+            console.log(queryBuilder.getQueryAndParameters());
 
             const start = (dto.pageIndex - 1) * dto.pageSize;
-            const total = mergedRecords.length;
-            const items = mergedRecords.slice(start, start + dto.pageSize);
+            const total = await queryBuilder.getCount();
+            const items = await queryBuilder
+                .orderBy('rec.create_time', 'DESC')
+                .limit(dto.pageSize)
+                .offset(start)
+                .getRawMany();
 
             return { result: 0, msg: 'success', datas: { total, items } };
         } catch (error) {

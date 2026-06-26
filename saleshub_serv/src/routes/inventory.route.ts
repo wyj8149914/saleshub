@@ -180,7 +180,7 @@ router.post('/stockOutByProduct',
 );
 
 // 查询零件历史记录
-router.get('/listStockHistory',
+router.get('/stockHistoryList',
     validationMiddleware(ListStockHistoryDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ListStockHistoryDto, req.query);

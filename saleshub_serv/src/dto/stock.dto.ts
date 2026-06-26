@@ -170,6 +170,9 @@ export class ListStockHistoryDto extends PageDto {
     item_id: string;
 
     @IsOptional()
+    spec_id?: string;
+
+    @IsOptional()
     @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '开始日期格式不正确' })
     start_date?: string;
 

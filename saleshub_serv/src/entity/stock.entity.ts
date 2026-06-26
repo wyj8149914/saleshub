@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn, ViewEntity, ViewColumn } from 'typeorm';
 
 /**
  * 入库记录实体
@@ -115,4 +115,40 @@ export class InventoryCheck {
 
     @Column({ type: 'timestamp', comment: '创建时间' })
     create_time: Date;
+}
+
+@ViewEntity({ schema: 'inventory', name: 'stock_history' })
+export class StockHistory {
+    @PrimaryColumn()
+    id: string;
+
+    @ViewColumn()
+    type: string;
+
+    @ViewColumn()
+    item_id: string;
+
+    @ViewColumn()
+    spec_id: string;
+
+    @ViewColumn()
+    quantity: number;
+
+    @ViewColumn()
+    before_stock: number;
+
+    @ViewColumn()
+    after_stock: number;
+
+    @ViewColumn()
+    date: Date;
+
+    @ViewColumn()
+    remark: string;
+
+    @ViewColumn()
+    create_time: Date;
+
+    @ViewColumn()
+    status: number;
 }

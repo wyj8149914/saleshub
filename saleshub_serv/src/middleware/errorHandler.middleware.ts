@@ -27,8 +27,6 @@ export function errorHandlerMiddleware(
         res.status(error.statusCode).json({
             result: error.ret_code,
             msg: error.ret_msg,
-            alg: '',
-            datas: {},
         });
         return;
     }
@@ -38,8 +36,6 @@ export function errorHandlerMiddleware(
         res.json({
             result: 5000,
             msg: '数据库操作失败',
-            alg: '',
-            datas: {},
         });
         return;
     }
@@ -49,8 +45,6 @@ export function errorHandlerMiddleware(
         res.status(401).json({
             result: 2001,
             msg: '无效的Token',
-            alg: '',
-            datas: {},
         });
         return;
     }
@@ -59,8 +53,6 @@ export function errorHandlerMiddleware(
         res.status(401).json({
             result: 2001,
             msg: 'Token已过期',
-            alg: '',
-            datas: {},
         });
         return;
     }
@@ -70,8 +62,6 @@ export function errorHandlerMiddleware(
     res.status(500).json({
         result: 5000,
         msg: '服务器内部错误',
-        alg: '',
-        datas: {},
     });
 }
 
@@ -81,9 +71,7 @@ export function errorHandlerMiddleware(
 export function notFoundMiddleware(req: Request, res: Response): void {
     res.status(404).json({
         result: 404,
-        msg: `路径 ${req.originalUrl} 不存在`,
-        alg: '',
-        datas: {},
+        msg: `路径 ${req.originalUrl} 不存在`
     });
 }
 

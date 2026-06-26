@@ -337,6 +337,127 @@
             }
         }
     },
+    "/saleshub/inventory/stockHistoryList": {
+        "method": "GET",
+        "summary": "库存历史",
+        "description": "分页查询指定零件的入库、出库、盘点合并历史记录。数据来源为数据库视图 inventory.stock_history（由 stock_in_record、stock_out_record、inventory_check 三表 UNION ALL 构成）。查询前校验零件存在（inventory_item.status=1）。支持按业务日期区间 start_date/end_date（格式 YYYY-MM-DD，含起止日）、规格 spec_id 筛选。LEFT JOIN inventory_item（status=1）取零件名称 item_name，LEFT JOIN inventory_item_spec（status=1）取规格文本 spec（空串为默认 SKU）。在数据库层按 create_time 降序排序并分页（limit/offset），仅返回当前页数据。type 取值：in-入库，out-出库，check-盘点；盘点记录的 quantity 可能为 null。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "pageIndex": {
+                    "type": "number",
+                    "description": "页码，从 1 开始（Query 参数）"
+                },
+                "pageSize": {
+                    "type": "number",
+                    "description": "每页条数（Query 参数）"
+                },
+                "item_id": {
+                    "type": "string",
+                    "description": "零件主键 UUID（Query 参数，必填，精确匹配，最长 32 字符）"
+                },
+                "spec_id": {
+                    "type": "string",
+                    "description": "规格 ID（Query 参数，可选，精确匹配 inventory_item_spec.spec_id，最长 32 字符）"
+                },
+                "start_date": {
+                    "type": "string",
+                    "description": "开始日期，格式 YYYY-MM-DD（Query 参数，可选，筛选 rec.date >= start_date）"
+                },
+                "end_date": {
+                    "type": "string",
+                    "description": "结束日期，格式 YYYY-MM-DD（Query 参数，可选，筛选 rec.date <= end_date，含当日）"
+                }
+            },
+            "required": [
+                "pageIndex",
+                "pageSize",
+                "item_id"
+            ]
+        },
+        "example_request": {
+            "pageIndex": 1,
+            "pageSize": 20,
+            "item_id": "0194b1c0a2d34e5f6789012345678abc",
+            "spec_id": "0194b1d0e3f45a6b7890123456789def",
+            "start_date": "2026-06-01",
+            "end_date": "2026-06-30"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-零件不存在/查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，成功时为 success；零件不存在时返回「零件不存在」"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "分页结果",
+                    "properties": {
+                        "total": {
+                            "type": "number",
+                            "description": "符合条件的总条数"
+                        },
+                        "items": {
+                            "type": "array",
+                            "description": "库存历史记录列表（入库、出库、盘点合并，按 create_time 降序）",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "description": "记录主键 UUID（无连字符，32 位）；入库/出库对应 record_id，盘点对应 check_id"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "description": "记录类型：in-入库，out-出库，check-盘点"
+                                    },
+                                    "item_name": {
+                                        "type": "string",
+                                        "description": "零件名称（关联 inventory_item.name），零件已删除或未关联时为 null"
+                                    },
+                                    "spec": {
+                                        "type": "string",
+                                        "description": "规格文本（关联 inventory_item_spec.spec），空串为默认 SKU；规格已删除、未关联或盘点记录无 spec_id 时为 null"
+                                    },
+                                    "quantity": {
+                                        "type": "number",
+                                        "description": "变更数量；入库/出库为实际数量，盘点记录可能为 null"
+                                    },
+                                    "before_stock": {
+                                        "type": "number",
+                                        "description": "操作前该规格库存数量"
+                                    },
+                                    "after_stock": {
+                                        "type": "number",
+                                        "description": "操作后该规格库存数量"
+                                    },
+                                    "date": {
+                                        "type": "string",
+                                        "description": "业务日期（入库/出库/盘点日期），格式 YYYY-MM-DD"
+                                    },
+                                    "remark": {
+                                        "type": "string",
+                                        "description": "备注，可能为 null"
+                                    },
+                                    "create_time": {
+                                        "type": "string",
+                                        "description": "记录创建时间，格式 YYYY-MM-DD HH:mm:ss"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
     "/saleshub/inventory/stockInList": {
         "method": "GET",
         "summary": "入库记录列表",
