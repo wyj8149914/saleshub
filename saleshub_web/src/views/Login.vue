@@ -43,7 +43,7 @@
 
         <footer class="brand-footer">
           <span>SalesHub Inventory Platform</span>
-          <span>© 2024</span>
+          <span>© 2026 深圳市光克拉科技有限公司 版权所有</span>
         </footer>
       </div>
     </aside>

@@ -46,7 +46,7 @@
 
       <div class="sidebar-footer">
         <span>SalesHub Inventory Platform</span>
-        <span>© 2024</span>
+        <span>© 2026</span>
       </div>
     </aside>
 
