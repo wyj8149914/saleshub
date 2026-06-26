@@ -1,0 +1,36 @@
+# /app/node-backend/docker-compose.yml
+
+services:
+  saleshub_serv:
+    # 直接使用官方镜像，不单独 build
+    image: node:24-bookworm-slim
+    container_name: saleshub_serv
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
+    
+    # 🚨 核心安全：以非 root 用户运行 (node 用户在 debian 中 uid/gid 通常为 1000)
+    user: "1000:1000"
+    
+    # 挂载代码目录，并隔离 node_modules
+    volumes:
+      # 1. 映射当前目录到容器的 /app
+      - /app/service/saleshub_serv:/app
+      
+    # 工作目录
+    working_dir: /app
+    
+    # 🚨 核心启动逻辑：先安装生产依赖，再启动服务
+    # --omit=dev 确保不安装开发依赖，减小体积和提升安全性
+    command: npm run start:pro
+      
+    # 加入已有的 Nginx 网络 (替换为你实际的 Nginx 网络名，如 app_net)
+    networks:
+      - app_net  # 1. 接收 Nginx 反向代理请求
+      - db_net   # 2. 访问数据库容器
+
+networks:
+  app_net:
+    external: true
+  db_net:
+    external: true

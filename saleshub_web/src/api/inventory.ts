@@ -136,6 +136,96 @@ export interface StockHistoryQuery {
     end_date?: string
 }
 
+// ============ 入库记录 ============
+export interface StockInRecord {
+    record_id: string
+    record_no: string
+    date: string
+    quantity: number
+    remark: string | null
+    photo_id: string | null
+    photo_url: string | null
+    before_stock: number
+    after_stock: number
+    item_name: string | null
+    spec: string | null
+    create_time: string
+}
+
+// ============ 出库记录 ============
+export interface StockOutRecord {
+    record_id: string
+    record_no: string
+    date: string
+    quantity: number
+    remark: string | null
+    before_stock: number
+    after_stock: number
+    item_name: string | null
+    spec: string | null
+    create_time: string
+}
+
+export interface StockRecordListQuery {
+    pageIndex: number
+    pageSize: number
+    start_date?: string
+    end_date?: string
+    item_id?: string
+    spec_id?: string
+    record_no?: string
+}
+
+// ============ 出入库 Payload ============
+export interface StockInPayload {
+    item_id: string
+    spec_id: string
+    quantity: number
+    date: string
+    photo_id: string
+    remark?: string
+}
+
+export interface StockInBatchItem {
+    item_id: string
+    spec_id: string
+    quantity: number
+}
+
+export interface StockInBatchPayload {
+    items: StockInBatchItem[]
+    date: string
+    photo_id: string
+    remark?: string
+}
+
+export interface StockOutPayload {
+    item_id: string
+    spec_id: string
+    quantity: number
+    date: string
+    remark?: string
+}
+
+export interface StockOutBatchItem {
+    item_id: string
+    spec_id: string
+    quantity: number
+}
+
+export interface StockOutBatchPayload {
+    items: StockOutBatchItem[]
+    date: string
+    remark?: string
+}
+
+export interface StockOutByProductPayload {
+    product_id: string
+    quantity: number
+    date: string
+    remark?: string
+}
+
 // ============ 文件上传 API ============
 export const fileApi = {
     uploadFile(file: File): Promise<FileUploadResponse> {
@@ -194,6 +284,37 @@ export const inventoryApi = {
     // ---- 库存历史 ----
     listStockHistory(query: StockHistoryQuery) {
         return http.get<PaginatedData<StockRecord>>('/saleshub/inventory/listStockHistory', { params: query })
+    },
+
+    // ---- 入库记录列表 ----
+    listStockInRecords(query: StockRecordListQuery) {
+        return http.get<PaginatedData<StockInRecord>>('/saleshub/inventory/stockInList', { params: query })
+    },
+
+    // ---- 出库记录列表 ----
+    listStockOutRecords(query: StockRecordListQuery) {
+        return http.get<PaginatedData<StockOutRecord>>('/saleshub/inventory/stockOutList', { params: query })
+    },
+
+    // ---- 出入库操作 ----
+    stockIn(payload: StockInPayload) {
+        return http.post('/saleshub/inventory/stockIn', payload)
+    },
+
+    stockInBatch(payload: StockInBatchPayload) {
+        return http.post('/saleshub/inventory/stockInBatch', payload)
+    },
+
+    stockOut(payload: StockOutPayload) {
+        return http.post('/saleshub/inventory/stockOut', payload)
+    },
+
+    stockOutBatch(payload: StockOutBatchPayload) {
+        return http.post('/saleshub/inventory/stockOutBatch', payload)
+    },
+
+    stockOutByProduct(payload: StockOutByProductPayload) {
+        return http.post('/saleshub/inventory/stockOutByProduct', payload)
     }
 }
 

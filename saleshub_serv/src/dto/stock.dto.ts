@@ -21,7 +21,7 @@ export class StockInDto {
     @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '入库日期格式不正确' })
     date: string;
 
-    @IsNotEmpty({ message: '照片ID不能为空' })
+    @IsOptional()
     @MaxLength(32, { message: '照片ID长度不能超过32' })
     photo_id: string;
 
@@ -55,7 +55,7 @@ export class StockInBatchDto {
     @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '入库日期格式不正确' })
     date: string;
 
-    @IsNotEmpty({ message: '照片ID不能为空' })
+    @IsOptional()
     @MaxLength(32, { message: '照片ID长度不能超过32' })
     photo_id: string;
 
@@ -176,4 +176,48 @@ export class ListStockHistoryDto extends PageDto {
     @IsOptional()
     @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '结束日期格式不正确' })
     end_date?: string;
+}
+
+export class ListStockInRecordsDto extends PageDto {
+    @IsOptional()
+    @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '开始日期格式不正确' })
+    start_date?: string;
+
+    @IsOptional()
+    @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '结束日期格式不正确' })
+    end_date?: string;
+
+    @IsOptional()
+    @MaxLength(32, { message: '零件ID长度不能超过32' })
+    item_id?: string;
+
+    @IsOptional()
+    @MaxLength(32, { message: '规格ID长度不能超过32' })
+    spec_id?: string;
+
+    @IsOptional()
+    @MaxLength(50, { message: '记录编号长度不能超过50' })
+    record_no?: string;
+}
+
+export class ListStockOutRecordsDto extends PageDto {
+    @IsOptional()
+    @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '开始日期格式不正确' })
+    start_date?: string;
+
+    @IsOptional()
+    @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '结束日期格式不正确' })
+    end_date?: string;
+
+    @IsOptional()
+    @MaxLength(32, { message: '零件ID长度不能超过32' })
+    item_id?: string;
+
+    @IsOptional()
+    @MaxLength(32, { message: '规格ID长度不能超过32' })
+    spec_id?: string;
+
+    @IsOptional()
+    @MaxLength(50, { message: '记录编号长度不能超过50' })
+    record_no?: string;
 }
