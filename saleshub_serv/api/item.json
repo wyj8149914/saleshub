@@ -30,6 +30,14 @@
                 "code": {
                     "type": "string",
                     "description": "零件编码，精确匹配（Query 参数，可选）"
+                },
+                "is_custom": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "description": "是否定制筛选（Query 参数，可选）：1-否，2-是"
                 }
             },
             "required": [
@@ -97,15 +105,27 @@
                                         "type": "string",
                                         "description": "零件图片 ID（关联 file.relation_id），可能为 null"
                                     },
+                                    "remark": {
+                                        "type": "string",
+                                        "description": "备注，可能为 null"
+                                    },
                                     "specs": {
                                         "type": "array",
                                         "description": "规格库存明细列表",
                                         "items": {
                                             "type": "object",
                                             "properties": {
+                                                "spec_id": {
+                                                    "type": "string",
+                                                    "description": "规格主键 UUID"
+                                                },
                                                 "spec": {
                                                     "type": "string",
                                                     "description": "规格值，空串为默认 SKU"
+                                                },
+                                                "price": {
+                                                    "type": "number",
+                                                    "description": "规格价格，可能为 null"
                                                 },
                                                 "current_stock": {
                                                     "type": "number",
@@ -121,6 +141,14 @@
                                             2
                                         ],
                                         "description": "预警状态：1-正常（total_stock > warn_stock），2-预警（total_stock <= warn_stock）"
+                                    },
+                                    "is_custom": {
+                                        "type": "number",
+                                        "enum": [
+                                            1,
+                                            2
+                                        ],
+                                        "description": "是否定制：1-否，2-是"
                                     }
                                 }
                             }
@@ -133,7 +161,7 @@
     "/saleshub/inventory/createItem": {
         "method": "POST",
         "summary": "创建零件",
-        "description": "创建零件记录。服务端自动生成编码 code（格式 IT + 6 位递增数字，如 IT000001；上限 999999），item_id 由 UUID v7 去连字符生成。type 必须为 device 或 common。specs 为规格选项数组：传入后在独立的 inventory_item_spec 表中为每个规格创建一条记录（初始库存为 0）；若不传或传空数组，则自动创建一条默认 SKU（spec 为空串）。warnStock 为预警阈值，默认 10。status 默认 1。事务执行：同时写入零件主表与规格表。",
+        "description": "创建零件记录。服务端自动生成编码 code（格式 IT + 6 位递增数字，如 IT000001；上限 999999），item_id 由 UUID v7 去连字符生成。type 必须为 device 或 common。specs 为规格选项数组：每个元素包含 spec（规格值）和 price（可选价格）；传入后在独立的 inventory_item_spec 表中为每个规格创建一条记录（初始库存为 0）；若不传或传空数组，则自动创建一条默认 SKU（spec 为空串）。warnStock 为预警阈值，默认 10。status 默认 1。事务执行：同时写入零件主表与规格表。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -153,7 +181,20 @@
                 "specs": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "type": "object",
+                        "properties": {
+                            "spec": {
+                                "type": "string",
+                                "description": "规格值，最长 100 字符"
+                            },
+                            "price": {
+                                "type": "number",
+                                "description": "规格价格（可选）"
+                            }
+                        },
+                        "required": [
+                            "spec"
+                        ]
                     },
                     "description": "规格选项数组（可选，传入后为每个规格创建独立库存记录；不传或空数组则创建默认 SKU，规格为空串）"
                 },
@@ -164,6 +205,18 @@
                 "image_id": {
                     "type": "string",
                     "description": "零件图片 ID（可选，关联 file.relation_id，最长 32 字符）"
+                },
+                "remark": {
+                    "type": "string",
+                    "description": "备注（可选，最长 500 字符）"
+                },
+                "is_custom": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "description": "是否定制（可选，默认1-否）：1-否，2-是"
                 }
             },
             "required": [
@@ -175,8 +228,14 @@
             "type": "common",
             "name": "M8 螺栓",
             "specs": [
-                "不锈钢",
-                "镀锌"
+                {
+                    "spec": "不锈钢",
+                    "price": 12.5
+                },
+                {
+                    "spec": "镀锌",
+                    "price": 10.8
+                }
             ],
             "warnStock": 20,
             "image_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
@@ -209,7 +268,7 @@
     "/saleshub/inventory/updateItem": {
         "method": "POST",
         "summary": "更新零件",
-        "description": "更新零件基础信息（类型、名称、规格、预警阈值、图片）。仅当 item_id 对应的零件存在且 status=1 时可更新。type 与 name 为必填字段（直接覆盖原值）；warnStock 传入时更新；image_id 传入时更新（支持传 null 清空图片）。规格同步规则（基于 inventory_item_spec 表）：specs 不传（undefined）则规格保持不变仅更新主表；specs 传空数组则改为默认 SKU（需所有现存规格库存为 0）；specs 传非空数组则同步为该列表（新增的规格初始库存为 0，删除的规格需库存为 0 否则报错）。事务执行。",
+        "description": "更新零件基础信息（类型、名称、规格、预警阈值、图片、备注）。仅当 item_id 对应的零件存在且 status=1 时可更新。type 与 name 为必填字段（直接覆盖原值）；warnStock 传入时更新；image_id 传入时更新（支持传 null 清空图片）；remark 传入时更新（支持传 null 清空备注）。规格同步规则（基于 inventory_item_spec 表）：specs 不传（undefined）则规格保持不变仅更新主表；specs 传空数组则改为默认 SKU（需所有现存规格库存为 0）；specs 传非空数组则同步为该列表（新增的规格初始库存为 0，删除的规格需库存为 0 否则报错；保留的规格会更新价格）。事务执行。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -233,9 +292,22 @@
                 "specs": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "type": "object",
+                        "properties": {
+                            "spec": {
+                                "type": "string",
+                                "description": "规格值，最长 100 字符"
+                            },
+                            "price": {
+                                "type": "number",
+                                "description": "规格价格（可选）"
+                            }
+                        },
+                        "required": [
+                            "spec"
+                        ]
                     },
-                    "description": "规格选项数组（可选；不传=保持不变，空数组=改为默认 SKU，非空数组=同步为该列表；删除库存非零的规格会报错）"
+                    "description": "规格选项数组（可选；不传=保持不变，空数组=改为默认 SKU，非空数组=同步为该列表；删除库存非零的规格会报错；保留的规格会更新价格）"
                 },
                 "warnStock": {
                     "type": "number",
@@ -244,6 +316,18 @@
                 "image_id": {
                     "type": "string",
                     "description": "零件图片 ID（可选，关联 file.relation_id；传入 null 可清空图片）"
+                },
+                "remark": {
+                    "type": "string",
+                    "description": "备注（可选，最长 500 字符；传入 null 可清空）"
+                },
+                "is_custom": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "description": "是否定制（可选）：1-否，2-是"
                 }
             },
             "required": [
@@ -257,9 +341,18 @@
             "type": "common",
             "name": "M8 螺栓（更新）",
             "specs": [
-                "不锈钢",
-                "镀锌",
-                "黑色"
+                {
+                    "spec": "不锈钢",
+                    "price": 13.5
+                },
+                {
+                    "spec": "镀锌",
+                    "price": 10.8
+                },
+                {
+                    "spec": "黑色",
+                    "price": 11.2
+                }
             ],
             "warnStock": 15
         },

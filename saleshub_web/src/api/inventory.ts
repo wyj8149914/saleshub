@@ -20,7 +20,14 @@ export interface FileUploadResponse {
 export interface ItemSpec {
     spec_id: string
     spec: string
+    price: number | null
     current_stock: number
+}
+
+/** 创建/更新零件时使用的规格项 */
+export interface SpecPayload {
+    spec: string
+    price?: number
 }
 
 // ============ 产品 ============
@@ -31,6 +38,8 @@ export interface Product {
     description: string
     image_id: string | null
     image_url: string | null
+    price: number | null
+    remark: string | null
 }
 
 export interface ProductListQuery {
@@ -44,6 +53,8 @@ export interface ProductCreatePayload {
     name: string
     description?: string
     image_id?: string
+    price?: number
+    remark?: string
 }
 
 export interface ProductUpdatePayload {
@@ -51,6 +62,8 @@ export interface ProductUpdatePayload {
     name: string
     description?: string
     image_id?: string
+    price?: number
+    remark?: string
 }
 
 // ============ 零件 ============
@@ -63,6 +76,8 @@ export interface InventoryItem {
     image_id: string | null
     image_url: string | null
     warn_stock: number
+    remark: string | null
+    is_custom: 1 | 2
 }
 
 export interface ItemListQuery {
@@ -72,23 +87,28 @@ export interface ItemListQuery {
     name?: string
     code?: string
     isWarning?: 1 | 2
+    is_custom?: 1 | 2
 }
 
 export interface ItemCreatePayload {
     type: ItemType
     name: string
-    specs?: string[]
+    specs?: SpecPayload[]
     warnStock?: number
     image_id?: string
+    remark?: string
+    is_custom?: 1 | 2
 }
 
 export interface ItemUpdatePayload {
     item_id: string
     type: ItemType
     name: string
-    specs?: string[]
+    specs?: SpecPayload[]
     warnStock?: number
     image_id?: string
+    remark?: string
+    is_custom?: 1 | 2
 }
 
 // ============ 产品-零件关联 ============

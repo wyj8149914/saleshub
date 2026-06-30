@@ -11,6 +11,15 @@
         <a-textarea v-model:value="form.description" placeholder="请输入产品描述（可选）" :rows="4" :maxlength="500" show-count />
       </a-form-item>
 
+      <a-form-item label="产品价格" name="price">
+        <a-input-number v-model:value="form.price" placeholder="请输入产品价格（可选）" :min="0" :precision="2"
+          style="width: 100%" />
+      </a-form-item>
+
+      <a-form-item label="备注" name="remark">
+        <a-textarea v-model:value="form.remark" placeholder="请输入备注（可选）" :rows="3" :maxlength="500" show-count />
+      </a-form-item>
+
       <!-- 单图上传：校验类型与大小后走自定义上传，image_id 提交给后端 -->
       <a-form-item label="产品图片" name="image_id">
         <a-upload :before-upload="beforeUpload" :custom-request="handleUpload" :max-count="1" list-type="picture-card"
@@ -76,13 +85,17 @@
     description: string
     /** 关联文件 ID，提交给后端存储 */
     image_id?: string
+    price?: number
+    remark?: string
   }
 
   const form = reactive<FormData>({
     name: '',
     code: '',
     description: '',
-    image_id: undefined
+    image_id: undefined,
+    price: undefined,
+    remark: undefined
   })
 
   /** 表单校验规则 */
@@ -146,6 +159,8 @@
     form.code = ''
     form.description = ''
     form.image_id = undefined
+    form.price = undefined
+    form.remark = undefined
     imageUrl.value = ''
     formRef.value?.clearValidate()
   }
@@ -157,6 +172,8 @@
       form.code = props.product.code || ''
       form.description = props.product.description || ''
       form.image_id = props.product.image_id || undefined
+      form.price = props.product.price ?? undefined
+      form.remark = props.product.remark || undefined
       // 如果有 image_id，设置图片预览 URL
       if (props.product.image_id) {
         imageUrl.value = props.product.image_url || ''
@@ -199,7 +216,9 @@
           product_id: props.product!.product_id,
           name: form.name,
           description: form.description || undefined,
-          image_id: form.image_id
+          image_id: form.image_id,
+          price: form.price,
+          remark: form.remark
         }
         await inventoryApi.updateProduct(payload)
         message.success('产品更新成功')
@@ -207,7 +226,9 @@
         const payload: ProductCreatePayload = {
           name: form.name,
           description: form.description || undefined,
-          image_id: form.image_id
+          image_id: form.image_id,
+          price: form.price,
+          remark: form.remark
         }
         await inventoryApi.createProduct(payload)
         message.success('产品创建成功')

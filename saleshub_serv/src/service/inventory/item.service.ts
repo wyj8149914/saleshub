@@ -5,6 +5,7 @@ import { getLogger } from '../../utils/logger.util';
 import { v7 } from 'uuid';
 import { generateFileUrl } from '../../config/minio.config';
 import { MinioFile } from '../../entity/file.entity';
+import { In } from 'typeorm';
 
 export class InventoryItemService {
     private inventoryItemRepository = AppDataSource.getRepository(InventoryItem);
@@ -26,19 +27,28 @@ export class InventoryItemService {
             item.code = code;
             item.type = dto.type;
             item.name = dto.name;
-            if (dto.warnStock) {
+            if (dto.warnStock !== null && dto.warnStock !== undefined) {
                 item.warn_stock = dto.warnStock;
             }
             if (dto.image_id) {
                 item.image_id = dto.image_id;
             }
+            if (dto.remark !== undefined) {
+                item.remark = dto.remark;
+            }
+            if (dto.is_custom !== undefined) {
+                item.is_custom = dto.is_custom;
+            }
 
             const specs = this.normalizeSpecs(dto.specs);
-            const specRows: InventoryItemSpec[] = specs.map((spec) => {
+            const specRows: InventoryItemSpec[] = specs.map((specData) => {
                 const row = new InventoryItemSpec();
                 row.spec_id = v7().replace(/-/g, '');
                 row.item_id = itemId;
-                row.spec = spec;
+                row.spec = specData.spec;
+                if (specData.price !== undefined) {
+                    row.price = specData.price;
+                }
                 return row;
             });
 
@@ -68,6 +78,8 @@ export class InventoryItemService {
                     'item.code AS code',
                     'item.warn_stock AS warn_stock',
                     'item.image_id AS image_id',
+                    'item.remark AS remark',
+                    'item.is_custom AS is_custom',
                     'file.object_name AS image_object_name',
                 ])
                 .where('item.status = :status', { status: 1 });
@@ -80,6 +92,9 @@ export class InventoryItemService {
             }
             if (dto.code) {
                 queryBuilder.andWhere('item.code = :code', { code: dto.code });
+            }
+            if (dto.is_custom) {
+                queryBuilder.andWhere('item.is_custom = :is_custom', { is_custom: dto.is_custom });
             }
 
             const start = (dto.pageIndex - 1) * dto.pageSize;
@@ -99,6 +114,7 @@ export class InventoryItemService {
                             's.spec_id AS spec_id',
                             's.item_id AS item_id',
                             's.spec AS spec',
+                            's.price AS price',
                             's.current_stock AS current_stock',
                         ])
                         .where('s.item_id IN (:...ids) AND s.status = :status', { ids: itemIds, status: 1 })
@@ -110,7 +126,7 @@ export class InventoryItemService {
                 if (!specMap.has(row.item_id)) {
                     specMap.set(row.item_id, []);
                 }
-                specMap.get(row.item_id)?.push({ spec_id: row.spec_id, spec: row.spec, current_stock: Number(row.current_stock) });
+                specMap.get(row.item_id)?.push({ spec_id: row.spec_id, spec: row.spec, price: row.price, current_stock: Number(row.current_stock) });
             }
 
             const datas = items.map((it: any) => ({
@@ -120,6 +136,7 @@ export class InventoryItemService {
                 code: it.code,
                 warn_stock: it.warn_stock,
                 image_id: it.image_id,
+                is_custom: it.is_custom,
                 specs: specMap.get(it.item_id) || [],
                 image_url: generateFileUrl(it.image_object_name ?? ''),
             }));
@@ -148,11 +165,17 @@ export class InventoryItemService {
 
             item.type = dto.type;
             item.name = dto.name;
-            if (dto.warnStock) {
+            if (dto.warnStock !== null && dto.warnStock !== undefined) {
                 item.warn_stock = dto.warnStock;
             }
             if (dto.image_id !== undefined) {
                 item.image_id = dto.image_id;
+            }
+            if (dto.remark !== undefined) {
+                item.remark = dto.remark;
+            }
+            if (dto.is_custom !== undefined) {
+                item.is_custom = dto.is_custom;
             }
             item.update_time = new Date();
 
@@ -165,12 +188,16 @@ export class InventoryItemService {
             const existingSpecs = await this.inventoryItemSpecRepository.find({
                 where: { item_id: dto.item_id, status: 1 },
             });
-            const newSpecs = this.normalizeSpecs(dto.specs);
-            const existingSpecValues = new Set(existingSpecs.map((s) => s.spec));
-            const newSpecSet = new Set(newSpecs);
+            const newSpecsData = this.normalizeSpecs(dto.specs);
+            const existingSpecMap = new Map(existingSpecs.map((s) => [s.spec, s]));
+            const newSpecMap = new Map(newSpecsData.map((s) => [s.spec, s]));
 
-            const toRemove = existingSpecs.filter((s) => !newSpecSet.has(s.spec));
-            const toAdd = newSpecs.filter((spec) => !existingSpecValues.has(spec));
+            // 找出需要删除的规格（在新规格中不存在的）
+            const toRemove = existingSpecs.filter((s) => !newSpecMap.has(s.spec));
+            // 找出需要添加的规格（在现有规格中不存在的）
+            const toAddData = newSpecsData.filter((s) => !existingSpecMap.has(s.spec));
+            // 找出需要更新的规格（两边都存在，可能需要更新价格）
+            const toUpdateData = newSpecsData.filter((s) => existingSpecMap.has(s.spec));
 
             for (const s of toRemove) {
                 if (s.current_stock !== 0) {
@@ -179,15 +206,28 @@ export class InventoryItemService {
             }
 
             const now = new Date();
-            const addRows: InventoryItemSpec[] = toAdd.map((spec) => {
+            const addRows: InventoryItemSpec[] = toAddData.map((specData) => {
                 const row = new InventoryItemSpec();
                 row.spec_id = v7().replace(/-/g, '');
                 row.item_id = dto.item_id;
-                row.spec = spec;
+                row.spec = specData.spec;
+                if (specData.price !== undefined) {
+                    row.price = specData.price;
+                }
                 row.create_time = now;
                 row.update_time = now;
                 return row;
             });
+
+            const toUpdateIds: string[] = [];
+            const toUpdatePrices: Map<string, number> = new Map();
+            for (const specData of toUpdateData) {
+                const existing = existingSpecMap.get(specData.spec)!;
+                if (specData.price !== undefined && specData.price !== existing.price) {
+                    toUpdateIds.push(existing.spec_id);
+                    toUpdatePrices.set(existing.spec_id, specData.price);
+                }
+            }
 
             await this.inventoryItemRepository.manager.transaction(async (manager) => {
                 await manager.save(InventoryItem, item);
@@ -200,6 +240,15 @@ export class InventoryItemService {
                 }
                 if (addRows.length > 0) {
                     await manager.save(InventoryItemSpec, addRows);
+                }
+                if (toUpdateIds.length > 0) {
+                    for (const specId of toUpdateIds) {
+                        await manager.update(
+                            InventoryItemSpec,
+                            { spec_id: specId },
+                            { price: toUpdatePrices.get(specId)!, update_time: now }
+                        );
+                    }
                 }
             });
 
@@ -259,17 +308,17 @@ export class InventoryItemService {
     }
 
     /**
-     * 规格标准化:undefined/空数组 → [''](默认 SKU);去重
+     * 规格标准化:undefined/空数组 → [{spec:''}](默认 SKU);去重
      */
-    private normalizeSpecs(specs: string[] | undefined): string[] {
+    private normalizeSpecs(specs?: { spec: string; price?: number }[]): { spec: string; price?: number }[] {
         if (!specs || specs.length === 0) {
-            return [''];
+            return [{ spec: '' }];
         }
         const seen = new Set<string>();
-        const out: string[] = [];
+        const out: { spec: string; price?: number }[] = [];
         for (const s of specs) {
-            if (!seen.has(s)) {
-                seen.add(s);
+            if (!seen.has(s.spec)) {
+                seen.add(s.spec);
                 out.push(s);
             }
         }

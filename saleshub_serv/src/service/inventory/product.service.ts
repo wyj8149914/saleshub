@@ -35,6 +35,12 @@ export class ProductService {
             if (dto.image_id) {
                 product.image_id = dto.image_id;
             }
+            if (dto.price !== undefined) {
+                product.price = dto.price;
+            }
+            if (dto.remark !== undefined) {
+                product.remark = dto.remark;
+            }
             product.status = 1;
             product.create_time = now;
             product.update_time = now;
@@ -60,6 +66,8 @@ export class ProductService {
                     'product.code AS code',
                     'product.description AS description',
                     'product.image_id AS image_id',
+                    'product.price AS price',
+                    'product.remark AS remark',
                     'file.object_name AS image_object_name',
                 ])
                 .where('product.status = :status', { status: 1 });
@@ -109,6 +117,12 @@ export class ProductService {
             }
             if (dto.image_id !== undefined) {
                 product.image_id = dto.image_id;
+            }
+            if (dto.price !== undefined) {
+                product.price = dto.price;
+            }
+            if (dto.remark !== undefined) {
+                product.remark = dto.remark;
             }
             product.update_time = new Date();
 

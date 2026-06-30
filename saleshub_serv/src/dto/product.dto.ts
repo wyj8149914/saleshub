@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsOptional, MaxLength, IsArray, IsInt, Min, ValidateNested } from 'class-validator';
+import { IsNotEmpty, IsOptional, MaxLength, IsArray, IsInt, Min, ValidateNested, IsNumber } from 'class-validator';
 import { PageDto } from './base.dto';
 
 export class CreateProductDto {
@@ -14,6 +14,14 @@ export class CreateProductDto {
     @IsOptional()
     @MaxLength(32, { message: '图片ID长度不能超过32' })
     image_id?: string;
+
+    @IsOptional()
+    @IsNumber({}, { message: '价格必须是数字' })
+    price?: number;
+
+    @IsOptional()
+    @MaxLength(500, { message: '备注长度不能超过500' })
+    remark?: string;
 }
 
 export class UpdateProductDto extends CreateProductDto {

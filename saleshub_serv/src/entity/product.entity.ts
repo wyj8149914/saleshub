@@ -17,6 +17,12 @@ export class Product {
     @Column({ type: 'varchar', length: 32, nullable: true, comment: '产品图片 file.relation_id' })
     image_id: string;
 
+    @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true, comment: '产品价格' })
+    price: number;
+
+    @Column({ type: 'text', nullable: true, comment: '备注' })
+    remark: string;
+
     @Column({ type: 'int', default: 1, comment: '状态:1-正常,2-停用' })
     status: number;
 
@@ -47,8 +53,14 @@ export class InventoryItem {
     @Column({ type: 'varchar', length: 32, nullable: true, comment: '零件图片 file.relation_id' })
     image_id: string;
 
+    @Column({ type: 'text', nullable: true, comment: '备注' })
+    remark: string;
+
     @Column({ type: 'int', default: 1, comment: '状态:1-正常,2-停用' })
     status: number;
+
+    @Column({ type: 'int', default: 1, comment: '是否定制:1-否,2-是' })
+    is_custom: number;
 
     @Column({ type: 'timestamp', comment: '创建时间' })
     create_time: Date;
@@ -85,6 +97,9 @@ export class ProductItem {
 
     @Column({ type: 'timestamp', comment: '更新时间' })
     update_time: Date;
+
+    @Column({ type: 'int', default: 0, comment: '是否定制:1-否,2-是' })
+    is_custom: number;
 }
 
 @Entity({ schema: 'inventory', name: 'inventory_item_spec' })
@@ -98,6 +113,9 @@ export class InventoryItemSpec {
 
     @Column({ type: 'varchar', length: 100, comment: '规格值,空串为默认 SKU' })
     spec: string;
+
+    @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true, comment: '规格价格' })
+    price: number;
 
     @Column({ type: 'int', default: 0, comment: '当前规格库存' })
     current_stock: number;

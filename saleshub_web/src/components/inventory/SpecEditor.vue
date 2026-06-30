@@ -1,9 +1,11 @@
 <template>
-  <!-- 常用件规格列表编辑器：v-model 绑定规格名称字符串数组 -->
+  <!-- 常用件规格列表编辑器：v-model 绑定规格对象数组（含规格名称和价格） -->
   <div class="spec-editor">
-    <div v-for="(_spec, index) in value" :key="index" class="spec-row">
-      <a-input :value="value[index]" placeholder="请输入规格（如：不锈钢、M8×20）" :maxlength="100" allow-clear
+    <div v-for="(specItem, index) in value" :key="index" class="spec-row">
+      <a-input :value="specItem.spec" placeholder="请输入规格（如：不锈钢、M8×20）" :maxlength="100" allow-clear
         @update:value="(v: string) => updateSpec(index, v)" />
+      <a-input-number :value="specItem.price" placeholder="价格（可选）" :min="0" :precision="2"
+        style="width: 120px; margin-left: 8px" @update:value="(v: number) => updatePrice(index, v)" />
       <a-button type="text" danger @click="removeSpec(index)">
         <template #icon>
           <DeleteOutlined />
@@ -24,14 +26,15 @@
 /**
  * SpecEditor — 常用件规格选项编辑器
  *
- * 职责：维护规格名称列表，通过 v-model:value 与父表单同步 string[]。
- * 提交时由父组件过滤空串后作为 specs 传给后端。
+ * 职责：维护规格列表（包含规格名称和价格），通过 v-model:value 与父表单同步 SpecPayload[]。
+ * 提交时由父组件过滤空规格后作为 specs 传给后端。
  */
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue'
+import type { SpecPayload } from '@/api/inventory'
 
 interface Props {
-  /** 规格名称列表 */
-  value: string[]
+  /** 规格列表 */
+  value: SpecPayload[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -39,17 +42,26 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  (e: 'update:value', value: string[]): void
+  (e: 'update:value', value: SpecPayload[]): void
 }>()
 
 function updateSpec(index: number, spec: string) {
   const next = [...props.value]
-  next[index] = spec
+  next[index] = { ...next[index], spec }
   emit('update:value', next)
 }
 
+function updatePrice(index: number, price: number | undefined) {
+  const next = [...props.value]
+  const current = next[index]
+  if (current) {
+    next[index] = { spec: current.spec, price }
+    emit('update:value', next)
+  }
+}
+
 function addSpec() {
-  emit('update:value', [...props.value, ''])
+  emit('update:value', [...props.value, { spec: '' }])
 }
 
 function removeSpec(index: number) {
@@ -78,8 +90,13 @@ function removeSpec(index: number) {
   flex: 1;
 }
 
+.spec-row :deep(.ant-input-number) {
+  border-radius: 8px;
+}
+
 .spec-row :deep(.ant-input-affix-wrapper-focused),
-.spec-row :deep(.ant-input:focus) {
+.spec-row :deep(.ant-input:focus),
+.spec-row :deep(.ant-input-number-focused) {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
 }

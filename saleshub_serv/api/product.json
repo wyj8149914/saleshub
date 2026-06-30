@@ -79,6 +79,14 @@
                                     "image_id": {
                                         "type": "string",
                                         "description": "产品图片 ID（关联 file.relation_id），可能为 null"
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "description": "产品价格，可能为 null"
+                                    },
+                                    "remark": {
+                                        "type": "string",
+                                        "description": "备注，可能为 null"
                                     }
                                 }
                             }
@@ -107,6 +115,14 @@
                 "image_id": {
                     "type": "string",
                     "description": "产品图片 ID（可选，关联 file.relation_id，最长 32 字符）"
+                },
+                "price": {
+                    "type": "number",
+                    "description": "产品价格（可选）"
+                },
+                "remark": {
+                    "type": "string",
+                    "description": "备注（可选，最长 500 字符）"
                 }
             },
             "required": [
@@ -166,6 +182,14 @@
                 "image_id": {
                     "type": "string",
                     "description": "产品图片 ID（可选，关联 file.relation_id；传入 null 可清空图片）"
+                },
+                "price": {
+                    "type": "number",
+                    "description": "产品价格（可选；传入 null 可清空价格）"
+                },
+                "remark": {
+                    "type": "string",
+                    "description": "备注（可选，最长 500 字符；传入 null 可清空）"
                 }
             },
             "required": [

@@ -3,7 +3,6 @@ import { fileApi } from '@/api/inventory'
 
 export interface UploadImageOptions {
   maxSize?: number      // MB，默认 10
-  acceptTypes?: string[] // 默认 ['image/*']
 }
 
 export interface UploadImageResult {
@@ -12,7 +11,6 @@ export interface UploadImageResult {
 }
 
 const DEFAULT_MAX_SIZE = 10 // MB
-const DEFAULT_ACCEPT_TYPES = ['image/*']
 
 /**
  * 上传图片文件
@@ -25,7 +23,6 @@ export async function uploadImage(
   options?: UploadImageOptions
 ): Promise<UploadImageResult> {
   const maxSize = options?.maxSize ?? DEFAULT_MAX_SIZE
-  const acceptTypes = options?.acceptTypes ?? DEFAULT_ACCEPT_TYPES
 
   // 校验文件类型
   const isImage = file.type.startsWith('image/')
@@ -41,20 +38,15 @@ export async function uploadImage(
     throw new Error(`图片大小不能超过 ${maxSize}MB`)
   }
 
-  try {
-    const response = await fileApi.uploadFile(file)
+  const response = await fileApi.uploadFile(file)
 
-    if (response) {
-      return {
-        relationId: response.relation_id,
-        url: response.url
-      }
-    } else {
-      message.error('上传失败')
-      throw new Error('上传失败')
+  if (response) {
+    return {
+      relationId: response.relation_id,
+      url: response.url
     }
-  } catch (error) {
-    // 业务错误由 request 拦截器统一处理
-    throw error
+  } else {
+    message.error('上传失败')
+    throw new Error('上传失败')
   }
 }
