@@ -292,9 +292,9 @@ export class StockService {
                 .getMany();
 
             const mergedRecords = [
-                ...inRecords.map((r: StockInRecord) => ({ ...r, id: r.record_id, type: 'in' as const })),
-                ...outRecords.map((r: StockOutRecord) => ({ ...r, id: r.record_id, type: 'out' as const })),
-                ...checkRecords.map((r: InventoryCheck) => ({ ...r, id: r.check_id, type: 'check' as const })),
+                ...inRecords.map((r: StockInRecord) => ({ ...r, id: r.record_id, type: 'in' })),
+                ...outRecords.map((r: StockOutRecord) => ({ ...r, id: r.record_id, type: 'out' })),
+                ...checkRecords.map((r: InventoryCheck) => ({ ...r, id: r.check_id, type: 'check' })),
             ];
             mergedRecords.sort((a, b) => b.create_time.getTime() - a.create_time.getTime());
 
