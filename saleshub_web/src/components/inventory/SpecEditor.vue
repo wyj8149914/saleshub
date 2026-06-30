@@ -30,7 +30,7 @@
  * 提交时由父组件过滤空规格后作为 specs 传给后端。
  */
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue'
-import type { SpecPayload } from '@/api/inventory'
+import type { SpecPayload } from '@/types/inventory'
 
 interface Props {
   /** 规格列表 */

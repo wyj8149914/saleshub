@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn, ViewEntity, ViewColumn } from 'typeorm';
 
 /**
  * 入库记录实体
@@ -95,8 +95,8 @@ export class InventoryCheck {
     @Column({ type: 'varchar', length: 32, comment: '零件ID' })
     item_id: string;
 
-    @Column({ type: 'varchar', length: 100, default: '', comment: '盘点规格,空串为默认 SKU' })
-    spec: string;
+    @Column({ type: 'varchar', length: 32, comment: '盘点规格ID' })
+    spec_id: string;
 
     @Column({ type: 'int', comment: '盘点前库存' })
     before_stock: number;
@@ -115,4 +115,43 @@ export class InventoryCheck {
 
     @Column({ type: 'timestamp', comment: '创建时间' })
     create_time: Date;
+
+    @Column({ type: 'varchar', length: 50, comment: '记录编号' })
+    record_no: string;
+}
+
+@ViewEntity({ schema: 'inventory', name: 'stock_history' })
+export class StockHistory {
+    @PrimaryColumn()
+    id: string;
+
+    @ViewColumn()
+    type: string;
+
+    @ViewColumn()
+    item_id: string;
+
+    @ViewColumn()
+    spec_id: string;
+
+    @ViewColumn()
+    quantity: number;
+
+    @ViewColumn()
+    before_stock: number;
+
+    @ViewColumn()
+    after_stock: number;
+
+    @ViewColumn()
+    date: Date;
+
+    @ViewColumn()
+    remark: string;
+
+    @ViewColumn()
+    create_time: Date;
+
+    @ViewColumn()
+    status: number;
 }

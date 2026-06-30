@@ -140,7 +140,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, SearchOutlined, TagOutlined } from '@ant-design/icons-vue'
 import { inventoryApi } from '@/api/inventory'
-import type { InventoryItem, ItemType, ItemSpec } from '@/api/inventory'
+import type { InventoryItem, ItemType, ItemSpec } from '@/types/inventory'
 import InventoryItemForm from '@/components/inventory/InventoryItemForm.vue'
 
 const columns = [

@@ -50,7 +50,7 @@
   import { PlusOutlined } from '@ant-design/icons-vue'
   import { inventoryApi } from '@/api/inventory'
   import { uploadImage } from '@/utils/upload'
-  import type { Product, ProductCreatePayload, ProductUpdatePayload } from '@/api/inventory'
+  import type { Product, ProductCreatePayload, ProductUpdatePayload } from '@/types/inventory'
 
   interface Props {
     /** 弹窗显隐，由父组件 v-model:visible 控制 */

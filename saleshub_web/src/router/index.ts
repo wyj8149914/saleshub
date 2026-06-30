@@ -7,7 +7,7 @@ const routes: RouteRecordRaw[] = [
         path: '/login',
         name: 'Login',
         component: () => import('@/views/Login.vue'),
-        meta: { public: true }
+        meta: { public: true, title: '登录' }
     },
     {
         path: '/',
@@ -17,7 +17,7 @@ const routes: RouteRecordRaw[] = [
         path: '/inventory',
         component: () => import('@/layouts/DefaultLayout.vue'),
         redirect: '/inventory/products',
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, title: '库存管理' },
         children: [
             {
                 path: 'products',
@@ -28,22 +28,32 @@ const routes: RouteRecordRaw[] = [
             {
                 path: 'items',
                 name: 'InventoryList',
-                component: () => import('@/views/inventory/InventoryList.vue')
+                component: () => import('@/views/inventory/InventoryList.vue'),
+                meta: { title: '零件管理' }
             },
             {
                 path: 'stock-in',
                 name: 'StockIn',
-                component: () => import('@/views/inventory/StockIn.vue')
+                component: () => import('@/views/inventory/StockIn.vue'),
+                meta: { title: '入库管理' }
             },
             {
                 path: 'stock-out',
                 name: 'StockOut',
-                component: () => import('@/views/inventory/StockOut.vue')
+                component: () => import('@/views/inventory/StockOut.vue'),
+                meta: { title: '出库管理' }
+            },
+            {
+                path: 'stock-check',
+                name: 'StockCheck',
+                component: () => import('@/views/inventory/StockCheck.vue'),
+                meta: { title: '盘点管理' }
             },
             {
                 path: 'history',
                 name: 'StockHistory',
-                component: () => import('@/views/inventory/StockHistory.vue')
+                component: () => import('@/views/inventory/StockHistory.vue'),
+                meta: { title: '库存历史' }
             }
         ]
     },

@@ -39,6 +39,18 @@
       min-height: 100vh;
     }
 
+    body.embed .page-header {
+      display: none;
+    }
+
+    body.embed .container {
+      padding-top: 24px;
+    }
+
+    body.embed .footer a[href="/CHANGELOG.md"] {
+      display: none;
+    }
+
     .page-header {
       border-bottom: 1px solid var(--border);
       background: linear-gradient(180deg, #12151c 0%, var(--bg) 100%);
@@ -209,6 +221,15 @@
       font-weight: bold;
     }
 
+    code {
+      font-family: 'Courier New', Consolas, monospace;
+      font-size: 13px;
+      padding: 2px 6px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-radius: 4px;
+    }
+
     .version-table {
       width: 100%;
       border-collapse: collapse;
@@ -293,14 +314,49 @@
     </div>
     <h1>更新日志</h1>
     <p>了解 SalesHub 前端各版本的新功能与改进</p>
-    <span class="current-version">当前版本 v0.5.0</span>
+    <span class="current-version">当前版本 v0.6.0</span>
   </header>
 
   <main class="container">
+    <!-- v0.6.0 -->
+    <article class="release">
+      <div class="release-header">
+        <span class="release-version latest">v0.6.0</span>
+        <time class="release-date" datetime="2026-06-26">2026 年 6 月 26 日</time>
+      </div>
+      <div class="release-body">
+        <div class="section">
+          <div class="section-title added">新增</div>
+          <ul>
+            <li>盘点管理：盘点记录列表，支持按单号、日期筛选；单条/批量盘点弹窗，修正实际库存</li>
+            <li>入库管理重构：入库记录列表，单条/批量入库，支持入库照片上传</li>
+            <li>出库管理重构：出库记录列表，按零件单条/批量出库，支持按产品 BOM 出库</li>
+            <li>顶部栏版本号与更新日志入口，点击在当前页面弹窗中查看</li>
+          </ul>
+        </div>
+        <div class="section">
+          <div class="section-title changed">改进</div>
+          <ul>
+            <li>库存历史：盘点变更数量按盘点前后库存差值计算，统一 +/- 符号与红绿灰颜色区分</li>
+            <li>日期选择器全局中文：月份与星期显示为中文</li>
+            <li>侧边栏新增「盘点管理」菜单项</li>
+          </ul>
+        </div>
+        <div class="section">
+          <div class="section-title tech">技术</div>
+          <ul>
+            <li>新增盘点相关 TypeScript 类型与 API 封装</li>
+            <li>全局 dayjs 中文 locale 配置</li>
+            <li>集中管理应用版本号（<code>src/constants/app.ts</code>）</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
     <!-- v0.5.0 -->
     <article class="release">
       <div class="release-header">
-        <span class="release-version latest">v0.5.0</span>
+        <span class="release-version">v0.5.0</span>
         <time class="release-date" datetime="2026-06-25">2026 年 6 月 25 日</time>
       </div>
       <div class="release-body">
@@ -442,6 +498,11 @@
             </thead>
             <tbody>
               <tr>
+                <td>v0.6.0</td>
+                <td>2026-06-26</td>
+                <td>盘点管理、出入库记录列表重构</td>
+              </tr>
+              <tr>
                 <td>v0.5.0</td>
                 <td>2026-06-25</td>
                 <td>图片上传、规格级库存</td>
@@ -479,6 +540,11 @@
       <a href="/CHANGELOG.md">Markdown 版本</a>
     </p>
   </footer>
+  <script>
+    if (new URLSearchParams(window.location.search).get('embed') === '1') {
+      document.body.classList.add('embed');
+    }
+  </script>
 </body>
 
 </html>

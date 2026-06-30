@@ -15,7 +15,7 @@ export function validationMiddleware(type: any): RequestHandler {
                 // const result = { result: 1, msg: msg }
                 const allValues = msg.map(obj => Object.values(obj)).flat();
                 res.locals.datas = { result: 1, msg: allValues.join(',') };
-                return res.json({ result: 1, msg: allValues.join(','), alg: '', datas: {} });
+                return res.json({ result: 1, msg: allValues.join(',') });
             } else {
                 if (req.method === 'POST') {
                     req.body = dtoObj as any;

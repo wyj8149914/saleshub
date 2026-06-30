@@ -64,7 +64,7 @@ import { message } from 'ant-design-vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
 import { inventoryApi } from '@/api/inventory'
 import { uploadImage } from '@/utils/upload'
-import type { InventoryItem, ItemType, ItemCreatePayload, ItemUpdatePayload, SpecPayload } from '@/api/inventory'
+import type { InventoryItem, ItemType, ItemCreatePayload, ItemUpdatePayload, SpecPayload } from '@/types/inventory'
 import SpecEditor from './SpecEditor.vue'
 
 interface Props {
