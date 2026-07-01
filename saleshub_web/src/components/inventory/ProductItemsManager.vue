@@ -28,11 +28,9 @@
       :row-key="(record: SelectedItem) => `${record.item_id}_${record.spec_id}`" size="middle" class="items-table"
       :locale="{ emptyText: '暂未关联任何零件，使用上方搜索框添加' }">
       <template #bodyCell="{ column, record }">
-        <!-- 零件类型标签：设备件 / 常用件 -->
+        <!-- 零件类型标签 -->
         <template v-if="column.key === 'item_type'">
-          <a-tag :class="record.item_type === 'device' ? 'tag-device' : 'tag-common'">
-            {{ record.item_type === 'device' ? '设备件' : '常用件' }}
-          </a-tag>
+          <span class="cell-type">{{ record.type_name || '-' }}</span>
         </template>
 
         <template v-else-if="column.key === 'item_name'">
@@ -90,7 +88,7 @@
   import { ref, reactive, computed, watch } from 'vue'
   import { message } from 'ant-design-vue'
   import { inventoryApi } from '@/api/inventory'
-  import type { Product, InventoryItem, ItemType } from '@/types/inventory'
+  import type { Product, InventoryItem } from '@/types/inventory'
 
   /** 弹窗显隐，由父组件 v-model:visible 控制 */
   interface Props {
@@ -118,7 +116,8 @@
     spec: string
     item_name: string
     item_code: string
-    item_type: ItemType
+    type_id: string
+    type_name: string
     current_stock: number
     warn_stock: number
     /** 组装一台产品所需该零件的数量 */
@@ -228,7 +227,8 @@
         spec: i.spec,
         item_name: i.item_name,
         item_code: i.item_code,
-        item_type: i.item_type,
+        type_id: i.type_id,
+        type_name: i.type_name,
         current_stock: i.current_stock,
         warn_stock: i.warn_stock,
         quantity_per_product: i.quantity_per_product || 1,
@@ -286,7 +286,8 @@
       spec: option.specName,
       item_name: item.name,
       item_code: item.code,
-      item_type: item.type,
+      type_id: item.type_id,
+      type_name: item.type_name || item.type_id,
       current_stock: spec?.current_stock || 0,
       warn_stock: item.warn_stock,
       quantity_per_product: addForm.quantity_per_product,
@@ -498,22 +499,12 @@
   }
 
   /* 类型标签 */
-  .tag-device {
-    background: rgba(37, 99, 235, 0.1) !important;
-    color: #2563eb !important;
-    border-color: transparent !important;
+  .cell-type {
+    font-size: 13px;
+    color: #52525b;
+    background: #f4f4f5;
+    padding: 2px 8px;
     border-radius: 4px;
-    font-size: 12px;
-    margin: 0;
-  }
-
-  .tag-common {
-    background: rgba(16, 185, 129, 0.1) !important;
-    color: #059669 !important;
-    border-color: transparent !important;
-    border-radius: 4px;
-    font-size: 12px;
-    margin: 0;
   }
 
   .cell-name {

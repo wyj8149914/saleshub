@@ -3,7 +3,8 @@ import type {
     FileUploadResponse, ProductListQuery, ProductCreatePayload, ProductUpdatePayload, ItemListQuery, ItemCreatePayload,
     ItemUpdatePayload, ProductItemPayload, StockHistoryQuery, StockHistoryRecord, StockInRecord, StockOutRecord, StockInPayload,
     StockInBatchPayload, StockOutPayload, StockOutBatchPayload, StockOutByProductPayload, StockCheckRecord, StockCheckPayload,
-    StockCheckBatchPayload, PaginatedData, Product, InventoryItem, ProductItemRelation, StockRecordListQuery
+    StockCheckBatchPayload, PaginatedData, Product, InventoryItem, ProductItemRelation, StockRecordListQuery,
+    ItemTypeNode, ItemTypeListQuery, ItemTypeCreatePayload, ItemTypeUpdatePayload
 } from '@/types/inventory'
 
 // ============ 文件上传 API ============
@@ -109,6 +110,20 @@ export const inventoryApi = {
 
     stockCheckBatch(payload: StockCheckBatchPayload) {
         return http.post('/saleshub/inventory/stockCheckBatch', payload)
+    },
+
+    // ---- 零件类型 ----
+    listItemTypes(query?: ItemTypeListQuery) {
+        return http.get<ItemTypeNode[]>('/saleshub/inventory/listItemTypes', { params: query })
+    },
+    createItemType(payload: ItemTypeCreatePayload) {
+        return http.post<{ type_id: string }>('/saleshub/inventory/createItemType', payload)
+    },
+    updateItemType(payload: ItemTypeUpdatePayload) {
+        return http.post('/saleshub/inventory/updateItemType', payload)
+    },
+    deleteItemType(type_id: string) {
+        return http.post('/saleshub/inventory/deleteItemType', { type_id })
     }
 }
 

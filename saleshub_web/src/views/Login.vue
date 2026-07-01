@@ -136,7 +136,7 @@
       })
       message.success('登录成功')
       // 默认跳转到「零件管理」（库存件列表）；若 URL 带 redirect 参数则优先跳该地址
-      const redirect = (route.query.redirect as string) || '/inventory/items'
+      const redirect = (route.query.redirect as string) || '/inventory/products'
       router.replace(redirect)
     } catch {
       // 业务错误（用户名/密码错误等）已由 utils/request.ts 的拦截器统一弹窗，此处静默

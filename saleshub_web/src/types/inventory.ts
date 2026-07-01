@@ -1,6 +1,35 @@
+// ============ 零件类型 ============
+export interface ItemTypeNode {
+    type_id: string
+    type_name: string
+    parent_id: string | null
+    sort_order: number
+    remark: string | null
+    parent_type_id?: string | null
+    parent_type_name?: string | null
+    children?: ItemTypeNode[]
+}
+
+export interface ItemTypeListQuery {
+    parent_id?: string
+}
+
+export interface ItemTypeCreatePayload {
+    parent_id?: string
+    type_name: string
+    sort_order?: number
+    remark?: string
+}
+
+export interface ItemTypeUpdatePayload {
+    type_id: string
+    type_name: string
+    sort_order?: number
+    remark?: string
+}
+
 // ============ 通用类型 ============
 export type ItemType = 'device' | 'common'
-
 export interface PaginatedData<T> {
     total: number
     items: T[]
@@ -67,7 +96,9 @@ export interface ProductUpdatePayload {
 // ============ 零件 ============
 export interface InventoryItem {
     item_id: string
-    type: ItemType
+    type_id: string
+    type_name?: string
+    type_full_name?: string
     name: string
     code: string
     specs: ItemSpec[]
@@ -81,7 +112,7 @@ export interface InventoryItem {
 export interface ItemListQuery {
     pageIndex: number
     pageSize: number
-    type?: ItemType
+    type_id?: string
     name?: string
     code?: string
     isWarning?: 1 | 2
@@ -89,7 +120,7 @@ export interface ItemListQuery {
 }
 
 export interface ItemCreatePayload {
-    type: ItemType
+    type_id: string
     name: string
     specs?: SpecPayload[]
     warnStock?: number
@@ -100,7 +131,7 @@ export interface ItemCreatePayload {
 
 export interface ItemUpdatePayload {
     item_id: string
-    type: ItemType
+    type_id: string
     name: string
     specs?: SpecPayload[]
     warnStock?: number
@@ -120,7 +151,8 @@ export interface ProductItemRelation {
     remark: string | null
     item_name: string
     item_code: string
-    item_type: ItemType
+    type_id: string
+    type_name: string
     current_stock: number
     warn_stock: number
 }

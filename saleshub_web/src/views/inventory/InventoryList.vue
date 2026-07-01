@@ -16,10 +16,18 @@
           </template>
         </a-input>
 
-        <a-select v-model:value="filters.type" placeholder="零件类型" allow-clear class="filter-select"
-          @change="handleSearch">
-          <a-select-option value="device">设备件</a-select-option>
-          <a-select-option value="common">常用件</a-select-option>
+        <a-select v-model:value="filterParentTypeId" placeholder="一级类型" allow-clear class="filter-select"
+          :loading="typesLoading" @change="handleFilterParentChange">
+          <a-select-option v-for="t in parentTypes" :key="t.type_id" :value="t.type_id">
+            {{ t.type_name }}
+          </a-select-option>
+        </a-select>
+
+        <a-select v-model:value="filterChildTypeId" placeholder="二级类型" allow-clear class="filter-select"
+          :loading="typesLoading" :disabled="!filterParentTypeId" @change="handleSearch">
+          <a-select-option v-for="t in filterChildTypes" :key="t.type_id" :value="t.type_id">
+            {{ t.type_name }}
+          </a-select-option>
         </a-select>
 
         <a-select v-model:value="filters.is_custom" placeholder="是否定制" allow-clear class="filter-select"
@@ -32,12 +40,20 @@
         <a-button type="primary" @click="handleReset">重置</a-button>
       </a-space>
 
-      <a-button type="primary" class="create-btn" @click="handleCreate">
-        <template #icon>
-          <PlusOutlined />
-        </template>
-        新建零件
-      </a-button>
+      <a-space :size="8">
+        <a-button @click="typeManagerVisible = true">
+          <template #icon>
+            <AppstoreOutlined />
+          </template>
+          类型管理
+        </a-button>
+        <a-button type="primary" class="create-btn" @click="handleCreate">
+          <template #icon>
+            <PlusOutlined />
+          </template>
+          新建零件
+        </a-button>
+      </a-space>
     </div>
 
     <a-card :bordered="false" class="table-card">
@@ -77,9 +93,7 @@
           </template>
 
           <template v-else-if="column.key === 'type'">
-            <a-tag :class="record.type === 'device' ? 'tag-device' : 'tag-common'">
-              {{ record.type === 'device' ? '设备件' : '常用件' }}
-            </a-tag>
+            <span class="type-full-name">{{ record.type_full_name || record.type_name || '-' }}</span>
           </template>
 
           <template v-else-if="column.key === 'code'">
@@ -121,7 +135,8 @@
             <div class="actions-cell" @click.stop>
               <a-space :size="4">
                 <a-button type="link" size="small" @click="handleEdit(record)">编辑</a-button>
-                <a-popconfirm title="确定要删除此零件吗？" ok-text="删除" cancel-text="取消" @confirm="handleDelete(record)">
+                <a-popconfirm title="确定要删除此零件吗？" ok-text="删除" cancel-text="取消" @confirm="handleDelete(record)"
+                  placement="left">
                   <a-button type="link" size="small" danger>删除</a-button>
                 </a-popconfirm>
               </a-space>
@@ -132,20 +147,22 @@
     </a-card>
 
     <InventoryItemForm v-model:visible="formVisible" :item="currentItem" @success="handleFormSuccess" />
+    <ItemTypeManager v-model:visible="typeManagerVisible" @success="loadTypes" />
   </div>
 </template>
 
 <script setup lang="ts">
   import { ref, reactive, onMounted } from 'vue'
   import { message } from 'ant-design-vue'
-  import { PlusOutlined, SearchOutlined, TagOutlined } from '@ant-design/icons-vue'
+  import { PlusOutlined, SearchOutlined, TagOutlined, AppstoreOutlined } from '@ant-design/icons-vue'
   import { inventoryApi } from '@/api/inventory'
-  import type { InventoryItem, ItemType, ItemSpec } from '@/types/inventory'
+  import type { InventoryItem, ItemSpec, ItemTypeNode } from '@/types/inventory'
   import InventoryItemForm from '@/components/inventory/InventoryItemForm.vue'
+  import ItemTypeManager from '@/components/inventory/ItemTypeManager.vue'
 
   const columns = [
     { title: '图片', dataIndex: 'image_url', key: 'image', width: 80, align: 'center' },
-    { title: '类型', dataIndex: 'type', key: 'type', width: 80, align: 'center' },
+    { title: '类型', dataIndex: 'type_full_name', key: 'type', width: 140, align: 'center' },
     { title: '名称', dataIndex: 'name', key: 'name', width: 200, ellipsis: true, align: 'center' },
     { title: '编码', dataIndex: 'code', key: 'code', width: 130, align: 'center' },
     { title: '是否定制', dataIndex: 'is_custom', key: 'isCustom', width: 80, align: 'center' },
@@ -157,7 +174,6 @@
     { title: '操作', key: 'actions', align: 'left' }
   ]
 
-  /** 规格子表格列定义（多规格展开时展示） */
   const specColumns = [
     { title: '规格名称', dataIndex: 'spec', key: 'spec', width: 120, align: 'center' },
     { title: '价格', dataIndex: 'price', key: 'price', width: 100, align: 'center' },
@@ -168,32 +184,52 @@
   const loading = ref(false)
   const items = ref<InventoryItem[]>([])
   const formVisible = ref(false)
+  const typeManagerVisible = ref(false)
   const currentItem = ref<InventoryItem | null>(null)
 
-  /** 计算零件的总库存（所有规格库存之和） */
+  // 类型筛选相关
+  const typesLoading = ref(false)
+  const allTypes = ref<ItemTypeNode[]>([])
+  const filterParentTypeId = ref<string | undefined>(undefined)
+  const filterChildTypeId = ref<string | undefined>(undefined)
+
+  const parentTypes = ref<ItemTypeNode[]>([])
+
+  // 根据选中的一级类型，过滤出二级类型选项
+  const filterChildTypes = ref<ItemTypeNode[]>([])
+
+  const loadTypes = async () => {
+    typesLoading.value = true
+    try {
+      const res = await inventoryApi.listItemTypes()
+      allTypes.value = (res.datas || res) as ItemTypeNode[]
+      parentTypes.value = allTypes.value
+    } catch {
+      // 错误由拦截器处理
+    } finally {
+      typesLoading.value = false
+    }
+  }
+
   const getTotalStock = (item: InventoryItem): number => {
     if (!item.specs || item.specs.length === 0) return 0
     return item.specs.reduce((sum, spec) => sum + spec.current_stock, 0)
   }
 
-  /** 仅一条且 spec 为空串 → 默认 SKU，无需展开子行 */
   const isDefaultSpec = (item: InventoryItem): boolean => {
     const spec = item.specs?.[0]
     return item.specs?.length === 1 && spec?.spec === ''
   }
 
-  /** 多规格或具名规格时才允许展开 */
   const isRowExpandable = (item: InventoryItem): boolean => {
     if (!item.specs?.length) return false
     return !isDefaultSpec(item)
   }
 
-  /** 零件级预警：总库存 ≤ 预警阈值 */
   const isItemWarning = (item: InventoryItem): boolean => {
     return getTotalStock(item) <= item.warn_stock
   }
 
-  /** 规格级预警：该规格库存 ≤ 零件预警阈值 */
   const isSpecWarning = (item: InventoryItem, spec: ItemSpec): boolean => {
     return spec.current_stock <= item.warn_stock
   }
@@ -201,12 +237,10 @@
   const filters = reactive<{
     name: string
     code: string
-    type: ItemType | undefined
     is_custom: 1 | 2 | undefined
   }>({
     name: '',
     code: '',
-    type: undefined,
     is_custom: undefined
   })
 
@@ -221,12 +255,14 @@
   const loadItems = async () => {
     loading.value = true
     try {
+      // 筛选 type_id：如果有二级类型用二级，否则用一级
+      const typeId = filterChildTypeId.value || filterParentTypeId.value
       const res = await inventoryApi.listItems({
         pageIndex: pagination.current,
         pageSize: pagination.pageSize,
         name: filters.name || undefined,
         code: filters.code || undefined,
-        type: filters.type,
+        type_id: typeId,
         is_custom: filters.is_custom
       })
       items.value = res.datas.items
@@ -246,10 +282,24 @@
   const handleReset = () => {
     filters.name = ''
     filters.code = ''
-    filters.type = undefined
     filters.is_custom = undefined
+    filterParentTypeId.value = undefined
+    filterChildTypeId.value = undefined
+    filterChildTypes.value = []
     pagination.current = 1
     loadItems()
+  }
+
+  // 一级类型筛选变更时，更新二级类型选项并重置二级选择
+  const handleFilterParentChange = (value: string | undefined) => {
+    filterChildTypeId.value = undefined
+    if (value) {
+      const parent = allTypes.value.find(t => t.type_id === value)
+      filterChildTypes.value = parent?.children || []
+    } else {
+      filterChildTypes.value = []
+    }
+    handleSearch()
   }
 
   const handleFilterChange = (e: any) => {
@@ -293,6 +343,7 @@
   }
 
   onMounted(() => {
+    loadTypes()
     loadItems()
   })
 </script>
@@ -349,6 +400,15 @@
     box-shadow: 0 8px 22px rgba(37, 99, 235, 0.28);
   }
 
+  .type-full-name {
+    font-size: 13px;
+    color: #52525b;
+    background: #f4f4f5;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
   .table-card {
     border-radius: 12px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -370,36 +430,18 @@
     font-size: 16px;
   }
 
-  /* 隔行灰底（偶数行） */
   .table-card :deep(.ant-table-tbody > tr:nth-child(even) > td) {
     background: #e8f0f8;
   }
 
-  /* hover 时覆盖为浅蓝（写在隔行规则之后以确保生效） */
   .table-card :deep(.ant-table-tbody > tr:hover > td) {
     background: #cadff9;
   }
 
-  /* 类型标签 */
-  .tag-device {
-    background: rgba(37, 99, 235, 0.1) !important;
-    color: #2563eb !important;
-    border-color: transparent !important;
-    border-radius: 4px;
-    font-size: 12px;
-    margin: 0;
+  .cell-muted {
+    color: #a1a1aa;
   }
 
-  .tag-common {
-    background: rgba(16, 185, 129, 0.1) !important;
-    color: #059669 !important;
-    border-color: transparent !important;
-    border-radius: 4px;
-    font-size: 12px;
-    margin: 0;
-  }
-
-  /* 编码 monospace */
   .cell-code {
     font-family: 'Courier New', Consolas, monospace;
     font-size: 16px;
@@ -407,10 +449,6 @@
     background: #f4f4f5;
     padding: 2px 8px;
     border-radius: 4px;
-  }
-
-  .cell-muted {
-    color: #a1a1aa;
   }
 
   .cell-spec {
@@ -424,7 +462,6 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* 父行：多规格库存摘要 */
   .spec-summary {
     display: flex;
     flex-wrap: wrap;
@@ -442,51 +479,10 @@
     white-space: nowrap;
   }
 
-  /* 展开行：规格子表格 */
   .spec-sub-table {
     margin: 0 16px 8px 48px;
   }
 
-  /* 规格列表样式（备用） */
-  .spec-list {
-    padding: 8px 24px;
-    background: #fafafa;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .spec-item {
-    display: inline-flex;
-    align-items: center;
-    padding: 6px 12px;
-    background: #ffffff;
-    border: 1px solid #e4e4e7;
-    border-radius: 6px;
-    font-size: 14px;
-  }
-
-  .spec-name {
-    color: #52525b;
-    font-weight: 500;
-  }
-
-  .spec-stock {
-    color: #71717a;
-    margin-left: 4px;
-  }
-
-  /* 规格标签 */
-  .spec-tag {
-    background: #f4f4f5 !important;
-    color: #52525b !important;
-    border-color: transparent !important;
-    border-radius: 4px;
-    font-size: 16px;
-    margin: 2px 4px 2px 0;
-  }
-
-  /* 库存数字（等宽数字，右对齐便于比较） */
   .stock-num {
     font-weight: 600;
     color: #18181b;
@@ -503,7 +499,6 @@
     color: #dc2626;
   }
 
-  /* 预警状态标签：绿色正常 / 红色库存不足 */
   .tag-normal {
     background: rgba(16, 185, 129, 0.1) !important;
     color: #059669 !important;
@@ -522,7 +517,6 @@
     margin: 0;
   }
 
-  /* 是否定制标签 */
   .tag-custom {
     background: rgba(168, 85, 247, 0.1) !important;
     color: #9333ea !important;
@@ -532,7 +526,6 @@
     margin: 0;
   }
 
-  /* 操作按钮 */
   .table-card :deep(.ant-btn-link) {
     padding: 4px 8px;
     height: auto;
@@ -547,7 +540,6 @@
     color: #dc2626;
   }
 
-  /* 分页器 */
   .table-card :deep(.ant-pagination) {
     margin: 16px 24px;
   }

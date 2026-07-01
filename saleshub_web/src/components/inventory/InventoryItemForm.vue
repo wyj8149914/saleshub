@@ -1,20 +1,36 @@
 <template>
-  <!-- 零件新建/编辑弹窗：常用件支持多规格，设备件无规格 -->
-  <a-modal :open="visible" :title="isEditMode ? '编辑零件' : '新建零件'" :confirm-loading="loading" :width="520"
+  <!-- 零件新建/编辑弹窗 -->
+  <a-modal :open="visible" :title="isEditMode ? '编辑零件' : '新建零件'" :confirm-loading="loading" :width="680"
     :mask-closable="false" wrap-class-name="item-form-modal" @ok="handleSubmit" @cancel="handleCancel">
-    <a-form ref="formRef" :model="form" :rules="rules" layout="vertical" class="item-form">
-      <a-form-item label="类型" name="type">
-        <a-radio-group v-model:value="form.type" button-style="solid" class="type-radio">
-          <a-radio-button value="device">设备件</a-radio-button>
-          <a-radio-button value="common">常用件</a-radio-button>
-        </a-radio-group>
-      </a-form-item>
+    <a-form ref="formRef" :model="form" :rules="rules" layout="horizontal" class="item-form" :label-col="{ span: 4 }"
+      :wrapper-col="{ span: 20 }">
+      <a-row :gutter="16">
+        <a-col :span="12">
+          <a-form-item label="一级类型" name="parent_type_id" :label-col="{ span: 8 }" :wrapper-col="{ span: 16 }">
+            <a-select v-model:value="form.parent_type_id" placeholder="请选择一级类型" allow-clear :loading="typesLoading"
+              @change="handleParentTypeChange">
+              <a-select-option v-for="t in parentTypes" :key="t.type_id" :value="t.type_id">
+                {{ t.type_name }}
+              </a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-col>
+        <a-col :span="12">
+          <a-form-item label="二级类型" name="child_type_id" :label-col="{ span: 8 }" :wrapper-col="{ span: 16 }">
+            <a-select v-model:value="form.child_type_id" placeholder="请选择二级类型" allow-clear :loading="typesLoading"
+              :disabled="!form.parent_type_id" @change="handleChildTypeChange">
+              <a-select-option v-for="t in childTypes" :key="t.type_id" :value="t.type_id">
+                {{ t.type_name }}
+              </a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-col>
+      </a-row>
 
       <a-form-item label="名称" name="name">
         <a-input v-model:value="form.name" placeholder="请输入零件名称" :maxlength="100" show-count />
       </a-form-item>
 
-      <!-- 常用件支持规格；设备件规格字段无意义 -->
       <a-form-item label="规格选项" name="specs">
         <spec-editor v-model:value="form.specs" />
       </a-form-item>
@@ -31,10 +47,10 @@
       </a-form-item>
 
       <a-form-item label="备注" name="remark">
-        <a-textarea v-model:value="form.remark" placeholder="请输入备注（可选）" :rows="3" :maxlength="500" show-count />
+        <a-textarea v-model:value="form.remark" placeholder="请输入备注（可选）" :rows="2" :maxlength="500" show-count />
       </a-form-item>
 
-      <!-- 单图上传：校验类型与大小后走自定义上传，image_id 提交给后端 -->
+      <!-- 单图上传 -->
       <a-form-item label="零件图片" name="image_id">
         <a-upload :before-upload="beforeUpload" :custom-request="handleUpload" :max-count="1" list-type="picture-card"
           :disabled="uploading" :file-list="imageUrl ? [{ url: imageUrl, uid: '1' }] : []" @remove="handleRemoveImage">
@@ -53,24 +69,16 @@
 </template>
 
 <script setup lang="ts">
-  /**
-   * InventoryItemForm — 库存零件新建/编辑弹窗
-   *
-   * 职责：维护零件类型、名称、规格（仅常用件）、预警阈值与图片。
-   * 零件编码由后端生成；创建/编辑时 specs 均提交为规格名称 string[]。
-   */
   import { ref, reactive, computed, watch } from 'vue'
   import { message } from 'ant-design-vue'
   import { PlusOutlined } from '@ant-design/icons-vue'
   import { inventoryApi } from '@/api/inventory'
   import { uploadImage } from '@/utils/upload'
-  import type { InventoryItem, ItemType, ItemCreatePayload, ItemUpdatePayload, SpecPayload } from '@/types/inventory'
+  import type { InventoryItem, ItemTypeNode, ItemCreatePayload, ItemUpdatePayload, SpecPayload } from '@/types/inventory'
   import SpecEditor from './SpecEditor.vue'
 
   interface Props {
-    /** 弹窗显隐，由父组件 v-model:visible 控制 */
     visible: boolean
-    /** 传入则为编辑模式；不传或为 null 则为新建 */
     item?: InventoryItem | null
   }
 
@@ -78,27 +86,46 @@
 
   interface Emits {
     (e: 'update:visible', value: boolean): void
-    /** 创建或更新成功后通知父组件刷新列表 */
     (e: 'success'): void
   }
 
   const emit = defineEmits<Emits>()
 
-  /** Ant Design Form 实例，用于校验与清除错误状态 */
   const formRef = ref()
-  /** 提交保存时的 loading，会禁用弹窗确认按钮 */
   const loading = ref(false)
-  /** 图片上传进行中的 loading，禁用上传控件 */
   const uploading = ref(false)
-  /** 图片预览 URL，与 form.image_id 对应 */
   const imageUrl = ref<string>('')
+  const typesLoading = ref(false)
+  const allTypes = ref<ItemTypeNode[]>([])
 
-  /** 表单数据模型 */
+  // 一级类型列表
+  const parentTypes = computed(() => allTypes.value)
+
+  // 根据选中的一级类型，过滤出二级类型
+  const childTypes = computed(() => {
+    if (!form.parent_type_id) return []
+    const parent = allTypes.value.find(t => t.type_id === form.parent_type_id)
+    return parent?.children || []
+  })
+
+  // 加载类型列表
+  const loadTypes = async () => {
+    typesLoading.value = true
+    try {
+      const res = await inventoryApi.listItemTypes()
+      allTypes.value = (res.datas || res) as ItemTypeNode[]
+    } catch {
+      // 错误由拦截器处理
+    } finally {
+      typesLoading.value = false
+    }
+  }
+
   interface FormData {
-    type: ItemType
+    parent_type_id: string | undefined
+    child_type_id: string | undefined
     name: string
     code: string
-    /** 常用件规格列表；设备件始终为空数组 */
     specs: SpecPayload[]
     warnStock: number | undefined
     image_id?: string
@@ -107,7 +134,8 @@
   }
 
   const form = reactive<FormData>({
-    type: 'device',
+    parent_type_id: undefined,
+    child_type_id: undefined,
     name: '',
     code: '',
     specs: [],
@@ -117,9 +145,8 @@
     is_custom: 1
   })
 
-  /** 表单校验规则 */
   const rules = {
-    type: [{ required: true, message: '请选择类型', trigger: 'change' }],
+    parent_type_id: [{ required: true, message: '请选择一级类型', trigger: 'change' }],
     name: [
       { required: true, message: '请输入名称', trigger: 'blur' },
       { max: 100, message: '名称最多 100 个字符', trigger: 'blur' }
@@ -129,12 +156,11 @@
     ]
   }
 
-  /** 是否编辑模式：由是否传入 item 决定 */
   const isEditMode = computed(() => !!props.item)
 
-  /** 重置表单为新建默认值，并清除校验状态 */
   function resetForm() {
-    form.type = 'device'
+    form.parent_type_id = undefined
+    form.child_type_id = undefined
     form.name = ''
     form.code = ''
     form.specs = []
@@ -146,14 +172,10 @@
     formRef.value?.clearValidate()
   }
 
-  /** 编辑模式下，用 props.item 回填表单、规格与图片预览 */
   function populateForm() {
-    console.log(props.item)
     if (props.item) {
-      form.type = props.item.type
       form.name = props.item.name
       form.code = props.item.code
-      // 将 ItemSpec[] 转换为 SpecPayload[]，过滤掉默认规格（空串）
       form.specs = (props.item.specs || [])
         .filter(s => s.spec !== '')
         .map(s => ({ spec: s.spec, price: s.price ?? undefined }))
@@ -161,22 +183,51 @@
       form.image_id = props.item.image_id || undefined
       form.remark = props.item.remark || undefined
       form.is_custom = props.item.is_custom || 1
-      // 设置图片预览URL
       if (props.item.image_url) {
         imageUrl.value = props.item.image_url || ''
+      }
+      // 根据 item.type_id 判断是一级还是二级类型，回填选择器
+      if (allTypes.value.length > 0) {
+        const itemTypeId = props.item.type_id
+        for (const parent of allTypes.value) {
+          if (parent.type_id === itemTypeId) {
+            // type_id 是一级类型
+            form.parent_type_id = parent.type_id
+            form.child_type_id = undefined
+            break
+          }
+          if (parent.children?.length) {
+            const child = parent.children.find(c => c.type_id === itemTypeId)
+            if (child) {
+              // type_id 是二级类型
+              form.parent_type_id = parent.type_id
+              form.child_type_id = child.type_id
+              break
+            }
+          }
+        }
       }
     }
   }
 
-  /**
-   * 监听弹窗显隐，负责表单初始化与清理
-   * - 打开：编辑则回填，新建则重置
-   * - 关闭：始终重置，避免下次打开残留数据
-   */
+  // 一级类型变更时，清空二级类型
+  const handleParentTypeChange = () => {
+    form.child_type_id = undefined
+  }
+
+  // 二级类型变更（预留）
+  const handleChildTypeChange = () => {
+    // noop
+  }
+
+  // 实际提交的 type_id：有二级选二级，否则用一级
+  const submitTypeId = computed(() => form.child_type_id || form.parent_type_id || '')
+
   watch(
     () => props.visible,
-    (visible) => {
+    async (visible) => {
       if (visible) {
+        await loadTypes()
         if (props.item) populateForm()
         else resetForm()
       } else {
@@ -185,23 +236,6 @@
     }
   )
 
-  /**
-   * 监听零件类型切换
-   * 设备件不使用规格，切换为 device 时清空 specs 避免提交无效数据
-   */
-  watch(
-    () => form.type,
-    (newType) => {
-      if (newType === 'device') {
-        form.specs = []
-      }
-    }
-  )
-
-  /**
-   * 上传前校验
-   * 仅允许图片类型，且单文件不超过 5MB
-   */
   const beforeUpload = (file: File) => {
     const isImage = file.type.startsWith('image/')
     if (!isImage) {
@@ -216,10 +250,6 @@
     return true
   }
 
-  /**
-   * 自定义图片上传
-   * 调用 uploadImage 获取 relationId 与预览 URL，写入 form.image_id
-   */
   const handleUpload = async (options: any) => {
     const { file } = options
     uploading.value = true
@@ -235,17 +265,11 @@
     }
   }
 
-  /** 移除已选图片，清空 image_id 与预览 URL */
   const handleRemoveImage = () => {
     form.image_id = undefined
     imageUrl.value = ''
   }
 
-  /**
-   * 提交表单
-   * 常用件 specs 为规格对象数组 SpecPayload[]；设备件不传 specs。
-   * 编辑时传空数组表示改为默认 SKU（后端 normalizeSpecs 处理）。
-   */
   async function handleSubmit() {
     try {
       await formRef.value?.validate()
@@ -255,20 +279,17 @@
 
     loading.value = true
     try {
-      // 过滤空规格，并确保 spec 字段非空
       const validSpecs = form.specs
         .map(s => ({ spec: s.spec.trim(), price: s.price }))
         .filter(s => s.spec !== '')
 
       let specsPayload: SpecPayload[] | undefined
-
       specsPayload = isEditMode.value ? validSpecs : validSpecs.length > 0 ? validSpecs : undefined
-
 
       if (isEditMode.value) {
         const payload: ItemUpdatePayload = {
           item_id: props.item!.item_id,
-          type: form.type,
+          type_id: submitTypeId.value,
           name: form.name,
           specs: specsPayload,
           warnStock: form.warnStock,
@@ -280,7 +301,7 @@
         message.success('零件更新成功')
       } else {
         const payload: ItemCreatePayload = {
-          type: form.type,
+          type_id: submitTypeId.value,
           name: form.name,
           specs: specsPayload,
           warnStock: form.warnStock,
@@ -300,7 +321,6 @@
     }
   }
 
-  /** 取消编辑，关闭弹窗（不保存） */
   function handleCancel() {
     emit('update:visible', false)
   }
@@ -315,35 +335,17 @@
   .item-form :deep(.ant-input),
   .item-form :deep(.ant-input-affix-wrapper),
   .item-form :deep(textarea.ant-input),
-  .item-form :deep(.ant-input-number) {
+  .item-form :deep(.ant-input-number),
+  .item-form :deep(.ant-select-selector) {
     border-radius: 8px;
   }
 
   .item-form :deep(.ant-input-affix-wrapper-focused),
   .item-form :deep(.ant-input:focus),
-  .item-form :deep(.ant-input-number-focused) {
+  .item-form :deep(.ant-input-number-focused),
+  .item-form :deep(.ant-select-focused .ant-select-selector) {
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
-  }
-
-  .type-radio {
-    width: 100%;
-    display: flex;
-  }
-
-  .type-radio :deep(.ant-radio-button-wrapper) {
-    flex: 1;
-    text-align: center;
-  }
-
-  .type-radio :deep(.ant-radio-button-wrapper:first-child) {
-    border-top-left-radius: 8px;
-    border-bottom-left-radius: 8px;
-  }
-
-  .type-radio :deep(.ant-radio-button-wrapper:last-child) {
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
   }
 
   .form-hint {

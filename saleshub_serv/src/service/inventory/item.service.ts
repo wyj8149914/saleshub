@@ -80,12 +80,12 @@ export class InventoryItemService {
             const queryBuilder = this.inventoryItemRepository.createQueryBuilder('item')
                 .leftJoin(MinioFile, 'file', 'file.relation_id = item.image_id')
                 .leftJoin(ItemType, 'type', 'type.type_id = item.type_id')
-                .leftJoin(ItemType, 'parentType', 'parentType.type_id = type.parent_id')
+                .leftJoin(ItemType, 'pt', 'pt.type_id = type.parent_id')
                 .select([
                     'item.item_id AS item_id',
                     'item.type_id AS type_id',
-                    'type.name AS type_name',
-                    'parentType.name AS parent_type_name',
+                    'type.type_name AS type_name',
+                    'pt.type_name AS parent_type_name',
                     'item.name AS name',
                     'item.code AS code',
                     'item.warn_stock AS warn_stock',

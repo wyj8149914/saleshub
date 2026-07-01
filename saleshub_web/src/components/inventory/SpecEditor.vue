@@ -1,25 +1,28 @@
 <template>
   <!-- 常用件规格列表编辑器：v-model 绑定规格对象数组（含规格名称和价格） -->
-  <div class="spec-editor">
-    <div v-for="(specItem, index) in value" :key="index" class="spec-row">
-      <a-input :value="specItem.spec" placeholder="请输入规格（如：不锈钢、M8×20）" :maxlength="100" allow-clear
-        @update:value="(v: string) => updateSpec(index, v)" />
-      <a-input-number :value="specItem.price" placeholder="价格（可选）" :min="0" :precision="2"
-        style="width: 120px; margin-left: 8px" @update:value="(v: number) => updatePrice(index, v)" />
-      <a-button type="text" danger @click="removeSpec(index)">
+  <!-- 内部多个输入框不参与父级 Form.Item 字段收集，避免 ant-design-vue 告警 -->
+  <a-form-item-rest>
+    <div class="spec-editor">
+      <div v-for="(specItem, index) in value" :key="index" class="spec-row">
+        <a-input :value="specItem.spec" placeholder="请输入规格（如：不锈钢、M8×20）" :maxlength="100" allow-clear
+          @update:value="(v: string) => updateSpec(index, v)" />
+        <a-input-number :value="specItem.price" placeholder="价格（可选）" :min="0" :precision="2"
+          style="width: 120px; margin-left: 8px" @update:value="(v: number) => updatePrice(index, v)" />
+        <a-button type="text" danger @click="removeSpec(index)">
+          <template #icon>
+            <DeleteOutlined />
+          </template>
+        </a-button>
+      </div>
+
+      <a-button type="dashed" block class="spec-add" @click="addSpec">
         <template #icon>
-          <DeleteOutlined />
+          <PlusOutlined />
         </template>
+        添加规格
       </a-button>
     </div>
-
-    <a-button type="dashed" block class="spec-add" @click="addSpec">
-      <template #icon>
-        <PlusOutlined />
-      </template>
-      添加规格
-    </a-button>
-  </div>
+  </a-form-item-rest>
 </template>
 
 <script setup lang="ts">
