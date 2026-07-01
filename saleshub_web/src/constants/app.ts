@@ -1,5 +1,5 @@
 /** 应用版本号，与 CHANGELOG.md / changelog.html 保持同步 */
-export const APP_VERSION = '0.6.0'
+export const APP_VERSION = '0.7.0'
 
 export const CHANGELOG_URL = '/sales/changelog.html'
 

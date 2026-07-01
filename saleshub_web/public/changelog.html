@@ -314,14 +314,48 @@
     </div>
     <h1>更新日志</h1>
     <p>了解 SalesHub 前端各版本的新功能与改进</p>
-    <span class="current-version">当前版本 v0.6.0</span>
+    <span class="current-version">当前版本 v0.7.0</span>
   </header>
 
   <main class="container">
+    <!-- v0.7.0 -->
+    <article class="release">
+      <div class="release-header">
+        <span class="release-version latest">v0.7.0</span>
+        <time class="release-date" datetime="2026-07-01">2026 年 7 月 1 日</time>
+      </div>
+      <div class="release-body">
+        <div class="section">
+          <div class="section-title added">新增</div>
+          <ul>
+            <li>零件类型管理系统：新增类型管理界面，支持新增、编辑、删除一级和二级类型，树形展示层级关系</li>
+            <li>零件表单类型选择：二级联动选择，先选一级类型，再选二级类型，零件列表支持按类型筛选</li>
+            <li>产品价格功能：产品表单新增价格字段，列表显示价格列，支持两位小数</li>
+            <li>零件规格价格：零件规格新增价格字段，支持为不同规格设置不同价格，库存列表展开显示</li>
+          </ul>
+        </div>
+        <div class="section">
+          <div class="section-title changed">改进</div>
+          <ul>
+            <li>库存项字段增强：新增价格、备注、定制属性等字段，完善字段验证规则</li>
+            <li>界面优化：类型管理表格优化为树形展示，更新登录页与侧边栏版权信息</li>
+          </ul>
+        </div>
+        <div class="section">
+          <div class="section-title tech">技术</div>
+          <ul>
+            <li>新增零件类型相关 TypeScript 类型与 API 封装</li>
+            <li>重构零件表单组件，适配二级类型选择</li>
+            <li>新增类型管理组件 <code>ItemTypeManager.vue</code></li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
     <!-- v0.6.0 -->
     <article class="release">
       <div class="release-header">
-        <span class="release-version latest">v0.6.0</span>
+        <span class="release-version">v0.6.0</span>
         <time class="release-date" datetime="2026-06-26">2026 年 6 月 26 日</time>
       </div>
       <div class="release-body">
@@ -497,6 +531,11 @@
               </tr>
             </thead>
             <tbody>
+              <tr>
+                <td>v0.7.0</td>
+                <td>2026-07-01</td>
+                <td>零件类型管理、产品价格、规格价格</td>
+              </tr>
               <tr>
                 <td>v0.6.0</td>
                 <td>2026-06-26</td>
