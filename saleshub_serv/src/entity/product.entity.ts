@@ -38,8 +38,8 @@ export class InventoryItem {
     @PrimaryColumn({ type: 'varchar', length: 32 })
     item_id: string;
 
-    @Column({ type: 'varchar', length: 10, comment: '类型:device-设备件,common-常用件' })
-    type: string;
+    @Column({ type: 'varchar', length: 32, comment: '类型ID' })
+    type_id: string;
 
     @Column({ type: 'varchar', length: 100, comment: '名称' })
     name: string;
@@ -119,6 +119,36 @@ export class InventoryItemSpec {
 
     @Column({ type: 'int', default: 1, comment: '状态:1-正常,2-停用' })
     status: number;
+
+    @Column({ type: 'timestamp', comment: '创建时间' })
+    create_time: Date;
+
+    @Column({ type: 'timestamp', comment: '更新时间' })
+    update_time: Date;
+}
+
+@Entity({ schema: 'inventory', name: 'item_type' })
+export class ItemType {
+    @PrimaryColumn({ type: 'varchar', length: 32 })
+    type_id: string;
+
+    @Column({ type: 'varchar', length: 32, nullable: true, comment: '父类型ID，NULL表示一级类型' })
+    parent_id: string;
+
+    @Column({ type: 'varchar', length: 100, comment: '类型名称' })
+    type_name: string;
+
+    @Column({ type: 'varchar', length: 50, nullable: true, comment: '类型编码' })
+    code: string;
+
+    @Column({ type: 'int', default: 0, comment: '排序号' })
+    sort_order: number;
+
+    @Column({ type: 'int', default: 1, comment: '状态：1-正常，2-停用' })
+    status: number;
+
+    @Column({ type: 'text', nullable: true, comment: '备注' })
+    remark: string;
 
     @Column({ type: 'timestamp', comment: '创建时间' })
     create_time: Date;

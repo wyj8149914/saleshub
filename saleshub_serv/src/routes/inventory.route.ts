@@ -10,7 +10,10 @@ import {
     StockInDto, StockInBatchDto, StockOutDto, StockOutBatchDto, StockOutByProductDto, StockCheckDto, ListStockHistoryDto,
     ListStockInRecordsDto, ListStockOutRecordsDto, ListStockCheckRecordsDto, StockCheckBatchDto,
 } from '../dto/stock.dto';
-import { productService, inventoryItemService, stockService } from '../service/inventory';
+import {
+    CreateItemTypeDto, UpdateItemTypeDto, DeleteItemTypeDto, ListItemTypeDto,
+} from '../dto/item.dto';
+import { productService, inventoryItemService, stockService, itemTypeService } from '../service/inventory';
 
 const router = Router();
 
@@ -240,6 +243,52 @@ router.post('/stockCheckBatch',
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(StockCheckBatchDto, req.body);
         const result = await stockService.stockCheckBatch(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// ============ 类型管理 ============
+
+// 查询类型列表
+router.get('/listItemTypes',
+    validationMiddleware(ListItemTypeDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(ListItemTypeDto, req.query);
+        const result = await itemTypeService.list(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 创建类型
+router.post('/createItemType',
+    validationMiddleware(CreateItemTypeDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(CreateItemTypeDto, req.body);
+        const result = await itemTypeService.create(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 更新类型
+router.post('/updateItemType',
+    validationMiddleware(UpdateItemTypeDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(UpdateItemTypeDto, req.body);
+        const result = await itemTypeService.update(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 删除类型
+router.post('/deleteItemType',
+    validationMiddleware(DeleteItemTypeDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(DeleteItemTypeDto, req.body);
+        const result = await itemTypeService.delete(dtoObj);
         res.locals.datas = result;
         next();
     })

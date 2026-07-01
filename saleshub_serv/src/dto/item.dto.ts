@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsArray, MaxLength, IsIn, IsInt, Min, IsString, IsNumber, ValidateNested } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsArray, MaxLength, IsIn, IsInt, Min, IsNumber, ValidateNested } from 'class-validator';
 import { PageDto } from './base.dto';
 
 export class ItemSpecDto {
@@ -15,9 +15,8 @@ export class ItemSpecDto {
 }
 
 export class CreateInventoryItemDto {
-    @IsNotEmpty({ message: '类型不能为空' })
-    @IsIn(['device', 'common'], { message: '类型必须是device或common' })
-    type: string;
+    @IsNotEmpty({ message: '类型ID不能为空' })
+    type_id: string;
 
     @IsNotEmpty({ message: '名称不能为空' })
     @MaxLength(100, { message: '名称长度不能超过100' })
@@ -42,7 +41,6 @@ export class CreateInventoryItemDto {
     is_custom?: number;
 
     @IsOptional()
-    @IsString()
     @MaxLength(32, { message: '图片ID长度不能超过32' })
     image_id?: string;
 
@@ -58,8 +56,7 @@ export class UpdateInventoryItemDto extends CreateInventoryItemDto {
 
 export class ListInventoryItemDto extends PageDto {
     @IsOptional()
-    @IsIn(['device', 'common'], { message: '类型必须是device或common' })
-    type: string;
+    type_id?: string;
 
     @IsOptional()
     name: string;
@@ -81,4 +78,45 @@ export class ListInventoryItemDto extends PageDto {
 export class ItemIdDto {
     @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
+}
+
+export class CreateItemTypeDto {
+    @IsOptional()
+    parent_id?: string;
+
+    @MaxLength(100, { message: '类型名称最多100个字符' })
+    type_name: string;
+
+    @IsOptional()
+    @IsInt({ message: '排序号必须是整数' })
+    sort_order?: number;
+
+    @IsOptional()
+    remark?: string;
+}
+
+export class UpdateItemTypeDto {
+    @IsNotEmpty({ message: '类型ID不能为空' })
+    type_id: string;
+
+    @IsNotEmpty({ message: '类型名称不能为空' })
+    type_name: string;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt({ message: '排序号必须是整数' })
+    sort_order?: number;
+
+    @IsOptional()
+    remark?: string;
+}
+
+export class DeleteItemTypeDto {
+    @IsNotEmpty({ message: '类型ID不能为空' })
+    type_id: string;
+}
+
+export class ListItemTypeDto {
+    @IsOptional()
+    parent_id?: string;
 }

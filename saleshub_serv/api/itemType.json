@@ -1,0 +1,242 @@
+{
+    "/saleshub/inventory/listItemTypes": {
+        "method": "GET",
+        "summary": "查询类型列表",
+        "description": "查询当前正常状态（status=1）的零件类型。不传 parent_id 时返回一级类型（parent_id IS NULL）；传入 parent_id 时返回该父类型下的二级子类型。LEFT JOIN 父类型表获取 parent_type_id、parent_type_name。按 sort_order 升序排列，结果经 arrayToTree 组装为树形结构返回（仅包含当前查询层级的节点）。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "parent_id": {
+                    "type": "string",
+                    "description": "父类型 ID（Query 参数，可选）。不传则查询一级类型；传入则查询该父类型下的子类型"
+                }
+            }
+        },
+        "example_request": {
+            "parent_id": "type_device"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，成功时为「查询成功」"
+                },
+                "datas": {
+                    "type": "array",
+                    "description": "类型树形列表（按 sort_order 升序）",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "type_id": {
+                                "type": "string",
+                                "description": "类型主键 UUID（无连字符，32 位）"
+                            },
+                            "type_name": {
+                                "type": "string",
+                                "description": "类型名称"
+                            },
+                            "sort_order": {
+                                "type": "number",
+                                "description": "排序号，越小越靠前"
+                            },
+                            "remark": {
+                                "type": "string",
+                                "description": "备注，可能为 null"
+                            },
+                            "parent_type_id": {
+                                "type": "string",
+                                "description": "父类型 ID，一级类型为 null"
+                            },
+                            "parent_type_name": {
+                                "type": "string",
+                                "description": "父类型名称，一级类型为 null"
+                            },
+                            "children": {
+                                "type": "array",
+                                "description": "子类型列表（树形组装字段；查询一级类型时通常为空，需传入 parent_id 单独查询子类型）",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "type_id": {
+                                            "type": "string",
+                                            "description": "子类型 ID"
+                                        },
+                                        "type_name": {
+                                            "type": "string",
+                                            "description": "子类型名称"
+                                        },
+                                        "sort_order": {
+                                            "type": "number",
+                                            "description": "排序号"
+                                        },
+                                        "remark": {
+                                            "type": "string",
+                                            "description": "备注"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/createItemType": {
+        "method": "POST",
+        "summary": "创建类型",
+        "description": "创建零件类型记录。type_id 由 UUID v7 去连字符生成。不传 parent_id 时创建一级类型；传入 parent_id 时创建二级子类型。校验规则：① 若传 parent_id，父类型须存在且 status=1；② 父类型不能本身是二级类型（不支持三级）；③ type_name 全局不可重复。sort_order 默认 0；status 默认 1。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "parent_id": {
+                    "type": "string",
+                    "description": "父类型 ID（可选，最长 32 字符）。不传则创建一级类型"
+                },
+                "type_name": {
+                    "type": "string",
+                    "description": "类型名称，最长 100 字符，全局唯一"
+                },
+                "sort_order": {
+                    "type": "number",
+                    "description": "排序号（可选，整数，默认 0）"
+                },
+                "remark": {
+                    "type": "string",
+                    "description": "备注（可选）"
+                }
+            },
+            "required": [
+                "type_name"
+            ]
+        },
+        "example_request": {
+            "parent_id": "type_device",
+            "type_name": "传感器",
+            "sort_order": 1,
+            "remark": "设备件下的传感器分类"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-父类型不存在/父类型已停用/不支持创建三级类型/类型名称已存在/创建失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「创建成功」「父类型不存在」「父类型已停用」「不支持创建三级类型」「类型名称已存在」「创建失败」"
+                },
+                "alg": {
+                    "type": "string",
+                    "description": "算法标识（预留，成功时为空串）"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时返回新建类型 ID",
+                    "properties": {
+                        "type_id": {
+                            "type": "string",
+                            "description": "新建类型主键 UUID（无连字符，32 位）"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/updateItemType": {
+        "method": "POST",
+        "summary": "更新类型",
+        "description": "更新零件类型信息。仅当 type_id 对应类型存在且 status=1 时可更新。type_name 为必填（直接覆盖）；sort_order、remark 传入时更新。type_name 全局不可与其他类型重复。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "type_id": {
+                    "type": "string",
+                    "description": "类型主键 UUID（无连字符，32 位）"
+                },
+                "type_name": {
+                    "type": "string",
+                    "description": "类型名称，全局唯一"
+                },
+                "sort_order": {
+                    "type": "number",
+                    "description": "排序号（可选，整数）"
+                },
+                "remark": {
+                    "type": "string",
+                    "description": "备注（可选）"
+                }
+            },
+            "required": [
+                "type_id",
+                "type_name"
+            ]
+        },
+        "example_request": {
+            "type_id": "0194b1c0a2d34e5f6789012345678abc",
+            "type_name": "传感器（更新）",
+            "sort_order": 2,
+            "remark": "更新排序与备注"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-类型不存在/类型名称已存在/更新失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「更新成功」「类型不存在」「类型名称已存在」「更新失败」"
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/deleteItemType": {
+        "method": "POST",
+        "summary": "删除类型",
+        "description": "软删除零件类型（将 status 置为 2）。校验规则：① 类型须存在；② 类型未被任何零件（inventory_item.type_id）引用；③ 若删除一级类型，其下所有正常子类型均不能被零件引用。删除一级类型时，会同时将下属所有子类型 status 置为 2。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "type_id": {
+                    "type": "string",
+                    "description": "类型主键 UUID（无连字符，32 位）"
+                }
+            },
+            "required": [
+                "type_id"
+            ]
+        },
+        "example_request": {
+            "type_id": "0194b1c0a2d34e5f6789012345678abc"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-类型不存在/类型已被使用/子类型已被使用/删除失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「删除成功」「类型不存在」「类型已被使用，无法删除」「子类型已被使用，无法删除」「删除失败」"
+                }
+            }
+        }
+    }
+}

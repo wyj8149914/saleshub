@@ -1,5 +1,5 @@
 import { EntityManager } from 'typeorm';
-import { Product, ProductItem, InventoryItem, InventoryItemSpec } from '../../entity/product.entity';
+import { Product, ProductItem, InventoryItem, InventoryItemSpec, ItemType } from '../../entity/product.entity';
 import { MinioFile } from '../../entity/file.entity';
 import {
     CreateProductDto, ProductIdDto, ListProductDto, UpdateProductDto, SetProductItemsDto,
@@ -250,6 +250,7 @@ export class ProductService {
                 .createQueryBuilder('pi')
                 .leftJoin(InventoryItem, 'i', 'i.item_id = pi.item_id')
                 .leftJoin(InventoryItemSpec, 's', 's.spec_id = pi.spec_id AND s.status = 1')
+                .leftJoin(ItemType, 't', 't.type_id = i.type_id')
                 .select([
                     'pi.relation_id AS relation_id',
                     'pi.product_id AS product_id',
@@ -260,7 +261,8 @@ export class ProductService {
                     'pi.remark AS remark',
                     'i.name AS item_name',
                     'i.code AS item_code',
-                    'i.type AS item_type',
+                    'i.type_id AS type_id',
+                    't.type_name AS type_name',
                     'i.warn_stock AS warn_stock',
                     's.current_stock AS current_stock',
                 ])

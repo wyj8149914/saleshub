@@ -1,16 +1,17 @@
 import { InventoryItem, InventoryItemSpec, ProductItem } from '../../entity/product.entity';
+import { ItemType } from '../../entity/product.entity';
 import { CreateInventoryItemDto, ItemIdDto, ListInventoryItemDto, UpdateInventoryItemDto } from '../../dto/item.dto';
 import { AppDataSource } from '../../config/database.config';
 import { getLogger } from '../../utils/logger.util';
 import { v7 } from 'uuid';
 import { generateFileUrl } from '../../config/minio.config';
 import { MinioFile } from '../../entity/file.entity';
-import { In } from 'typeorm';
 
 export class InventoryItemService {
     private inventoryItemRepository = AppDataSource.getRepository(InventoryItem);
     private inventoryItemSpecRepository = AppDataSource.getRepository(InventoryItemSpec);
     private productItemRepository = AppDataSource.getRepository(ProductItem);
+    private itemTypeRepository = AppDataSource.getRepository(ItemType);
     private logger = getLogger('INVENTORY_SERV');
 
     /**
@@ -18,14 +19,21 @@ export class InventoryItemService {
      */
     async create(dto: CreateInventoryItemDto) {
         try {
+            // 验证 type_id 存在且状态正常
+            const itemType = await this.itemTypeRepository.findOne({
+                where: { type_id: dto.type_id, status: 1 },
+            });
+            if (!itemType) {
+                return { result: 1, msg: '类型不存在' };
+            }
+
             const code = await this.generateItemCode();
             const itemId = v7().replace(/-/g, '');
-            const now = new Date();
 
             const item = new InventoryItem();
             item.item_id = itemId;
             item.code = code;
-            item.type = dto.type;
+            item.type_id = dto.type_id;
             item.name = dto.name;
             if (dto.warnStock !== null && dto.warnStock !== undefined) {
                 item.warn_stock = dto.warnStock;
@@ -71,9 +79,13 @@ export class InventoryItemService {
         try {
             const queryBuilder = this.inventoryItemRepository.createQueryBuilder('item')
                 .leftJoin(MinioFile, 'file', 'file.relation_id = item.image_id')
+                .leftJoin(ItemType, 'type', 'type.type_id = item.type_id')
+                .leftJoin(ItemType, 'parentType', 'parentType.type_id = type.parent_id')
                 .select([
                     'item.item_id AS item_id',
-                    'item.type AS type',
+                    'item.type_id AS type_id',
+                    'type.name AS type_name',
+                    'parentType.name AS parent_type_name',
                     'item.name AS name',
                     'item.code AS code',
                     'item.warn_stock AS warn_stock',
@@ -84,8 +96,8 @@ export class InventoryItemService {
                 ])
                 .where('item.status = :status', { status: 1 });
 
-            if (dto.type) {
-                queryBuilder.andWhere('item.type = :type', { type: dto.type });
+            if (dto.type_id) {
+                queryBuilder.andWhere('item.type_id = :type_id', { type_id: dto.type_id });
             }
             if (dto.name) {
                 queryBuilder.andWhere('item.name LIKE :name', { name: `%${dto.name}%` });
@@ -129,18 +141,28 @@ export class InventoryItemService {
                 specMap.get(row.item_id)?.push({ spec_id: row.spec_id, spec: row.spec, price: row.price, current_stock: Number(row.current_stock) });
             }
 
-            const datas = items.map((it: any) => ({
-                item_id: it.item_id,
-                type: it.type,
-                name: it.name,
-                code: it.code,
-                warn_stock: it.warn_stock,
-                image_id: it.image_id,
-                is_custom: it.is_custom,
-                specs: specMap.get(it.item_id) || [],
-                remark: it.remark,
-                image_url: generateFileUrl(it.image_object_name ?? ''),
-            }));
+            const datas = items.map((it: any) => {
+                // 构建完整类型名称
+                let type_full_name = it.type_name;
+                if (it.parent_type_name) {
+                    type_full_name = `${it.parent_type_name} > ${it.type_name}`;
+                }
+
+                return {
+                    item_id: it.item_id,
+                    type_id: it.type_id,
+                    type_name: it.type_name,
+                    type_full_name,
+                    name: it.name,
+                    code: it.code,
+                    warn_stock: it.warn_stock,
+                    image_id: it.image_id,
+                    is_custom: it.is_custom,
+                    specs: specMap.get(it.item_id) || [],
+                    remark: it.remark,
+                    image_url: generateFileUrl(it.image_object_name ?? ''),
+                };
+            });
 
             return { result: 0, msg: 'success', datas: { total, items: datas } };
         } catch (error) {
@@ -164,7 +186,17 @@ export class InventoryItemService {
                 return { result: 1, msg: '零件不存在' };
             }
 
-            item.type = dto.type;
+            // 验证 type_id 存在且状态正常
+            if (dto.type_id) {
+                const itemType = await this.itemTypeRepository.findOne({
+                    where: { type_id: dto.type_id, status: 1 },
+                });
+                if (!itemType) {
+                    return { result: 1, msg: '类型不存在' };
+                }
+                item.type_id = dto.type_id;
+            }
+
             item.name = dto.name;
             if (dto.warnStock !== null && dto.warnStock !== undefined) {
                 item.warn_stock = dto.warnStock;
