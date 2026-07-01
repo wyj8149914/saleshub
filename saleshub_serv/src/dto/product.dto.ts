@@ -16,7 +16,9 @@ export class CreateProductDto {
     image_id?: string;
 
     @IsOptional()
+    @Type(() => Number)
     @IsNumber({}, { message: '价格必须是数字' })
+    @Min(0, { message: '价格不能小于0' })
     price?: number;
 
     @IsOptional()

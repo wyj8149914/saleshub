@@ -23,93 +23,93 @@
 </template>
 
 <script setup lang="ts">
-/**
- * SpecEditor — 常用件规格选项编辑器
- *
- * 职责：维护规格列表（包含规格名称和价格），通过 v-model:value 与父表单同步 SpecPayload[]。
- * 提交时由父组件过滤空规格后作为 specs 传给后端。
- */
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue'
-import type { SpecPayload } from '@/types/inventory'
+  /**
+   * SpecEditor — 常用件规格选项编辑器
+   *
+   * 职责：维护规格列表（包含规格名称和价格），通过 v-model:value 与父表单同步 SpecPayload[]。
+   * 提交时由父组件过滤空规格后作为 specs 传给后端。
+   */
+  import { DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue'
+  import type { SpecPayload } from '@/types/inventory'
 
-interface Props {
-  /** 规格列表 */
-  value: SpecPayload[]
-}
+  interface Props {
+    /** 规格列表 */
+    value: SpecPayload[]
+  }
 
-const props = withDefaults(defineProps<Props>(), {
-  value: () => []
-})
+  const props = withDefaults(defineProps<Props>(), {
+    value: () => []
+  })
 
-const emit = defineEmits<{
-  (e: 'update:value', value: SpecPayload[]): void
-}>()
+  const emit = defineEmits<{
+    (e: 'update:value', value: SpecPayload[]): void
+  }>()
 
-function updateSpec(index: number, spec: string) {
-  const next = [...props.value]
-  next[index] = { ...next[index], spec }
-  emit('update:value', next)
-}
-
-function updatePrice(index: number, price: number | undefined) {
-  const next = [...props.value]
-  const current = next[index]
-  if (current) {
-    next[index] = { spec: current.spec, price }
+  function updateSpec(index: number, spec: string) {
+    const next = [...props.value]
+    next[index] = { ...next[index], spec }
     emit('update:value', next)
   }
-}
 
-function addSpec() {
-  emit('update:value', [...props.value, { spec: '' }])
-}
+  function updatePrice(index: number, price: number | undefined) {
+    const next = [...props.value]
+    const current = next[index]
+    if (current) {
+      next[index] = { spec: current.spec, price }
+      emit('update:value', next)
+    }
+  }
 
-function removeSpec(index: number) {
-  const next = [...props.value]
-  next.splice(index, 1)
-  emit('update:value', next)
-}
+  function addSpec() {
+    emit('update:value', [...props.value, { spec: '' }])
+  }
+
+  function removeSpec(index: number) {
+    const next = [...props.value]
+    next.splice(index, 1)
+    emit('update:value', next)
+  }
 </script>
 
 <style scoped>
-.spec-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+  .spec-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
 
-.spec-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
+  .spec-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
 
-.spec-row :deep(.ant-input),
-.spec-row :deep(.ant-input-affix-wrapper) {
-  border-radius: 8px;
-  flex: 1;
-}
+  .spec-row :deep(.ant-input),
+  .spec-row :deep(.ant-input-affix-wrapper) {
+    border-radius: 8px;
+    flex: 1;
+  }
 
-.spec-row :deep(.ant-input-number) {
-  border-radius: 8px;
-}
+  .spec-row :deep(.ant-input-number) {
+    border-radius: 8px;
+  }
 
-.spec-row :deep(.ant-input-affix-wrapper-focused),
-.spec-row :deep(.ant-input:focus),
-.spec-row :deep(.ant-input-number-focused) {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
-}
+  .spec-row :deep(.ant-input-affix-wrapper-focused),
+  .spec-row :deep(.ant-input:focus),
+  .spec-row :deep(.ant-input-number-focused) {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  }
 
-.spec-add {
-  border-radius: 8px;
-  border-color: #e4e4e7;
-  color: #52525b;
-  transition: all 0.18s ease;
-}
+  .spec-add {
+    border-radius: 8px;
+    border-color: #e4e4e7;
+    color: #52525b;
+    transition: all 0.18s ease;
+  }
 
-.spec-add:hover {
-  border-color: #2563eb;
-  color: #2563eb;
-}
+  .spec-add:hover {
+    border-color: #2563eb;
+    color: #2563eb;
+  }
 </style>

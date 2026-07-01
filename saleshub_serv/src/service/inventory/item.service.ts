@@ -138,6 +138,7 @@ export class InventoryItemService {
                 image_id: it.image_id,
                 is_custom: it.is_custom,
                 specs: specMap.get(it.item_id) || [],
+                remark: it.remark,
                 image_url: generateFileUrl(it.image_object_name ?? ''),
             }));
 

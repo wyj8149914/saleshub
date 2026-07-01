@@ -35,7 +35,9 @@ export interface Product {
     code: string
     description: string
     image_id: string | null
-    image_url: string | null
+    image_url: string | null,
+    price: number | null,
+    remark: string | null,
 }
 
 export interface ProductListQuery {
@@ -49,6 +51,8 @@ export interface ProductCreatePayload {
     name: string
     description?: string
     image_id?: string
+    price?: number
+    remark?: string
 }
 
 export interface ProductUpdatePayload {
@@ -56,6 +60,8 @@ export interface ProductUpdatePayload {
     name: string
     description?: string
     image_id?: string
+    price?: number
+    remark?: string
 }
 
 // ============ 零件 ============

@@ -97,9 +97,6 @@ export class ProductItem {
 
     @Column({ type: 'timestamp', comment: '更新时间' })
     update_time: Date;
-
-    @Column({ type: 'int', default: 0, comment: '是否定制:1-否,2-是' })
-    is_custom: number;
 }
 
 @Entity({ schema: 'inventory', name: 'inventory_item_spec' })
