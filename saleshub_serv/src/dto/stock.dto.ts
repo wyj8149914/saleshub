@@ -5,6 +5,9 @@ import {
 import { PageDto } from './base.dto';
 
 export class StockInDto {
+    @IsNotEmpty({ message: '仓库ID不能为空' })
+    warehouse_id: string;
+
     @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
 
@@ -45,6 +48,9 @@ export class StockInItemEntryDto {
 }
 
 export class StockInBatchDto {
+    @IsNotEmpty({ message: '仓库ID不能为空' })
+    warehouse_id: string;
+
     @IsArray({ message: '入库零件列表必须是数组' })
     @IsNotEmpty({ message: '入库零件列表不能为空' })
     @ValidateNested({ each: true })
@@ -65,6 +71,9 @@ export class StockInBatchDto {
 }
 
 export class StockOutDto {
+    @IsNotEmpty({ message: '仓库ID不能为空' })
+    warehouse_id: string;
+
     @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
 
@@ -101,6 +110,9 @@ export class StockOutItemEntryDto {
 }
 
 export class StockOutBatchDto {
+    @IsNotEmpty({ message: '仓库ID不能为空' })
+    warehouse_id: string;
+
     @IsArray({ message: '出库零件列表必须是数组' })
     @IsNotEmpty({ message: '出库零件列表不能为空' })
     @ValidateNested({ each: true })
@@ -117,6 +129,9 @@ export class StockOutBatchDto {
 }
 
 export class StockOutByProductDto {
+    @IsNotEmpty({ message: '仓库ID不能为空' })
+    warehouse_id: string;
+
     @IsNotEmpty({ message: '产品ID不能为空' })
     product_id: string;
 
@@ -150,6 +165,9 @@ export class StockCheckItemEntryDto {
 }
 
 export class StockCheckDto {
+    @IsNotEmpty({ message: '仓库ID不能为空' })
+    warehouse_id: string;
+
     @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
 
@@ -172,6 +190,9 @@ export class StockCheckDto {
 }
 
 export class StockCheckBatchDto {
+    @IsNotEmpty({ message: '仓库ID不能为空' })
+    warehouse_id: string;
+
     @IsArray({ message: '盘点零件列表必须是数组' })
     @IsNotEmpty({ message: '盘点零件列表不能为空' })
     @ValidateNested({ each: true })

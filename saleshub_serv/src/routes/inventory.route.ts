@@ -13,7 +13,11 @@ import {
 import {
     CreateItemTypeDto, UpdateItemTypeDto, DeleteItemTypeDto, ListItemTypeDto,
 } from '../dto/item.dto';
-import { productService, inventoryItemService, stockService, itemTypeService } from '../service/inventory';
+import {
+    CreateWarehouseDto, UpdateWarehouseDto, DeleteWarehouseDto, ListWarehouseDto,
+    AssignSpecWarehouseDto, ListSpecWarehouseStockDto, WarehouseIdDto,
+} from '../dto/warehouse.dto';
+import { productService, inventoryItemService, stockService, itemTypeService, warehouseService } from '../service/inventory';
 
 const router = Router();
 
@@ -289,6 +293,74 @@ router.post('/deleteItemType',
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(DeleteItemTypeDto, req.body);
         const result = await itemTypeService.delete(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// ============ 仓库管理 ============
+
+// 查询仓库列表
+router.get('/listWarehouses',
+    validationMiddleware(ListWarehouseDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(ListWarehouseDto, req.query);
+        const result = await warehouseService.list(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 创建仓库
+router.post('/createWarehouse',
+    validationMiddleware(CreateWarehouseDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(CreateWarehouseDto, req.body);
+        const result = await warehouseService.create(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 更新仓库
+router.post('/updateWarehouse',
+    validationMiddleware(UpdateWarehouseDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(UpdateWarehouseDto, req.body);
+        const result = await warehouseService.update(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 删除仓库
+router.post('/deleteWarehouse',
+    validationMiddleware(DeleteWarehouseDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(DeleteWarehouseDto, req.body);
+        const result = await warehouseService.delete(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 分配零件仓库
+router.post('/assignSpecWarehouse',
+    validationMiddleware(AssignSpecWarehouseDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(AssignSpecWarehouseDto, req.body);
+        const result = await warehouseService.assignSpecWarehouse(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 查询规格库存明细
+router.get('/listSpecWarehouseStock',
+    validationMiddleware(ListSpecWarehouseStockDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(ListSpecWarehouseStockDto, req.query);
+        const result = await warehouseService.listSpecWarehouseStock(dtoObj);
         res.locals.datas = result;
         next();
     })

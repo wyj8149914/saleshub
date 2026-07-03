@@ -40,6 +40,9 @@ export class StockInRecord {
 
     @Column({ type: 'varchar', length: 50, comment: '记录编号' })
     record_no: string;
+
+    @Column({ type: 'varchar', length: 32, nullable: true, comment: '入库仓库ID' })
+    warehouse_id: string;
 }
 
 /**
@@ -82,6 +85,9 @@ export class StockOutRecord {
 
     @Column({ type: 'varchar', length: 50, comment: '记录编号' })
     record_no: string;
+
+    @Column({ type: 'varchar', length: 32, nullable: true, comment: '出库仓库ID' })
+    warehouse_id: string;
 }
 
 /**
@@ -118,6 +124,9 @@ export class InventoryCheck {
 
     @Column({ type: 'varchar', length: 50, comment: '记录编号' })
     record_no: string;
+
+    @Column({ type: 'varchar', length: 32, nullable: true, comment: '盘点仓库ID' })
+    warehouse_id: string;
 }
 
 @ViewEntity({ schema: 'inventory', name: 'stock_history' })
