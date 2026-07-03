@@ -12,7 +12,8 @@
       "Bash(where python *)",
       "Bash(/usr/bin/python3 /c/Users/Jason/AppData/Local/Temp/skills-XXXXXXuVWXzn/understand-anything-plugin/skills/understand/merge-batch-graphs.py \"D:/Work/gitproject/card\")",
       "Bash(pnpm run *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Skill(update-config)"
     ]
   }
 }
