@@ -314,10 +314,44 @@
     </div>
     <h1>更新日志</h1>
     <p>了解 SalesHub 前端各版本的新功能与改进</p>
-    <span class="current-version">当前版本 v0.7.0</span>
+    <span class="current-version">当前版本 v0.8.0</span>
   </header>
 
   <main class="container">
+    <!-- v0.8.0 -->
+    <article class="release">
+      <div class="release-header">
+        <span class="release-version latest">v0.8.0</span>
+        <time class="release-date" datetime="2026-07-05">2026 年 7 月 5 日</time>
+      </div>
+      <div class="release-body">
+        <div class="section">
+          <div class="section-title added">新增</div>
+          <ul>
+            <li>入库/出库记录撤销功能：入库记录列表新增撤销按钮，支持撤销入库操作并回退库存</li>
+            <li>出库记录列表新增撤销按钮，支持撤销出库操作并恢复库存</li>
+            <li>后端新增撤销入库和撤销出库接口</li>
+          </ul>
+        </div>
+        <div class="section">
+          <div class="section-title changed">改进</div>
+          <ul>
+            <li>类型选择交互优化：零件选择不再强制要求先选类型，用户可直接选择任意零件</li>
+            <li>选择类型后自动筛选零件列表，移除二级类型下拉框的禁用状态</li>
+            <li>批量入库/出库/盘点时，每行可独立选择类型和零件</li>
+          </ul>
+        </div>
+        <div class="section">
+          <div class="section-title tech">技术</div>
+          <ul>
+            <li>重构 <code>useStockFilter</code> composable，支持直接加载所有零件并按类型筛选</li>
+            <li>重构入库、出库、盘点弹窗组件的类型选择逻辑</li>
+            <li>新增 <code>allItemsUnfiltered</code> 状态存储未筛选的零件列表</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
     <!-- v0.7.0 -->
     <article class="release">
       <div class="release-header">
@@ -531,6 +565,11 @@
               </tr>
             </thead>
             <tbody>
+              <tr>
+                <td>v0.8.0</td>
+                <td>2026-07-05</td>
+                <td>入库出库撤销、类型选择交互优化</td>
+              </tr>
               <tr>
                 <td>v0.7.0</td>
                 <td>2026-07-01</td>

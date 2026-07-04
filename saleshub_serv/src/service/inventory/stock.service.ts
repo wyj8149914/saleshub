@@ -3,6 +3,7 @@ import { StockInRecord, StockOutRecord, InventoryCheck, StockHistory } from '../
 import {
     StockInDto, StockOutDto, StockOutBatchDto, StockOutByProductDto, StockCheckDto, ListStockHistoryDto,
     StockInBatchDto, ListStockInRecordsDto, ListStockOutRecordsDto, ListStockCheckRecordsDto, StockCheckBatchDto,
+    RevertStockInDto, RevertStockOutDto,
 } from '../../dto/stock.dto';
 import { AppDataSource } from '../../config/database.config';
 import { getLogger } from '../../utils/logger.util';
@@ -876,5 +877,113 @@ export class StockService {
                 );
             }
         });
+    }
+
+    /**
+     * 撤销入库记录
+     */
+    async revertStockIn(dto: RevertStockInDto) {
+        try {
+            const record = await this.stockInRepository.findOne({
+                where: { record_id: dto.record_id, status: 1 },
+            });
+            if (!record) {
+                return { result: 1, msg: '入库记录不存在' };
+            }
+
+            const item = await this.inventoryItemRepository.findOne({
+                where: { item_id: record.item_id, status: 1 },
+            });
+            if (!item) {
+                return { result: 1, msg: '零件不存在或已停用' };
+            }
+            const spec = await this.inventoryItemSpecRepository.findOne({
+                where: { spec_id: record.spec_id, status: 1 },
+            });
+            if (!spec) {
+                return { result: 1, msg: '规格不存在或已停用' };
+            }
+
+            // 检查库存：撤销后库存 = 当前库存 - 入库数量
+            const newStock = spec.current_stock - record.quantity;
+            if (newStock < 0) {
+                return {
+                    result: 1,
+                    msg: `撤销后库存不足，当前库存 ${spec.current_stock}，入库数量 ${record.quantity}`,
+                };
+            }
+
+            const now = new Date();
+            const remark = record.remark ? `${record.remark} (撤销入库记录)` : '撤销入库记录';
+            await this.stockInRepository.manager.transaction(async (manager) => {
+                await manager.update(
+                    StockInRecord,
+                    { record_id: dto.record_id },
+                    { status: 2, update_time: now, remark: remark }
+                );
+                await manager.update(
+                    InventoryItemSpec,
+                    { spec_id: record.spec_id },
+                    { current_stock: newStock, update_time: now }
+                );
+            });
+
+            this.logger.info(`撤销入库记录 ${record.record_no}，库存从 ${spec.current_stock} 回退到 ${newStock}`);
+            return { result: 0, msg: '撤销成功' };
+        } catch (error) {
+            this.logger.error('撤销入库记录失败:', error);
+            return { result: 1, msg: '撤销失败' };
+        }
+    }
+
+    /**
+     * 撤销出库记录
+     */
+    async revertStockOut(dto: RevertStockOutDto) {
+        try {
+            const record = await this.stockOutRepository.findOne({
+                where: { record_id: dto.record_id, status: 1 },
+            });
+            if (!record) {
+                return { result: 1, msg: '出库记录不存在' };
+            }
+
+            const item = await this.inventoryItemRepository.findOne({
+                where: { item_id: record.item_id, status: 1 },
+            });
+            if (!item) {
+                return { result: 1, msg: '零件不存在或已停用' };
+            }
+            const spec = await this.inventoryItemSpecRepository.findOne({
+                where: { spec_id: record.spec_id, status: 1 },
+            });
+            if (!spec) {
+                return { result: 1, msg: '规格不存在或已停用' };
+            }
+
+            // 出库撤销：库存增加，无需检查限制
+            const newStock = spec.current_stock + record.quantity;
+
+            const now = new Date();
+            const remark = record.remark ? `${record.remark} (撤销出库记录)` : '撤销出库记录';
+            await this.stockOutRepository.manager.transaction(async (manager) => {
+                await manager.update(
+                    StockOutRecord,
+                    { record_id: dto.record_id },
+                    { status: 2, update_time: now, remark: remark }
+                );
+                await manager.update(
+                    InventoryItemSpec,
+                    { spec_id: record.spec_id },
+                    { current_stock: newStock, update_time: now }
+                );
+            });
+
+            this.logger.info(`撤销出库记录 ${record.record_no}，库存从 ${spec.current_stock} 恢复到 ${newStock}`);
+            return { result: 0, msg: '撤销成功' };
+        } catch (error) {
+            this.logger.error('撤销出库记录失败:', error);
+            return { result: 1, msg: '撤销失败' };
+        }
     }
 }

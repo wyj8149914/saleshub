@@ -112,6 +112,15 @@ export const inventoryApi = {
         return http.post('/saleshub/inventory/stockCheckBatch', payload)
     },
 
+    // ---- 撤销操作 ----
+    revertStockIn(record_id: string) {
+        return http.post('/saleshub/inventory/revertStockIn', { record_id })
+    },
+
+    revertStockOut(record_id: string) {
+        return http.post('/saleshub/inventory/revertStockOut', { record_id })
+    },
+
     // ---- 零件类型 ----
     listItemTypes(query?: ItemTypeListQuery) {
         return http.get<ItemTypeNode[]>('/saleshub/inventory/listItemTypes', { params: query })

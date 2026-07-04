@@ -268,3 +268,15 @@ export class ListStockCheckRecordsDto extends PageDto {
     @MaxLength(50, { message: '记录编号长度不能超过50' })
     record_no?: string;
 }
+
+export class RevertStockInDto {
+    @IsNotEmpty({ message: '入库记录ID不能为空' })
+    @MaxLength(32, { message: '入库记录ID长度不能超过32' })
+    record_id: string;
+}
+
+export class RevertStockOutDto {
+    @IsNotEmpty({ message: '出库记录ID不能为空' })
+    @MaxLength(32, { message: '出库记录ID长度不能超过32' })
+    record_id: string;
+}

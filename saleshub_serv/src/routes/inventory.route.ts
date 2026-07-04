@@ -9,6 +9,7 @@ import {
 import {
     StockInDto, StockInBatchDto, StockOutDto, StockOutBatchDto, StockOutByProductDto, StockCheckDto, ListStockHistoryDto,
     ListStockInRecordsDto, ListStockOutRecordsDto, ListStockCheckRecordsDto, StockCheckBatchDto,
+    RevertStockInDto, RevertStockOutDto,
 } from '../dto/stock.dto';
 import {
     CreateItemTypeDto, UpdateItemTypeDto, DeleteItemTypeDto, ListItemTypeDto,
@@ -243,6 +244,28 @@ router.post('/stockCheckBatch',
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(StockCheckBatchDto, req.body);
         const result = await stockService.stockCheckBatch(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 撤销入库
+router.post('/revertStockIn',
+    validationMiddleware(RevertStockInDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(RevertStockInDto, req.body);
+        const result = await stockService.revertStockIn(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 撤销出库
+router.post('/revertStockOut',
+    validationMiddleware(RevertStockOutDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(RevertStockOutDto, req.body);
+        const result = await stockService.revertStockOut(dtoObj);
         res.locals.datas = result;
         next();
     })
