@@ -38,6 +38,9 @@ export class StockInRecord {
     @Column({ type: 'timestamp', comment: '创建时间' })
     create_time: Date;
 
+    @Column({ type: 'timestamp', comment: '更新时间' })
+    update_time: Date;
+
     @Column({ type: 'varchar', length: 50, comment: '记录编号' })
     record_no: string;
 }
@@ -79,6 +82,9 @@ export class StockOutRecord {
 
     @Column({ type: 'timestamp', comment: '创建时间' })
     create_time: Date;
+
+    @Column({ type: 'timestamp', comment: '更新时间' })
+    update_time: Date;
 
     @Column({ type: 'varchar', length: 50, comment: '记录编号' })
     record_no: string;

@@ -80,4 +80,10 @@ router.beforeEach((to) => {
     return true
 })
 
+router.afterEach((to) => {
+    const appTitle = '库存管理系统'
+    const pageTitle = to.meta?.title || '库存管理系统'
+    document.title = `${pageTitle} - ${appTitle}`
+})
+
 export default router

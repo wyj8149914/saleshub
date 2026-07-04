@@ -15,8 +15,7 @@
         "format": "prettier --write \"src/**/*.ts\"",
         "test": "jest --coverage",
         "test:watch": "jest --watch",
-        "test:pay-callback": "cross-env NODE_ENV=development ts-node src/test/testPayCallback.ts",
-        "test:refund-callback": "cross-env NODE_ENV=development ts-node src/test/testRefundCallback.ts"
+        "merge-items": "cross-env NODE_ENV=development ts-node scripts/merge-items.ts"
     },
     "keywords": [
         "card",
