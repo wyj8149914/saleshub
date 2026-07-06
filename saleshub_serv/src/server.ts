@@ -4,7 +4,7 @@ import { initializeDatabase } from './config/database.config';
 import { appConfig } from './config/env.config';
 import { getLogger } from './utils/logger.util';
 
-const logger = getLogger('CARD_SERV');
+const logger = getLogger('SALESHUB_SERV');
 
 /**
  * 启动服务器

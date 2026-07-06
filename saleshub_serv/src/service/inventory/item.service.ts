@@ -12,7 +12,7 @@ export class InventoryItemService {
     private inventoryItemSpecRepository = AppDataSource.getRepository(InventoryItemSpec);
     private productItemRepository = AppDataSource.getRepository(ProductItem);
     private itemTypeRepository = AppDataSource.getRepository(ItemType);
-    private logger = getLogger('INVENTORY_SERV');
+    private logger = getLogger('SALESHUB_SERV');
 
     /**
      * 创建零件

@@ -14,7 +14,7 @@ export class ProductService {
     private productItemRepository = AppDataSource.getRepository(ProductItem);
     private inventoryItemRepository = AppDataSource.getRepository(InventoryItem);
     private inventoryItemSpecRepository = AppDataSource.getRepository(InventoryItemSpec);
-    private logger = getLogger('INVENTORY_SERV');
+    private logger = getLogger('SALESHUB_SERV');
 
     /**
      * 创建产品

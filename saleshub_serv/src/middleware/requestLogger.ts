@@ -34,7 +34,7 @@ export async function requestLogger(req: Request, res: Response, next: NextFunct
     const requestId = resolveRequestId(req);
 
     runWithRequestContext({ requestId }, () => {
-        const logger = getLogger('CARD_SERV');
+        const logger = getLogger('SALESHUB_SERV');
         // 参数加解密处理
         const aesKey = res.locals.aesKey;
         const dntEncrypt = res.locals.dntEncrypt;

@@ -8,17 +8,36 @@
       <span class="product-code">{{ product.code }}</span>
     </div>
 
-    <!-- 添加面板：搜索未关联的「零件+规格」，设置单台数量与备注后加入列表 -->
+    <!-- 添加面板：一级类型 -> 二级类型 -> 零件 -> 规格联动选择 -->
     <div class="add-panel">
-      <a-select v-model:value="addForm.selectedKey" placeholder="搜索零件或规格" show-search allow-clear
-        :filter-option="filterItem" :options="availableOptions" :loading="loadingAvailable"
-        :field-names="{ label: 'label', value: 'value' }" class="add-select" />
+      <a-select v-model:value="addForm.parentTypeId" placeholder="一级类型" allow-clear :loading="typesLoading"
+        class="add-type" @change="handleParentTypeChange">
+        <a-select-option v-for="t in parentTypes" :key="t.type_id" :value="t.type_id">
+          {{ t.type_name }}
+        </a-select-option>
+      </a-select>
+
+      <a-select v-model:value="addForm.childTypeId" placeholder="二级类型" allow-clear :loading="typesLoading"
+        class="add-type" @change="handleChildTypeChange">
+        <a-select-option v-for="t in childTypes" :key="t.type_id" :value="t.type_id">
+          {{ t.type_name }}
+        </a-select-option>
+      </a-select>
+
+      <a-select v-model:value="addForm.selectedItemKey" placeholder="选择零件" show-search :filter-option="filterOption"
+        :loading="loadingAvailable" :options="itemOptions" class="add-item" @change="handleItemChange" />
+
+      <a-select v-if="showSpecSelect" v-model:value="addForm.selectedSpecId" placeholder="选择规格" :options="specOptions"
+        class="add-spec" />
+
       <a-input-number v-model:value="addForm.quantity_per_product" :min="1" :precision="0" :max="9999"
         class="add-quantity">
         <template #addonBefore>单台数量</template>
       </a-input-number>
+
       <a-input v-model:value="addForm.remark" placeholder="备注（可选，最长 100 字符）" :maxlength="100" class="add-remark" />
-      <a-button type="primary" class="add-btn" :disabled="!addForm.selectedKey" @click="handleAdd">
+
+      <a-button type="primary" class="add-btn" :disabled="!canAdd" @click="handleAdd">
         添加
       </a-button>
     </div>
@@ -88,7 +107,7 @@
   import { ref, reactive, computed, watch } from 'vue'
   import { message } from 'ant-design-vue'
   import { inventoryApi } from '@/api/inventory'
-  import type { Product, InventoryItem } from '@/types/inventory'
+  import type { Product, InventoryItem, ItemTypeNode } from '@/types/inventory'
 
   /** 弹窗显隐，由父组件 v-model:visible 控制 */
   interface Props {
@@ -137,14 +156,27 @@
   /** 全库零件原始数据，用于添加时补全名称、编码、库存等展示字段 */
   const availableItems = ref<InventoryItem[]>([])
 
+  /** 类型相关状态 */
+  const typesLoading = ref(false)
+  const allTypes = ref<ItemTypeNode[]>([])
+  const parentTypes = ref<ItemTypeNode[]>([])
+  const childTypes = ref<ItemTypeNode[]>([])
+
   /** 顶部「添加」面板的表单状态 */
   const addForm = reactive<{
-    /** 下拉选中项，格式 item_id_spec_id，唯一标识「零件+规格」 */
-    selectedKey: string | undefined
+    parentTypeId: string | undefined
+    childTypeId: string | undefined
+    /** 选中的零件 item_id */
+    selectedItemKey: string | undefined
+    /** 选中的规格 spec_id */
+    selectedSpecId: string | undefined
     quantity_per_product: number
     remark: string
   }>({
-    selectedKey: undefined,
+    parentTypeId: undefined,
+    childTypeId: undefined,
+    selectedItemKey: undefined,
+    selectedSpecId: undefined,
     quantity_per_product: 1,
     remark: ''
   })
@@ -162,54 +194,147 @@
   ]
 
   /**
-   * 下拉选项结构
-   * value 为 item_id + spec_id 复合键，保证同零件不同规格选项唯一
+   * 根据类型筛选后的零件列表
    */
-  interface SelectOption {
-    label: string
-    value: string
-    itemId: string
-    specId: string
-    specName: string
-  }
+  const filteredItems = computed(() => {
+    const typeId = addForm.childTypeId || addForm.parentTypeId
+    let items = availableItems.value
 
-  /**
-   * 可添加的下拉选项（计算属性）
-   *
-   * 逻辑：遍历全库零件及其规格，排除已在 selectedItems 中的 item_id+spec_id 组合，
-   * 生成「名称 - 规格（编码）」格式的 label 供搜索选择。
-   */
-  const availableOptions = computed<SelectOption[]>(() => {
+    if (typeId) {
+      items = items.filter(item => {
+        if (item.type_id === typeId) return true
+        const parent = allTypes.value.find(t => t.type_id === typeId)
+        if (parent?.children?.some(c => c.type_id === item.type_id)) return true
+        return false
+      })
+    }
+
+    // 排除已添加的零件+规格组合
     const selectedKeys = new Set(
       selectedItems.value.map(i => `${i.item_id}_${i.spec_id}`)
     )
-    const options: SelectOption[] = []
 
-    for (const item of availableItems.value) {
-      for (const spec of item.specs) {
-        const key = `${item.item_id}_${spec.spec_id}`
-        if (!selectedKeys.has(key)) {
-          const displaySpec = spec.spec ? ` - ${spec.spec}` : ''
-          options.push({
-            label: `${item.name}${displaySpec}（${item.code}）`,
-            value: key,
-            itemId: item.item_id,
-            specId: spec.spec_id,
-            specName: spec.spec
-          })
-        }
-      }
-    }
+    return items
+  })
 
-    return options
+  /**
+   * 零件下拉选项（根据类型筛选，排除已添加的）
+   */
+  const itemOptions = computed(() => {
+    const selectedKeys = new Set(
+      selectedItems.value.map(i => `${i.item_id}`)
+    )
+    return filteredItems.value
+      .filter(item => !selectedKeys.has(item.item_id) || item.specs.some(s => !selectedKeys.has(`${item.item_id}_${s.spec_id}`)))
+      .map(item => ({
+        label: `${item.name} (${item.code})`,
+        value: item.item_id
+      }))
+  })
+
+  /**
+   * 当前选中的零件对象
+   */
+  const selectedItem = computed(() =>
+    availableItems.value.find(i => i.item_id === addForm.selectedItemKey)
+  )
+
+  /**
+   * 是否显示规格选择
+   */
+  const showSpecSelect = computed(() => {
+    const item = selectedItem.value
+    if (!item?.specs?.length) return false
+    return !(item.specs.length === 1 && item.specs[0]?.spec === '')
+  })
+
+  /**
+   * 规格下拉选项
+   */
+  const specOptions = computed(() => {
+    const item = selectedItem.value
+    if (!item?.specs) return []
+
+    // 排除已添加的规格
+    const selectedKeys = new Set(
+      selectedItems.value
+        .filter(i => i.item_id === addForm.selectedItemKey)
+        .map(i => i.spec_id)
+    )
+
+    return item.specs
+      .filter(s => !selectedKeys.has(s.spec_id))
+      .map(s => ({
+        label: `${s.spec || '默认'} (库存: ${s.current_stock})`,
+        value: s.spec_id
+      }))
+  })
+
+  /**
+   * 是否可以添加（必须选择零件，且如果需要规格则必须选择规格）
+   */
+  const canAdd = computed(() => {
+    if (!addForm.selectedItemKey) return false
+    if (showSpecSelect.value && !addForm.selectedSpecId) return false
+    return true
   })
 
   /**
    * 下拉框本地搜索过滤
-   * 按选项 label 做不区分大小写的子串匹配
    */
-  const filterItem = (input: string, option: SelectOption) => {
-    return option.label.toLowerCase().includes(input.toLowerCase())
+  const filterOption = (input: string, option: { label: string }) =>
+    option.label.toLowerCase().includes(input.toLowerCase())
+
+  /**
+   * 加载零件类型列表
+   */
+  const loadTypes = async () => {
+    typesLoading.value = true
+    try {
+      const res = await inventoryApi.listItemTypes()
+      allTypes.value = (res.datas || res) as ItemTypeNode[]
+      parentTypes.value = allTypes.value
+    } catch {
+      // 错误由拦截器处理
+    } finally {
+      typesLoading.value = false
+    }
+  }
+
+  /**
+   * 一级类型变更
+   */
+  const handleParentTypeChange = (value: string | undefined) => {
+    addForm.childTypeId = undefined
+    addForm.selectedItemKey = undefined
+    addForm.selectedSpecId = undefined
+
+    if (value) {
+      const parent = allTypes.value.find(t => t.type_id === value)
+      childTypes.value = parent?.children || []
+    } else {
+      childTypes.value = []
+    }
+  }
+
+  /**
+   * 二级类型变更
+   */
+  const handleChildTypeChange = () => {
+    addForm.selectedItemKey = undefined
+    addForm.selectedSpecId = undefined
+  }
+
+  /**
+   * 零件变更
+   */
+  const handleItemChange = () => {
+    addForm.selectedSpecId = undefined
+    // 如果只有一个默认规格，自动选中
+    const defaultSpec = selectedItem.value?.specs?.[0]
+    if (selectedItem.value?.specs?.length === 1 && defaultSpec?.spec === '') {
+      addForm.selectedSpecId = defaultSpec.spec_id
+    }
   }
 
   /**
@@ -259,42 +384,60 @@
 
   /**
    * 将选中的零件规格加入关联列表
-   *
-   * 流程：
-   * 1. 校验 item_id、spec_id 均已选择
-   * 2. 从 availableOptions / availableItems 中查找对应记录
-   * 3. 组装 SelectedItem 推入 selectedItems
-   * 4. 重置添加表单
    */
   const handleAdd = () => {
-    if (!addForm.selectedKey) {
-      message.error('请选择零件和规格')
+    if (!addForm.selectedItemKey) {
+      message.error('请选择零件')
       return
     }
 
-    const option = availableOptions.value.find(opt => opt.value === addForm.selectedKey)
-    if (!option) return
-
-    const item = availableItems.value.find(i => i.item_id === option.itemId)
+    const item = selectedItem.value
     if (!item) return
 
-    const spec = item.specs?.find(s => s.spec_id === option.specId)
+    // 确定规格 ID 和名称
+    let specId = addForm.selectedSpecId
+    let specName = ''
+
+    if (item.specs?.length === 1 && item.specs[0]?.spec === '') {
+      // 只有一个默认规格的情况
+      specId = item.specs[0].spec_id
+      specName = ''
+    } else if (!specId && showSpecSelect.value) {
+      message.error('请选择规格')
+      return
+    }
+
+    if (specId) {
+      const spec = item.specs?.find(s => s.spec_id === specId)
+      specName = spec?.spec || ''
+    }
+
+    // 检查是否已存在
+    const exists = selectedItems.value.some(
+      i => i.item_id === item.item_id && i.spec_id === specId
+    )
+    if (exists) {
+      message.warning('该零件规格已添加')
+      return
+    }
 
     selectedItems.value.push({
       item_id: item.item_id,
-      spec_id: option.specId,
-      spec: option.specName,
+      spec_id: specId || '',
+      spec: specName,
       item_name: item.name,
       item_code: item.code,
       type_id: item.type_id,
       type_name: item.type_name || item.type_id,
-      current_stock: spec?.current_stock || 0,
+      current_stock: item.specs?.find(s => s.spec_id === specId)?.current_stock || 0,
       warn_stock: item.warn_stock,
       quantity_per_product: addForm.quantity_per_product,
       remark: addForm.remark
     })
 
-    addForm.selectedKey = undefined
+    // 重置选择（保留类型选择，方便连续添加同类型零件）
+    addForm.selectedItemKey = undefined
+    addForm.selectedSpecId = undefined
     addForm.quantity_per_product = 1
     addForm.remark = ''
   }
@@ -348,21 +491,30 @@
   /**
    * 监听弹窗显隐，负责数据加载与清理
    *
-   * - 打开：并行加载已关联列表和全库零件，并重置添加表单
+   * - 打开：并行加载类型、已关联列表和全库零件，并重置添加表单
    * - 关闭：清空 selectedItems、availableItems，释放内存
    */
   watch(
     () => props.visible,
     (visible) => {
       if (visible && props.product) {
+        loadTypes()
         loadCurrentItems()
         loadAvailableItems()
-        addForm.selectedKey = undefined
+        // 重置添加表单
+        addForm.parentTypeId = undefined
+        addForm.childTypeId = undefined
+        addForm.selectedItemKey = undefined
+        addForm.selectedSpecId = undefined
         addForm.quantity_per_product = 1
         addForm.remark = ''
+        childTypes.value = []
       } else {
         selectedItems.value = []
         availableItems.value = []
+        allTypes.value = []
+        parentTypes.value = []
+        childTypes.value = []
       }
     }
   )
@@ -403,20 +555,31 @@
     gap: 8px;
     margin-bottom: 16px;
     flex-wrap: wrap;
+    align-items: flex-start;
   }
 
-  .add-select {
+  .add-type {
+    width: 140px;
+    flex-shrink: 0;
+  }
+
+  .add-item {
     flex: 1;
-    min-width: 220px;
+    min-width: 150px;
+  }
+
+  .add-spec {
+    width: 180px;
+    flex-shrink: 0;
   }
 
   .add-remark {
     flex: 1;
-    min-width: 200px;
+    min-width: 160px;
   }
 
   .add-quantity {
-    width: 160px;
+    width: 140px;
     flex-shrink: 0;
   }
 

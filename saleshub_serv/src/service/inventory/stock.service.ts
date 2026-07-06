@@ -32,7 +32,7 @@ export class StockService {
     private stockOutRepository = AppDataSource.getRepository(StockOutRecord);
     private inventoryCheckRepository = AppDataSource.getRepository(InventoryCheck);
     private stockHistoryRepository = AppDataSource.getRepository(StockHistory);
-    private logger = getLogger('INVENTORY_SERV');
+    private logger = getLogger('SALESHUB_SERV');
 
     /**
      * 入库操作(按零件单个入库)
@@ -277,11 +277,11 @@ export class StockService {
                     'rec.remark AS remark',
                     'to_char(rec.create_time, \'YYYY-MM-DD HH24:MI:SS\') AS create_time',
                 ])
-                .where('rec.item_id = :itemId AND rec.status = :status', {
-                    itemId: dto.item_id,
-                    status: 1,
-                });
+                .where('rec.status = :status', { status: 1 });
 
+            if (dto.item_id) {
+                queryBuilder.andWhere('rec.item_id = :itemId', { itemId: dto.item_id });
+            }
             if (dto.start_date) {
                 queryBuilder.andWhere('rec.date >= to_date(:startDate, \'YYYY-MM-DD\')', {
                     startDate: dto.start_date,
