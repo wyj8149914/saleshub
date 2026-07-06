@@ -140,10 +140,40 @@ export interface ItemUpdatePayload {
     is_custom?: 1 | 2
 }
 
+// ============ 模块 ============
+export interface ProductModule {
+    module_id: string
+    product_id: string
+    name: string
+    code: string | null
+    sort_order: number
+    remark: string | null
+    status: number
+    create_time: string
+    update_time: string
+}
+
+export interface ModuleCreatePayload {
+    product_id: string
+    name: string
+    code?: string
+    sort_order?: number
+    remark?: string
+}
+
+export interface ModuleUpdatePayload {
+    module_id: string
+    name?: string
+    code?: string
+    sort_order?: number
+    remark?: string
+}
+
 // ============ 产品-零件关联 ============
 export interface ProductItemRelation {
     relation_id: string
     product_id: string
+    module_id: string | null
     item_id: string
     spec_id: string
     spec: string
@@ -155,6 +185,21 @@ export interface ProductItemRelation {
     type_name: string
     current_stock: number
     warn_stock: number
+}
+
+export interface ModuleWithItems {
+    module_id: string
+    name: string
+    code: string | null
+    sort_order: number
+    remark: string | null
+    items: ProductItemRelation[]
+}
+
+export interface ProductItemsResponse {
+    use_module: boolean
+    items?: ProductItemRelation[]
+    modules?: ModuleWithItems[]
 }
 
 export interface ProductItemPayload {

@@ -78,3 +78,70 @@ export class ProductItemIdDto {
     @IsNotEmpty({ message: '产品ID不能为空' })
     product_id: string;
 }
+
+// ============ 模块管理 DTO ============
+
+export class CreateModuleDto {
+    @IsNotEmpty({ message: '产品ID不能为空' })
+    product_id: string;
+
+    @IsNotEmpty({ message: '模块名称不能为空' })
+    @MaxLength(100, { message: '模块名称长度不能超过100' })
+    name: string;
+
+    @IsOptional()
+    @MaxLength(50, { message: '模块编码长度不能超过50' })
+    code?: string;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt({ message: '排序号必须是整数' })
+    sort_order?: number;
+
+    @IsOptional()
+    @MaxLength(500, { message: '备注长度不能超过500' })
+    remark?: string;
+}
+
+export class UpdateModuleDto {
+    @IsNotEmpty({ message: '模块ID不能为空' })
+    module_id: string;
+
+    @IsOptional()
+    @MaxLength(100, { message: '模块名称长度不能超过100' })
+    name?: string;
+
+    @IsOptional()
+    @MaxLength(50, { message: '模块编码长度不能超过50' })
+    code?: string;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt({ message: '排序号必须是整数' })
+    sort_order?: number;
+
+    @IsOptional()
+    @MaxLength(500, { message: '备注长度不能超过500' })
+    remark?: string;
+}
+
+export class ModuleIdDto {
+    @IsNotEmpty({ message: '模块ID不能为空' })
+    module_id: string;
+}
+
+export class ListModuleDto {
+    @IsNotEmpty({ message: '产品ID不能为空' })
+    product_id: string;
+}
+
+export class SetModuleItemsDto {
+    @IsNotEmpty({ message: '模块ID不能为空' })
+    module_id: string;
+
+    @IsArray({ message: '零件列表必须是数组' })
+    @IsNotEmpty({ message: '零件列表不能为空' })
+    @ValidateNested({ each: true })
+    @Type(() => ProductItemEntryDto)
+    items: ProductItemEntryDto[];
+}

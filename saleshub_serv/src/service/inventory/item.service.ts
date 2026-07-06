@@ -6,6 +6,7 @@ import { getLogger } from '../../utils/logger.util';
 import { v7 } from 'uuid';
 import { generateFileUrl } from '../../config/minio.config';
 import { MinioFile } from '../../entity/file.entity';
+import { Not } from 'typeorm';
 
 export class InventoryItemService {
     private inventoryItemRepository = AppDataSource.getRepository(InventoryItem);
@@ -19,6 +20,14 @@ export class InventoryItemService {
      */
     async create(dto: CreateInventoryItemDto) {
         try {
+            // 查询是否已有同名零件 
+            const existing = await this.inventoryItemRepository.findOne({
+                where: { name: dto.name, status: 1 },
+            });
+            if (existing) {
+                return { result: 1, msg: '零件名称已存在' };
+            }
+
             // 验证 type_id 存在且状态正常
             const itemType = await this.itemTypeRepository.findOne({
                 where: { type_id: dto.type_id, status: 1 },
@@ -179,6 +188,14 @@ export class InventoryItemService {
      */
     async update(dto: UpdateInventoryItemDto) {
         try {
+            // 查询是否已有同名零件
+            const existing = await this.inventoryItemRepository.findOne({
+                where: { name: dto.name, item_id: Not(dto.item_id), status: 1 },
+            });
+            if (existing) {
+                return { result: 1, msg: '零件名称已存在' };
+            }
+
             const item = await this.inventoryItemRepository.findOne({
                 where: { item_id: dto.item_id, status: 1 },
             });

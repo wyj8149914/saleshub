@@ -51,7 +51,6 @@ export class ItemTypeService {
 
             // 创建类型
             const typeId = v7().replace(/-/g, '');
-            const now = new Date();
             const itemType = new ItemType();
             itemType.type_id = typeId;
             if (dto.parent_id) {
