@@ -314,14 +314,48 @@
     </div>
     <h1>更新日志</h1>
     <p>了解 SalesHub 前端各版本的新功能与改进</p>
-    <span class="current-version">当前版本 v0.8.0</span>
+    <span class="current-version">当前版本 v0.9.0</span>
   </header>
 
   <main class="container">
+    <!-- v0.9.0 -->
+    <article class="release">
+      <div class="release-header">
+        <span class="release-version latest">v0.9.0</span>
+        <time class="release-date" datetime="2026-07-07">2026 年 7 月 7 日</time>
+      </div>
+      <div class="release-body">
+        <div class="section">
+          <div class="section-title added">新增</div>
+          <ul>
+            <li>产品详情查看：产品列表新增「详情」按钮，弹窗展示产品完整信息与 BOM 清单</li>
+            <li>BOM 清单表格：模块模式下产品列合并，模块列按模块合并；直接关联模式不显示模块列</li>
+            <li>后端产品详情接口：聚合返回产品基础信息及 BOM 零件结构</li>
+          </ul>
+        </div>
+        <div class="section">
+          <div class="section-title changed">改进</div>
+          <ul>
+            <li>模块零件编辑器：添加/删除改为本地数据修改，新增保存按钮统一提交</li>
+            <li>支持变更检测，无修改时保存按钮禁用；移除实时同步，数据流更清晰</li>
+            <li>接口优化：<code>setProductItems</code> 和 <code>setModuleItems</code> 支持空数组清空零件</li>
+          </ul>
+        </div>
+        <div class="section">
+          <div class="section-title tech">技术</div>
+          <ul>
+            <li>新增 <code>ProductDetail.vue</code> 产品详情组件</li>
+            <li>新增 <code>ProductDetailResponse</code> 等类型定义与 API 方法</li>
+            <li>重构模块零件编辑器本地数据管理逻辑</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
     <!-- v0.8.0 -->
     <article class="release">
       <div class="release-header">
-        <span class="release-version latest">v0.8.0</span>
+        <span class="release-version">v0.8.0</span>
         <time class="release-date" datetime="2026-07-05">2026 年 7 月 5 日</time>
       </div>
       <div class="release-body">
@@ -565,6 +599,11 @@
               </tr>
             </thead>
             <tbody>
+              <tr>
+                <td>v0.9.0</td>
+                <td>2026-07-07</td>
+                <td>产品详情查看、模块零件编辑优化</td>
+              </tr>
               <tr>
                 <td>v0.8.0</td>
                 <td>2026-07-05</td>
