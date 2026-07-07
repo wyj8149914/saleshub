@@ -209,6 +209,45 @@ export interface ProductItemPayload {
     remark?: string
 }
 
+// ============ 产品详情 ============
+export interface ProductDetailItem {
+    item_id: string
+    spec_id: string
+    spec: string
+    price: number | null
+    current_stock: number | null
+    module_id: string | null
+    item_name: string
+    item_code: string
+    quantity_per_product: number
+    remark: string | null
+}
+
+export interface ProductDetailModule {
+    module_id: string
+    name: string
+    sort_order: number
+    remark: string | null
+    items: ProductDetailItem[]
+}
+
+export interface ProductDetailProduct {
+    product_id: string
+    name: string
+    code: string
+    description: string | null
+    image_id: string | null
+    price: number | null
+    remark: string | null
+}
+
+export interface ProductDetailResponse {
+    product: ProductDetailProduct
+    mode: 'none' | 'direct' | 'module'
+    items?: ProductDetailItem[]
+    modules?: ProductDetailModule[]
+}
+
 export interface StockRecord {
     record_id: string
     item_id: string

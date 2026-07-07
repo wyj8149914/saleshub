@@ -129,6 +129,17 @@ router.get('/listProductItems',
     })
 );
 
+// 查询产品详情
+router.get('/productDetail',
+    validationMiddleware(ProductIdDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(ProductIdDto, req.query);
+        const result = await productService.getProductDetail(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
 // ============ 模块管理 ============
 
 // 创建模块

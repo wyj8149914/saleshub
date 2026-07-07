@@ -5,7 +5,7 @@ import type {
     StockInBatchPayload, StockOutPayload, StockOutBatchPayload, StockOutByProductPayload, StockCheckRecord, StockCheckPayload,
     StockCheckBatchPayload, PaginatedData, Product, InventoryItem, ProductItemRelation, StockRecordListQuery,
     ItemTypeNode, ItemTypeListQuery, ItemTypeCreatePayload, ItemTypeUpdatePayload,
-    ProductModule, ModuleCreatePayload, ModuleUpdatePayload, ProductItemsResponse
+    ProductModule, ModuleCreatePayload, ModuleUpdatePayload, ProductItemsResponse, ProductDetailResponse
 } from '@/types/inventory'
 
 // ============ 文件上传 API ============
@@ -37,6 +37,9 @@ export const inventoryApi = {
     },
     deleteProduct(product_id: string) {
         return http.post('/saleshub/inventory/deleteProduct', { product_id })
+    },
+    getProductDetail(product_id: string) {
+        return http.get<ProductDetailResponse>('/saleshub/inventory/productDetail', { params: { product_id } })
     },
 
     // ---- 零件 ----

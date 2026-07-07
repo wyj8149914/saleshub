@@ -1,6 +1,6 @@
 <template>
   <!-- 产品零件关联管理弹窗 -->
-  <a-modal :open="visible" title="管理产品零件" :width="1080" :confirm-loading="saving" :mask-closable="false"
+  <a-modal :open="visible" title="管理产品模块和零件" :width="1080" :confirm-loading="saving" :mask-closable="false"
     wrap-class-name="product-items-modal" @ok="handleSave" @cancel="handleCancel">
     <!-- 当前操作的产品摘要 -->
     <div v-if="product" class="product-info">
@@ -118,7 +118,7 @@
 
       <!-- 模块列表 -->
       <div v-if="modules.length > 0" class="module-list">
-        <a-collapse v-model:activeKey="activeModuleKeys" accordion>
+        <a-collapse v-model:activeKey="activeModuleKeys">
           <a-collapse-panel v-for="module in modules" :key="module.module_id">
             <template #header>
               <div class="module-header">
@@ -144,8 +144,7 @@
             <!-- 模块内零件管理 -->
             <div class="module-items-panel">
               <ModuleItemsEditor :module-id="module.module_id" :initial-items="module.items || []"
-                :available-items="availableItems" :all-types="allTypes"
-                @update="handleModuleItemsUpdate(module.module_id, $event)" />
+                :available-items="availableItems" :all-types="allTypes" />
             </div>
           </a-collapse-panel>
         </a-collapse>
@@ -157,6 +156,8 @@
         共 {{ modules.length }} 个模块，{{ totalModuleItems }} 个零件
       </div>
     </div>
+
+    <a-skeleton avatar :paragraph="{ rows: 4 }" v-else-if="mode === 'loading'" />
   </a-modal>
 
   <!-- 创建/编辑模块弹窗 -->
@@ -165,9 +166,6 @@
     <a-form :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
       <a-form-item label="模块名称" required>
         <a-input v-model:value="moduleForm.name" placeholder="请输入模块名称" :maxlength="100" />
-      </a-form-item>
-      <a-form-item label="模块编码">
-        <a-input v-model:value="moduleForm.code" placeholder="可选，最长50字符" :maxlength="50" />
       </a-form-item>
       <a-form-item label="排序号">
         <a-input-number v-model:value="moduleForm.sort_order" :min="0" style="width: 100%" />
@@ -211,8 +209,8 @@
   const emit = defineEmits<Emits>()
 
   /** 零件管理模式：none-未选择，direct-直接关联，module-模块化 */
-  type ManageMode = 'none' | 'direct' | 'module'
-  const mode = ref<ManageMode>('none')
+  type ManageMode = 'none' | 'direct' | 'module' | 'loading'
+  const mode = ref<ManageMode>('loading')
 
   // ============ 公共状态 ============
   const loading = ref(false)
@@ -382,7 +380,7 @@
           ...m,
           items: m.items || []
         })) as ModuleWithItems[]
-      } else {
+      } else if (res.datas.use_module == false && res.datas.items && res.datas.items.length > 0) {
         mode.value = 'direct'
         directItems.value = (res.datas.items || []).map(i => ({
           item_id: i.item_id,
@@ -397,6 +395,8 @@
           quantity_per_product: i.quantity_per_product || 1,
           remark: i.remark || ''
         }))
+      } else {
+        mode.value = 'none'
       }
     } finally {
       loading.value = false
@@ -585,13 +585,6 @@
     }
   }
 
-  const handleModuleItemsUpdate = (moduleId: string, items: ProductItemRelation[]) => {
-    const module = modules.value.find(m => m.module_id === moduleId)
-    if (module) {
-      module.items = items
-    }
-  }
-
   // ============ 保存 ============
   const handleSave = async () => {
     if (!props.product) return
@@ -613,9 +606,9 @@
             remark: i.remark || undefined
           }))
         )
+        message.success('保存成功')
       }
       // 模块模式下，零件保存由 ModuleItemsEditor 组件内部处理
-      message.success('保存成功')
       emit('update:visible', false)
     } catch {
       // 错误由拦截器处理
@@ -646,7 +639,7 @@
         childTypes.value = []
         activeModuleKeys.value = []
       } else {
-        mode.value = 'none'
+        mode.value = 'loading'
         directItems.value = []
         modules.value = []
         availableItems.value = []
@@ -787,17 +780,7 @@
 
   .add-btn {
     border-radius: 8px;
-    background: #2563eb;
-    border-color: #2563eb;
-  }
 
-  .add-btn:hover:not(:disabled) {
-    background: #1d4ed8;
-    border-color: #1d4ed8;
-  }
-
-  .add-btn[disabled] {
-    opacity: 0.5;
   }
 
   .add-panel :deep(.ant-select-selector),

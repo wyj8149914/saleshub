@@ -206,6 +206,11 @@ export class ProductService {
                 return { result: 1, msg: '该产品已使用模块方式管理零件，无法直接关联零件' };
             }
 
+            if (dto.items.length === 0) {
+                await this.productItemRepository.update({ product_id: dto.product_id }, { status: 2, update_time: new Date() });
+                return { result: 0, msg: '设置成功' };
+            }
+
             // 去重校验:(item_id, spec_id) 必须唯一
             const keys = dto.items.map((it) => `${it.item_id}||${it.spec_id}`);
             const dedup = new Set(keys);
@@ -294,11 +299,7 @@ export class ProductService {
                     allItems = await this.productItemRepository
                         .createQueryBuilder('pi')
                         .leftJoin(InventoryItem, 'i', 'i.item_id = pi.item_id')
-                        .leftJoin(
-                            InventoryItemSpec,
-                            's',
-                            's.spec_id = pi.spec_id AND s.status = 1'
-                        )
+                        .leftJoin(InventoryItemSpec, 's', 's.spec_id = pi.spec_id AND s.status = 1')
                         .leftJoin(ItemType, 't', 't.type_id = i.type_id')
                         .select([
                             'pi.relation_id AS relation_id',
@@ -585,6 +586,11 @@ export class ProductService {
                 return { result: 1, msg: '模块不存在' };
             }
 
+            if (dto.items.length === 0) {
+                await this.productItemRepository.update({ module_id: dto.module_id }, { status: 2, update_time: new Date() });
+                return { result: 0, msg: '设置成功' };
+            }
+
             // 去重校验:(item_id, spec_id) 必须唯一
             const keys = dto.items.map((it) => `${it.item_id}||${it.spec_id}`);
             const dedup = new Set(keys);
@@ -711,6 +717,79 @@ export class ProductService {
             return { result: 0, msg: 'success', datas: { items: rows } };
         } catch (error) {
             this.logger.error('查询模块零件失败:', error);
+            return { result: 1, msg: '查询失败' };
+        }
+    }
+
+    async getProductDetail(dto: ProductIdDto) {
+        try {
+            const product = await this.productRepository.findOne({
+                where: { product_id: dto.product_id, status: 1 },
+                select: ['product_id', 'name', 'code', 'description', 'image_id', 'price', 'remark'],
+            });
+            if (!product) {
+                return { result: 1, msg: '产品不存在' };
+            }
+
+            const modules = await this.productModuleRepository.find({
+                where: { product_id: dto.product_id, status: 1 },
+                select: ['module_id', 'name', 'sort_order', 'remark'],
+                order: { sort_order: 'ASC' },
+            });
+
+            const items = await this.productItemRepository.createQueryBuilder('pi')
+                .leftJoin(InventoryItem, 'i', 'i.item_id = pi.item_id')
+                .leftJoin(InventoryItemSpec, 's', 's.spec_id = pi.spec_id AND s.status = 1')
+                .select([
+                    'pi.item_id AS item_id',
+                    'pi.spec_id AS spec_id',
+                    's.spec AS spec',
+                    's.price AS price',
+                    's.current_stock AS current_stock',
+                    'pi.module_id AS module_id',
+                    'i.name AS item_name',
+                    'i.code AS item_code',
+                    'pi.quantity_per_product AS quantity_per_product',
+                    'pi.remark AS remark',
+                ])
+                .where('pi.product_id = :productId AND pi.status = :status', {
+                    productId: dto.product_id,
+                    status: 1,
+                })
+                .orderBy('pi.create_time', 'DESC')
+                .getRawMany();
+
+            // 关联模式,合并数据
+            let mode = 'none', returnData: Record<string, any> = { product }
+            if (modules.length > 0) {
+                // 如果是模块,将零件放到对应的模块下
+                mode = 'module';
+                const moduleMap = new Map();
+                items.forEach((item) => {
+                    if (moduleMap.has(item.module_id)) {
+                        moduleMap.get(item.module_id).push(item);
+                    } else {
+                        moduleMap.set(item.module_id, [item]);
+                    }
+                });
+                modules.forEach((m: any) => {
+                    m.items = moduleMap.get(m.module_id) || [];
+                });
+                returnData.modules = modules;
+                returnData.mode = mode;
+            } else if (items.length > 0) {
+                mode = 'direct';
+                returnData.items = items;
+                returnData.mode = mode;
+            } else {
+                mode = 'none';
+                returnData.mode = mode;
+            }
+
+            return { result: 0, msg: 'success', datas: returnData };
+
+        } catch (error) {
+            this.logger.error('查询产品详情失败:', error);
             return { result: 1, msg: '查询失败' };
         }
     }

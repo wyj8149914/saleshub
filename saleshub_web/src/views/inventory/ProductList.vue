@@ -65,11 +65,12 @@
             </a-tooltip>
           </template>
 
-          <!-- 行操作：编辑、关联零件、删除（带二次确认） -->
+          <!-- 行操作：详情、编辑、关联零件、删除（带二次确认） -->
           <template v-else-if="column.key === 'actions'">
             <a-space :size="4">
+              <a-button type="link" size="small" @click="handleDetail(record)">详情</a-button>
               <a-button type="link" size="small" @click="handleEdit(record)">编辑</a-button>
-              <a-button type="link" size="small" @click="handleManageItems(record)">关联零件</a-button>
+              <a-button type="link" size="small" @click="handleManageItems(record)">模块零件</a-button>
               <a-popconfirm title="确定要删除此产品吗？" ok-text="删除" cancel-text="取消" @confirm="handleDelete(record)">
                 <a-button type="link" size="small" danger>删除</a-button>
               </a-popconfirm>
@@ -84,6 +85,9 @@
 
     <!-- 管理产品关联零件弹窗 -->
     <ProductItemsManager v-model:visible="itemsManagerVisible" :product="currentProductForItems" />
+
+    <!-- 产品详情弹窗 -->
+    <ProductDetail v-model:visible="detailVisible" :product-id="currentProductId" />
   </div>
 </template>
 
@@ -101,6 +105,7 @@
   import type { Product } from '@/types/inventory'
   import ProductForm from '@/components/inventory/ProductForm.vue'
   import ProductItemsManager from '@/components/inventory/ProductItemsManager.vue'
+  import ProductDetail from '@/components/inventory/ProductDetail.vue'
 
   /** 表格列定义，key 与模板 #bodyCell 中的 column.key 对应 */
   const columns = [
@@ -110,7 +115,7 @@
     { title: '产品描述', dataIndex: 'description', key: 'description', width: 200, ellipsis: true, align: 'center' },
     { title: '价格', dataIndex: 'price', key: 'price', width: 100, align: 'center' },
     { title: '备注', dataIndex: 'remark', key: 'remark', width: 150, ellipsis: true, align: 'center' },
-    { title: '操作', key: 'actions', width: 260, align: 'center' }
+    { title: '操作', key: 'actions', width: 300, align: 'center' }
   ]
 
   /** 表格数据加载中 */
@@ -125,6 +130,10 @@
   const itemsManagerVisible = ref(false)
   /** 当前要管理零件关联的产品 */
   const currentProductForItems = ref<Product | null>(null)
+  /** 产品详情弹窗显隐 */
+  const detailVisible = ref(false)
+  /** 当前查看详情的产品 ID */
+  const currentProductId = ref<string | null>(null)
 
   /** 筛选条件：名称模糊、编码精确 */
   const filters = reactive({
@@ -210,6 +219,12 @@
   const handleManageItems = (product: Product) => {
     currentProductForItems.value = product
     itemsManagerVisible.value = true
+  }
+
+  /** 打开产品详情弹窗 */
+  const handleDetail = (product: Product) => {
+    currentProductId.value = product.product_id
+    detailVisible.value = true
   }
 
   /**
