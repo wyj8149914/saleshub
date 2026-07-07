@@ -1,0 +1,117 @@
+<h2>首页详细设计方案</h2>
+<p class="subtitle">仪表盘式布局 · 产品维度指标 · 本周业务数据</p>
+
+<div class="mockup">
+  <div class="mockup-header">SalesHub 系统首页 - 完整设计</div>
+  <div class="mockup-body">
+    <div style="background:#f5f7fa;padding:20px;border-radius:8px;min-height:600px;">
+
+      <!-- 顶部指标卡片区域 -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;">
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+          <div style="background:#fff;border-radius:12px;padding:20px;border-left:4px solid #1890ff;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+            <div style="font-size:40px;font-weight:700;color:#1890ff;">128</div>
+            <div style="font-size:14px;color:#666;margin-top:8px;font-weight:500;">产品总数</div>
+            <div style="font-size:12px;color:#52c41a;margin-top:6px;">↑ 8 本周新增</div>
+          </div>
+          <div style="background:#fff;border-radius:12px;padding:20px;border-left:4px solid #52c41a;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+            <div style="font-size:40px;font-weight:700;color:#52c41a;">456</div>
+            <div style="font-size:14px;color:#666;margin-top:8px;font-weight:500;">零件总数</div>
+            <div style="font-size:12px;color:#52c41a;margin-top:6px;">↑ 23 本周新增</div>
+          </div>
+          <div style="background:#fff;border-radius:12px;padding:20px;border-left:4px solid #722ed1;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+            <div style="font-size:40px;font-weight:700;color:#722ed1;">892</div>
+            <div style="font-size:14px;color:#666;margin-top:8px;font-weight:500;">规格数量</div>
+            <div style="font-size:12px;color:#999;margin-top:6px;">平均 1.96 规格/零件</div>
+          </div>
+          <div style="background:#fff;border-radius:12px;padding:20px;border-left:4px solid #faad14;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+            <div style="font-size:40px;font-weight:700;color:#faad14;">35</div>
+            <div style="font-size:14px;color:#666;margin-top:8px;font-weight:500;">模块总数</div>
+            <div style="font-size:12px;color:#52c41a;margin-top:6px;">↑ 5 本周新增</div>
+          </div>
+        </div>
+
+        <!-- 快速操作 -->
+        <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;flex-direction:column;">
+          <div style="font-size:16px;font-weight:600;color:#262626;margin-bottom:16px;">快速操作</div>
+          <button style="background:#1890ff;color:#fff;border:none;border-radius:8px;padding:14px 20px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:12px;transition:all 0.2s;">
+            📦 入库管理
+          </button>
+          <button style="background:#52c41a;color:#fff;border:none;border-radius:8px;padding:14px 20px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:12px;transition:all 0.2s;">
+            📤 出库管理
+          </button>
+          <button style="background:#722ed1;color:#fff;border:none;border-radius:8px;padding:14px 20px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:12px;transition:all 0.2s;">
+            🔍 盘点管理
+          </button>
+          <button style="background:#8c8c8c;color:#fff;border:none;border-radius:8px;padding:14px 20px;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s;">
+            📋 库存历史
+          </button>
+        </div>
+      </div>
+
+      <!-- 底部业务活跃度 -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+        <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          <div style="font-size:14px;color:#8c8c8c;margin-bottom:12px;font-weight:500;">本周入库总数</div>
+          <div style="font-size:32px;font-weight:600;color:#52c41a;">+1,256</div>
+          <div style="font-size:12px;color:#8c8c8c;margin-top:8px;">18 笔入库记录</div>
+          <div style="margin-top:12px;height:4px;background:#f0f0f0;border-radius:2px;overflow:hidden;">
+            <div style="height:100%;width:75%;background:linear-gradient(90deg,#52c41a 0%,#95de64 100%);border-radius:2px;"></div>
+          </div>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          <div style="font-size:14px;color:#8c8c8c;margin-bottom:12px;font-weight:500;">本周出库总数</div>
+          <div style="font-size:32px;font-weight:600;color:#1890ff;">-892</div>
+          <div style="font-size:12px;color:#8c8c8c;margin-top:8px;">12 笔出库记录</div>
+          <div style="margin-top:12px;height:4px;background:#f0f0f0;border-radius:2px;overflow:hidden;">
+            <div style="height:100%;width:60%;background:linear-gradient(90deg,#1890ff 0%,#69c0ff 100%);border-radius:2px;"></div>
+          </div>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          <div style="font-size:14px;color:#8c8c8c;margin-bottom:12px;font-weight:500;">本周盘点次数</div>
+          <div style="font-size:32px;font-weight:600;color:#722ed1;">5</div>
+          <div style="font-size:12px;color:#8c8c8c;margin-top:8px;">盘点零件 89 个</div>
+          <div style="margin-top:12px;height:4px;background:#f0f0f0;border-radius:2px;overflow:hidden;">
+            <div style="height:100%;width:45%;background:linear-gradient(90deg,#722ed1 0%,#b37feb 100%);border-radius:2px;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>设计说明</h3>
+  <div style="background:#f9f9f9;padding:16px;border-radius:8px;border-left:3px solid #1890ff;">
+    <p style="margin:0 0 12px 0;line-height:1.6;">
+      <strong>布局结构：</strong>采用仪表盘式布局，左侧为主指标区，右侧为快速操作区，底部为业务活跃度数据。
+    </p>
+    <p style="margin:0 0 12px 0;line-height:1.6;">
+      <strong>顶部指标：</strong>产品维度（产品总数、零件总数、规格数量、模块总数），每个卡片包含大数字、标签和趋势说明。
+    </p>
+    <p style="margin:0 0 12px 0;line-height:1.6;">
+      <strong>快速操作：</strong>4 个常用入口按钮，采用彩色按钮设计，视觉醒目。
+    </p>
+    <p style="margin:0;line-height:1.6;">
+      <strong>底部数据：</strong>本周业务活跃度（入库、出库、盘点），配合迷你进度条展示趋势。
+    </p>
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>确认设计</h3>
+      <p>这个设计方案符合我的需求，可以开始实现</p>
+    </div>
+  </div>
+  <div class="option" data-choice="modify" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content">
+      <h3>需要调整</h3>
+      <p>部分细节需要修改，我会说明具体调整内容</p>
+    </div>
+  </div>
+</div>
