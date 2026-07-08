@@ -30,11 +30,9 @@ export class DeleteWarehouseDto {
     warehouse_id: string;
 }
 
-export class ListWarehouseDto extends PageDto {
+export class ListWarehouseDto {
     @IsOptional()
-    @IsIn([1, 2], { message: '状态必须是1-正常,2-停用' })
-    @Type(() => Number)
-    status?: number;
+    name: string;
 }
 
 export class WarehouseIdDto {

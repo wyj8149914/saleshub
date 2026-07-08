@@ -110,7 +110,8 @@
     ExportOutlined,
     AuditOutlined,
     HistoryOutlined,
-    InfoCircleOutlined
+    InfoCircleOutlined,
+    HomeOutlined,
   } from '@ant-design/icons-vue'
   import { useAuthStore } from '@/stores/auth'
   import { APP_VERSION, CHANGELOG_EMBED_URL } from '@/constants/app'
@@ -144,6 +145,7 @@
       icon: DatabaseOutlined,
       children: [
         { path: '/inventory/items', label: '零件管理', icon: BlockOutlined },
+        { path: '/inventory/warehouse', label: '仓库管理', icon: HomeOutlined },
         { path: '/inventory/stock-in', label: '入库管理', icon: ImportOutlined },
         { path: '/inventory/stock-out', label: '出库管理', icon: ExportOutlined },
         { path: '/inventory/stock-check', label: '盘点管理', icon: AuditOutlined },
@@ -160,7 +162,8 @@
     StockOut: '出库管理',
     StockCheck: '盘点管理',
     StockHistory: '库存历史',
-    StockWarning: '库存预警'
+    StockWarning: '库存预警',
+    WarehouseList: '仓库管理'
   }
 
   // 默认展开「库存管理」，避免首次进入时用户看不到子项

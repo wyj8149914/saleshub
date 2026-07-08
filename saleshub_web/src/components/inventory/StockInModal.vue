@@ -9,23 +9,19 @@
         </a-radio-group>
       </a-form-item>
 
-      <!-- 单条入库：零件 / 规格 / 数量 同一行 -->
+      <!-- 单条入库 -->
       <template v-if="mode === 'single'">
+        <a-form-item label="仓库" name="warehouse_id" :rules="[{ required: true, message: '请选择仓库' }]">
+          <WarehouseSelect v-model="form.warehouse_id" />
+        </a-form-item>
+
         <a-row :gutter="12">
-          <a-col :span="showSpecSelect ? 9 : 12">
-            <a-form-item label="零件" name="item_id" :rules="[{ required: true, message: '请选择零件' }]">
-              <a-select v-model:value="form.item_id" placeholder="请选择零件" show-search :filter-option="filterOption"
-                :loading="itemsLoading" :options="itemOptions" @change="handleSingleItemChange" />
+          <a-col :span="12">
+            <a-form-item label="入库日期" name="date" :rules="[{ required: true, message: '请选择入库日期' }]">
+              <a-date-picker v-model:value="form.date" placeholder="请选择日期" style="width: 100%" :format="'YYYY-MM-DD'" />
             </a-form-item>
           </a-col>
-
-          <a-col v-if="showSpecSelect" :span="7">
-            <a-form-item label="规格" name="spec_id" :rules="[{ required: true, message: '请选择规格' }]">
-              <a-select v-model:value="form.spec_id" placeholder="请选择规格" :options="singleSpecOptions" />
-            </a-form-item>
-          </a-col>
-
-          <a-col :span="showSpecSelect ? 8 : 12">
+          <a-col :span="12">
             <a-form-item label="数量" name="quantity"
               :rules="[{ required: true, message: '请输入数量' }, { type: 'number', min: 1, message: '数量必须大于0' }]">
               <a-input-number v-model:value="form.quantity" placeholder="数量" :min="1" :precision="0"
@@ -33,10 +29,61 @@
             </a-form-item>
           </a-col>
         </a-row>
+
+        <a-row :gutter="12">
+          <a-col :span="showSpecSelect ? 12 : 24">
+            <a-form-item label="零件" name="item_id" :rules="[{ required: true, message: '请选择零件' }]">
+              <a-select v-model:value="form.item_id" placeholder="请选择零件" show-search :filter-option="filterOption"
+                :loading="itemsLoading" :options="itemOptions" @change="handleSingleItemChange" />
+            </a-form-item>
+          </a-col>
+
+          <a-col v-if="showSpecSelect" :span="12">
+            <a-form-item label="规格" name="spec_id" :rules="[{ required: true, message: '请选择规格' }]">
+              <a-select v-model:value="form.spec_id" placeholder="请选择规格" :options="singleSpecOptions" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-form-item label="入库照片" name="photo_id">
+          <a-upload v-model:file-list="fileList" :before-upload="beforeUpload" :custom-request="handleUpload"
+            :max-count="1" list-type="picture-card" :disabled="uploading">
+            <div v-if="fileList.length < 1 && !uploading">
+              <plus-outlined />
+              <div style="margin-top: 8px">上传照片</div>
+            </div>
+          </a-upload>
+        </a-form-item>
+
+        <a-form-item label="备注" name="remark">
+          <a-textarea v-model:value="form.remark" placeholder="请输入备注（可选）" :rows="3" :maxlength="500" show-count />
+        </a-form-item>
       </template>
 
-      <!-- 批量入库：动态行 -->
+      <!-- 批量入库 -->
       <template v-else>
+        <a-form-item label="仓库" name="warehouse_id" :rules="[{ required: true, message: '请选择仓库' }]">
+          <WarehouseSelect v-model="form.warehouse_id" />
+        </a-form-item>
+
+        <a-form-item label="入库日期" name="date" :rules="[{ required: true, message: '请选择入库日期' }]">
+          <a-date-picker v-model:value="form.date" placeholder="请选择日期" style="width: 100%" :format="'YYYY-MM-DD'" />
+        </a-form-item>
+
+        <a-form-item label="入库照片" name="photo_id">
+          <a-upload v-model:file-list="fileList" :before-upload="beforeUpload" :custom-request="handleUpload"
+            :max-count="1" list-type="picture-card" :disabled="uploading">
+            <div v-if="fileList.length < 1 && !uploading">
+              <plus-outlined />
+              <div style="margin-top: 8px">上传照片</div>
+            </div>
+          </a-upload>
+        </a-form-item>
+
+        <a-form-item label="备注" name="remark">
+          <a-textarea v-model:value="form.remark" placeholder="请输入备注（可选，本批次共用）" :rows="3" :maxlength="500" show-count />
+        </a-form-item>
+
         <div class="batch-header">
           <span class="batch-label">入库明细</span>
           <a-button type="link" size="small" @click="addRow">
@@ -60,28 +107,6 @@
           </a-button>
         </div>
       </template>
-
-      <a-row :gutter="12">
-        <a-col :span="12">
-          <a-form-item label="入库日期" name="date" :rules="[{ required: true, message: '请选择入库日期' }]">
-            <a-date-picker v-model:value="form.date" placeholder="请选择日期" style="width: 100%" :format="'YYYY-MM-DD'" />
-          </a-form-item>
-        </a-col>
-      </a-row>
-
-      <a-form-item label="入库照片" name="photo_id">
-        <a-upload v-model:file-list="fileList" :before-upload="beforeUpload" :custom-request="handleUpload"
-          :max-count="1" list-type="picture-card" :disabled="uploading">
-          <div v-if="fileList.length < 1 && !uploading">
-            <plus-outlined />
-            <div style="margin-top: 8px">上传照片</div>
-          </div>
-        </a-upload>
-      </a-form-item>
-
-      <a-form-item label="备注" name="remark">
-        <a-textarea v-model:value="form.remark" placeholder="请输入备注（可选，本批次共用）" :rows="3" :maxlength="500" show-count />
-      </a-form-item>
     </a-form>
   </a-modal>
 </template>
@@ -93,6 +118,7 @@
   import dayjs, { type Dayjs } from 'dayjs'
   import { inventoryApi, fileApi } from '@/api/inventory'
   import type { InventoryItem } from '@/types/inventory'
+  import WarehouseSelect from './WarehouseSelect.vue'
 
   interface Props {
     visible: boolean
@@ -115,6 +141,7 @@
   const fileList = ref<any[]>([])
 
   const form = reactive({
+    warehouse_id: '',
     item_id: '',
     spec_id: '',
     quantity: 1 as number,
@@ -271,6 +298,7 @@
       loading.value = true
       try {
         const res = await inventoryApi.stockIn({
+          warehouse_id: form.warehouse_id,
           item_id: form.item_id,
           spec_id: form.spec_id,
           quantity: form.quantity,
@@ -294,6 +322,14 @@
     }
 
     // 批量
+    if (!form.warehouse_id) {
+      message.warning('请选择仓库')
+      return
+    }
+    if (!form.date) {
+      message.warning('请选择入库日期')
+      return
+    }
     const err = validateBatch()
     if (err) {
       message.warning(err)
@@ -302,6 +338,7 @@
     loading.value = true
     try {
       const res = await inventoryApi.stockInBatch({
+        warehouse_id: form.warehouse_id,
         items: batchRows.value.map((r) => ({
           item_id: r.item_id,
           spec_id: r.spec_id,
@@ -331,6 +368,7 @@
 
   const resetForm = () => {
     mode.value = 'single'
+    form.warehouse_id = ''
     form.item_id = ''
     form.spec_id = ''
     form.quantity = 1

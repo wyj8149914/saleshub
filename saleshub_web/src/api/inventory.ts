@@ -6,6 +6,10 @@ import type {
     StockCheckBatchPayload, PaginatedData, Product, InventoryItem, ProductItemRelation, StockRecordListQuery,
     ItemTypeNode, ItemTypeListQuery, ItemTypeCreatePayload, ItemTypeUpdatePayload
 } from '@/types/inventory'
+import type {
+    Warehouse, WarehouseListQuery, WarehouseCreatePayload, WarehouseUpdatePayload, SpecWarehouseStock,
+    WarehouseStockItem
+} from '@/types/warehouse'
 
 // ============ 文件上传 API ============
 export const fileApi = {
@@ -124,6 +128,35 @@ export const inventoryApi = {
     },
     deleteItemType(type_id: string) {
         return http.post('/saleshub/inventory/deleteItemType', { type_id })
+    },
+
+    // ---- 仓库 ----
+    listWarehouses(query?: WarehouseListQuery) {
+        return http.get<Warehouse[]>('/saleshub/inventory/listWarehouses', { params: query || {} })
+    },
+
+    createWarehouse(payload: WarehouseCreatePayload) {
+        return http.post('/saleshub/inventory/createWarehouse', payload)
+    },
+
+    updateWarehouse(payload: WarehouseUpdatePayload) {
+        return http.post('/saleshub/inventory/updateWarehouse', payload)
+    },
+
+    deleteWarehouse(warehouse_id: string) {
+        return http.post('/saleshub/inventory/deleteWarehouse', { warehouse_id })
+    },
+
+    // 查询规格在各仓库的库存分布
+    listSpecWarehouseStock(spec_id: string) {
+        return http.get<SpecWarehouseStock[]>('/saleshub/inventory/listSpecWarehouseStock', { params: { spec_id } })
+    },
+
+    // 查询仓库库存明细
+    listWarehouseStock(warehouse_id: string) {
+        return http.get<WarehouseStockItem[]>('/saleshub/inventory/listWarehouseStock', {
+            params: { warehouse_id }
+        })
     }
 }
 

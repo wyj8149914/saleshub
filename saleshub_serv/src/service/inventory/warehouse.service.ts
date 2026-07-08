@@ -25,8 +25,6 @@ export class WarehouseService {
             if (dto.location) {
                 warehouse.location = dto.location;
             }
-            warehouse.status = 1;
-            warehouse.create_time = new Date();
 
             await this.warehouseRepository.save(warehouse);
             return { result: 0, msg: '创建成功' };
@@ -107,25 +105,14 @@ export class WarehouseService {
                     'w.warehouse_id AS warehouse_id',
                     'w.name AS name',
                     'w.location AS location',
-                    'w.status AS status',
-                    'to_char(w.create_time, \'YYYY-MM-DD HH24:MI:SS\') AS create_time',
-                    'to_char(w.update_time, \'YYYY-MM-DD HH24:MI:SS\') AS update_time',
                 ])
-                .where('1=1');
-
-            if (dto.status) {
-                queryBuilder.andWhere('w.status = :status', { status: dto.status });
+                .where('w.status = 1');
+            if (dto.name) {
+                queryBuilder.andWhere('w.name LIKE :name', { name: `%${dto.name}%` });
             }
+            const items = await queryBuilder.getRawMany();
 
-            const start = (dto.pageIndex - 1) * dto.pageSize;
-            const total = await queryBuilder.getCount();
-            const items = await queryBuilder
-                .orderBy('w.create_time', 'DESC')
-                .limit(dto.pageSize)
-                .offset(start)
-                .getRawMany();
-
-            return { result: 0, msg: 'success', datas: { total, items } };
+            return { result: 0, msg: 'success', datas: items };
         } catch (error) {
             this.logger.error('查询仓库列表失败:', error);
             return { result: 1, msg: '查询失败' };

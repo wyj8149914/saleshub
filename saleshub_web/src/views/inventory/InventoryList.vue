@@ -134,6 +134,7 @@
           <template v-else-if="column.key === 'actions'">
             <div class="actions-cell" @click.stop>
               <a-space :size="4">
+                <a-button type="link" size="small" @click="handleDetail(record)">详情</a-button>
                 <a-button type="link" size="small" @click="handleEdit(record)">编辑</a-button>
                 <a-popconfirm title="确定要删除此零件吗？" ok-text="删除" cancel-text="取消" @confirm="handleDelete(record)"
                   placement="left">
@@ -147,6 +148,7 @@
     </a-card>
 
     <InventoryItemForm v-model:visible="formVisible" :item="currentItem" @success="handleFormSuccess" />
+    <InventoryItemDetail v-model:visible="detailVisible" :item="detailItem" />
     <ItemTypeManager v-model:visible="typeManagerVisible" @success="loadTypes" />
   </div>
 </template>
@@ -158,6 +160,7 @@
   import { inventoryApi } from '@/api/inventory'
   import type { InventoryItem, ItemSpec, ItemTypeNode } from '@/types/inventory'
   import InventoryItemForm from '@/components/inventory/InventoryItemForm.vue'
+  import InventoryItemDetail from '@/components/inventory/InventoryItemDetail.vue'
   import ItemTypeManager from '@/components/inventory/ItemTypeManager.vue'
 
   const columns = [
@@ -185,7 +188,9 @@
   const items = ref<InventoryItem[]>([])
   const formVisible = ref(false)
   const typeManagerVisible = ref(false)
+  const detailVisible = ref(false)
   const currentItem = ref<InventoryItem | null>(null)
+  const detailItem = ref<InventoryItem | null>(null)
 
   // 类型筛选相关
   const typesLoading = ref(false)
@@ -322,6 +327,11 @@
   const handleEdit = (item: InventoryItem) => {
     currentItem.value = item
     formVisible.value = true
+  }
+
+  const handleDetail = (item: InventoryItem) => {
+    detailItem.value = item
+    detailVisible.value = true
   }
 
   const handleDelete = async (item: InventoryItem) => {

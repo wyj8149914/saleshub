@@ -1,0 +1,331 @@
+{
+    "/saleshub/inventory/listWarehouses": {
+        "method": "GET",
+        "summary": "查询仓库列表",
+        "description": "分页查询仓库列表。支持按 status 筛选（1-正常，2-停用）；不传 status 时返回所有状态。按 create_time 降序排列。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "pageIndex": {
+                    "type": "number",
+                    "description": "页码，从 1 开始（Query 参数）"
+                },
+                "pageSize": {
+                    "type": "number",
+                    "description": "每页条数（Query 参数）"
+                },
+                "status": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "description": "仓库状态（Query 参数，可选）：1-正常，2-停用"
+                }
+            },
+            "required": [
+                "pageIndex",
+                "pageSize"
+            ]
+        },
+        "example_request": {
+            "pageIndex": 1,
+            "pageSize": 10,
+            "status": 1
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，成功时为 success"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "分页结果",
+                    "properties": {
+                        "total": {
+                            "type": "number",
+                            "description": "符合条件的总条数"
+                        },
+                        "items": {
+                            "type": "array",
+                            "description": "仓库列表",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "warehouse_id": {
+                                        "type": "string",
+                                        "description": "仓库主键 UUID（无连字符，32 位）"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "仓库名称"
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "description": "仓库位置，可能为 null"
+                                    },
+                                    "status": {
+                                        "type": "number",
+                                        "enum": [
+                                            1,
+                                            2
+                                        ],
+                                        "description": "状态：1-正常，2-停用"
+                                    },
+                                    "create_time": {
+                                        "type": "string",
+                                        "description": "创建时间，格式 YYYY-MM-DD HH24:MI:SS"
+                                    },
+                                    "update_time": {
+                                        "type": "string",
+                                        "description": "修改时间，格式 YYYY-MM-DD HH24:MI:SS，可能为 null"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/createWarehouse": {
+        "method": "POST",
+        "summary": "创建仓库",
+        "description": "创建仓库记录。warehouse_id 由 UUID v7 去连字符生成；status 默认 1（正常）；location 可选。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "仓库名称，最长 100 字符"
+                },
+                "location": {
+                    "type": "string",
+                    "description": "仓库位置（可选，最长 200 字符）"
+                }
+            },
+            "required": [
+                "name"
+            ]
+        },
+        "example_request": {
+            "name": "主仓库",
+            "location": "A栋1层"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-创建失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「创建成功」「创建失败」"
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/updateWarehouse": {
+        "method": "POST",
+        "summary": "更新仓库",
+        "description": "更新仓库信息。仅当 warehouse_id 对应仓库存在且 status=1 时可更新。name 为必填（直接覆盖）；location 传入时更新，不传则不修改。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "warehouse_id": {
+                    "type": "string",
+                    "description": "仓库主键 UUID（无连字符，32 位）"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "仓库名称，最长 100 字符"
+                },
+                "location": {
+                    "type": "string",
+                    "description": "仓库位置（可选，最长 200 字符）"
+                }
+            },
+            "required": [
+                "warehouse_id",
+                "name"
+            ]
+        },
+        "example_request": {
+            "warehouse_id": "0194b1c0a2d34e5f6789012345678abc",
+            "name": "主仓库（更新）",
+            "location": "A栋2层"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-仓库不存在/更新失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「更新成功」「仓库不存在」「更新失败」"
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/deleteWarehouse": {
+        "method": "POST",
+        "summary": "删除仓库",
+        "description": "软删除仓库（将 status 置为 2）。校验规则：① 仓库须存在且 status=1；② 该仓库在 item_spec_warehouse 中不存在 current_stock > 0 的库存明细，否则无法删除。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "warehouse_id": {
+                    "type": "string",
+                    "description": "仓库主键 UUID（无连字符，32 位）"
+                }
+            },
+            "required": [
+                "warehouse_id"
+            ]
+        },
+        "example_request": {
+            "warehouse_id": "0194b1c0a2d34e5f6789012345678abc"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-仓库不存在/该仓库存在库存无法删除/删除失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「删除成功」「仓库不存在」「该仓库存在库存，无法删除」「删除失败」"
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/assignSpecWarehouse": {
+        "method": "POST",
+        "summary": "分配零件规格到仓库",
+        "description": "将指定规格的库存数量分配到指定仓库，主要用于历史数据初始化。校验规则：① 规格须存在（inventory_item_spec.status=1）；② 仓库须存在（warehouse.status=1）；③ 分配数量 quantity 不得超过该规格总库存 spec.current_stock；④ 分配数量不得超过可分配数量（总库存 - 该规格在各仓库已分配数量之和）。若 item_spec_warehouse 中已存在该 spec_id + warehouse_id 的正常记录，则在原 current_stock 上累加；否则新建记录（id 为 UUID v7 去连字符）。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "spec_id": {
+                    "type": "string",
+                    "description": "规格主键 UUID（inventory_item_spec.spec_id，无连字符，32 位）"
+                },
+                "warehouse_id": {
+                    "type": "string",
+                    "description": "仓库主键 UUID（无连字符，32 位）"
+                },
+                "quantity": {
+                    "type": "number",
+                    "description": "分配数量，正整数（最小 1）"
+                }
+            },
+            "required": [
+                "spec_id",
+                "warehouse_id",
+                "quantity"
+            ]
+        },
+        "example_request": {
+            "spec_id": "0194b1d0e3f45a6b7890123456789def",
+            "warehouse_id": "0194b1c0a2d34e5f6789012345678abc",
+            "quantity": 50
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-规格不存在/仓库不存在/分配数量超过总库存/可分配数量不足/分配失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息；超总库存时返回「分配数量(N)超过该规格总库存(M)」；可分配不足时返回「可分配数量不足(总库存:X, 已分配:Y, 可分配:Z)」"
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/listSpecWarehouseStock": {
+        "method": "GET",
+        "summary": "查询规格库存分布",
+        "description": "查询指定规格在各仓库的库存分布明细。校验规格须存在（inventory_item_spec.status=1）。LEFT JOIN warehouse 表获取仓库名称与位置。仅返回 item_spec_warehouse.status=1 的记录，按 create_time 升序。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "spec_id": {
+                    "type": "string",
+                    "description": "规格主键 UUID（Query 参数，inventory_item_spec.spec_id，无连字符，32 位）"
+                }
+            },
+            "required": [
+                "spec_id"
+            ]
+        },
+        "example_request": {
+            "spec_id": "0194b1d0e3f45a6b7890123456789def"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-规格不存在/查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，成功时为 success"
+                },
+                "datas": {
+                    "type": "array",
+                    "description": "该规格在各仓库的库存分布列表",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "description": "库存明细主键 UUID（item_spec_warehouse.id，无连字符，32 位）"
+                            },
+                            "warehouse_id": {
+                                "type": "string",
+                                "description": "仓库主键 UUID"
+                            },
+                            "warehouse_name": {
+                                "type": "string",
+                                "description": "仓库名称"
+                            },
+                            "warehouse_location": {
+                                "type": "string",
+                                "description": "仓库位置，可能为 null"
+                            },
+                            "current_stock": {
+                                "type": "number",
+                                "description": "该规格在该仓库的当前库存数量"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

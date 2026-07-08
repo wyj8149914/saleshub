@@ -204,6 +204,8 @@ export interface StockHistoryRecord {
 export interface StockInRecord {
     record_id: string
     record_no: string
+    warehouse_id: string
+    warehouse_name: string
     date: string
     quantity: number
     remark: string | null
@@ -220,6 +222,8 @@ export interface StockInRecord {
 export interface StockOutRecord {
     record_id: string
     record_no: string
+    warehouse_id: string
+    warehouse_name: string
     date: string
     quantity: number
     remark: string | null
@@ -242,6 +246,7 @@ export interface StockRecordListQuery {
 
 // ============ 出入库 Payload ============
 export interface StockInPayload {
+    warehouse_id: string
     item_id: string
     spec_id: string
     quantity: number
@@ -257,6 +262,7 @@ export interface StockInBatchItem {
 }
 
 export interface StockInBatchPayload {
+    warehouse_id: string
     items: StockInBatchItem[]
     date: string
     photo_id: string
@@ -264,6 +270,7 @@ export interface StockInBatchPayload {
 }
 
 export interface StockOutPayload {
+    warehouse_id: string
     item_id: string
     spec_id: string
     quantity: number
@@ -278,12 +285,14 @@ export interface StockOutBatchItem {
 }
 
 export interface StockOutBatchPayload {
+    warehouse_id: string
     items: StockOutBatchItem[]
     date: string
     remark?: string
 }
 
 export interface StockOutByProductPayload {
+    warehouse_id: string
     product_id: string
     quantity: number
     date: string
@@ -304,6 +313,7 @@ export interface StockCheckRecord {
 }
 
 export interface StockCheckPayload {
+    warehouse_id: string
     item_id: string
     spec_id: string
     after_stock: number
@@ -318,6 +328,7 @@ export interface StockCheckBatchItem {
 }
 
 export interface StockCheckBatchPayload {
+    warehouse_id: string
     items: StockCheckBatchItem[]
     date: string
     remark?: string

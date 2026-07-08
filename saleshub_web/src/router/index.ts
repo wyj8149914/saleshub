@@ -54,6 +54,12 @@ const routes: RouteRecordRaw[] = [
                 name: 'StockHistory',
                 component: () => import('@/views/inventory/StockHistory.vue'),
                 meta: { title: '库存历史' }
+            },
+            {
+                path: 'warehouse',
+                name: 'WarehouseList',
+                component: () => import('@/views/inventory/WarehouseList.vue'),
+                meta: { title: '仓库管理' }
             }
         ]
     },

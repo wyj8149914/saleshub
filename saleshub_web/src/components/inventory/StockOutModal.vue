@@ -2,6 +2,11 @@
   <a-modal :open="visible" title="出库" :confirm-loading="loading" :mask-closable="false" width="720px" ok-text="提交出库"
     cancel-text="取消" @ok="handleSubmit" @cancel="handleCancel">
     <a-form ref="formRef" :model="form" layout="vertical">
+      <!-- 仓库选择（所有模式共用） -->
+      <a-form-item label="仓库" name="warehouse_id" :rules="[{ required: true, message: '请选择仓库' }]">
+        <WarehouseSelect v-model="form.warehouse_id" @change="handleWarehouseChange" />
+      </a-form-item>
+
       <a-form-item>
         <a-radio-group v-model:value="mode" button-style="solid">
           <a-radio-button value="item">按零件出库</a-radio-button>
@@ -24,10 +29,15 @@
             :options="itemOptions" @change="(v: string) => handleRowItemChange(idx, v)" />
 
           <a-select v-if="needsSpec(row.item_id)" class="row-spec" :value="row.spec_id" placeholder="规格"
-            :options="specOptionsFor(row.item_id)" @change="(v: string) => (row.spec_id = v)" />
+            :options="specOptionsFor(row.item_id)" @change="(v: string) => handleRowSpecChange(idx, v)" />
 
           <a-input-number class="row-qty" :value="row.quantity" placeholder="数量" :min="1" :precision="0"
+            :max="row.availableStock ?? undefined"
             @change="(v: number | null) => (row.quantity = v ?? 1)" />
+
+          <span v-if="row.availableStock !== null && row.availableStock !== undefined" class="row-stock">
+            库存: <span class="stock-num">{{ row.availableStock }}</span>
+          </span>
 
           <a-button class="row-del" type="link" danger :disabled="batchRows.length === 1" @click="removeRow(idx)">
             <DeleteOutlined />
@@ -81,7 +91,7 @@
               </template>
 
               <template v-else-if="column.key === 'stock'">
-                <span :class="{ 'text-warn': record.needed > record.current_stock }">{{ record.current_stock }}</span>
+                <span :class="{ 'text-warn': record.needed > record.warehouseStock }">{{ record.warehouseStock ?? '-' }}</span>
               </template>
             </template>
           </a-table>
@@ -110,6 +120,7 @@
   import dayjs, { type Dayjs } from 'dayjs'
   import { inventoryApi } from '@/api/inventory'
   import type { InventoryItem, Product, ProductItemRelation } from '@/types/inventory'
+  import WarehouseSelect from './WarehouseSelect.vue'
 
   interface Props {
     visible: boolean
@@ -132,7 +143,11 @@
   const products = ref<Product[]>([])
   const bomItems = ref<ProductItemRelation[]>([])
 
+  // 仓库库存缓存: Map<spec_id, Map<warehouse_id, stock>>
+  const warehousesWithStock = ref<Map<string, Map<string, number>>>(new Map())
+
   const form = reactive({
+    warehouse_id: '',
     product_id: '',
     quantity: 1 as number,
     date: dayjs() as Dayjs,
@@ -143,8 +158,9 @@
     item_id: string
     spec_id: string
     quantity: number
+    availableStock: number | null
   }
-  const batchRows = ref<BatchRow[]>([{ item_id: '', spec_id: '', quantity: 1 }])
+  const batchRows = ref<BatchRow[]>([{ item_id: '', spec_id: '', quantity: 1, availableStock: null }])
 
   // ---- 选项 ----
   const itemOptions = computed(() =>
@@ -161,10 +177,20 @@
   function specOptionsFor(itemId: string) {
     const item = items.value.find((i) => i.item_id === itemId)
     if (!item?.specs) return []
-    return item.specs.map((s) => ({
-      label: `${s.spec || '默认'} (库存: ${s.current_stock})`,
-      value: s.spec_id
-    }))
+    return item.specs.map((s) => {
+      let stockLabel = ''
+      if (form.warehouse_id) {
+        const stockMap = warehousesWithStock.value.get(s.spec_id)
+        const stock = stockMap?.get(form.warehouse_id)
+        stockLabel = stock !== undefined ? `库存: ${stock}` : '库存: 0'
+      } else {
+        stockLabel = `库存: ${s.current_stock}`
+      }
+      return {
+        label: `${s.spec || '默认'} (${stockLabel})`,
+        value: s.spec_id
+      }
+    })
   }
 
   function needsSpec(itemId: string) {
@@ -173,9 +199,55 @@
     return !(item.specs.length === 1 && item.specs[0]?.spec === '')
   }
 
+  // ---- 仓库切换 ----
+  const handleWarehouseChange = async () => {
+    // 清空所有行的库存显示
+    for (const row of batchRows.value) {
+      row.availableStock = null
+    }
+    // 重新加载当前有规格的行的库存
+    for (const row of batchRows.value) {
+      if (row.spec_id) {
+        await loadSpecWarehouseStock(row.spec_id)
+        updateRowAvailableStock(row)
+      }
+    }
+    // 更新产品BOM的仓库库存
+    if (mode.value === 'product' && form.product_id) {
+      await loadBomWarehouseStock()
+    }
+  }
+
+  // 查询某规格在各仓库的库存
+  const loadSpecWarehouseStock = async (specId: string) => {
+    if (!specId || warehousesWithStock.value.has(specId)) return
+    try {
+      const res = await inventoryApi.listSpecWarehouseStock(specId)
+      if (res.result === 0) {
+        const stockMap = new Map<string, number>()
+        for (const item of (res.datas || [])) {
+          stockMap.set(item.warehouse_id, item.current_stock)
+        }
+        warehousesWithStock.value.set(specId, stockMap)
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // 更新单行的可用库存
+  const updateRowAvailableStock = (row: BatchRow) => {
+    if (row.spec_id && form.warehouse_id) {
+      const stockMap = warehousesWithStock.value.get(row.spec_id)
+      row.availableStock = stockMap?.get(form.warehouse_id) ?? 0
+    } else {
+      row.availableStock = null
+    }
+  }
+
   // ---- 按零件出库：行操作 ----
   const addRow = () => {
-    batchRows.value.push({ item_id: '', spec_id: '', quantity: 1 })
+    batchRows.value.push({ item_id: '', spec_id: '', quantity: 1, availableStock: null })
   }
 
   const removeRow = (idx: number) => {
@@ -187,10 +259,25 @@
     if (!row) return
     row.item_id = value
     row.spec_id = ''
+    row.availableStock = null
     const item = items.value.find((i) => i.item_id === value)
     const defaultSpec = item?.specs?.[0]
     if (item?.specs?.length === 1 && defaultSpec?.spec === '') {
       row.spec_id = defaultSpec.spec_id
+      if (form.warehouse_id) {
+        loadSpecWarehouseStock(defaultSpec.spec_id).then(() => updateRowAvailableStock(row))
+      }
+    }
+  }
+
+  const handleRowSpecChange = async (idx: number, specId: string) => {
+    const row = batchRows.value[idx]
+    if (!row) return
+    row.spec_id = specId
+    row.availableStock = null
+    if (specId && form.warehouse_id) {
+      await loadSpecWarehouseStock(specId)
+      updateRowAvailableStock(row)
     }
   }
 
@@ -202,10 +289,21 @@
       const res = await inventoryApi.listProductItems(productId)
       if (res.result === 0) {
         bomItems.value = res.datas.items
+        // 如果已选仓库，加载仓库库存
+        if (form.warehouse_id) {
+          await loadBomWarehouseStock()
+        }
       }
     } catch (error) {
       console.error('加载产品零件清单失败:', error)
     }
+  }
+
+  // 加载BOM中所有规格的仓库库存
+  const loadBomWarehouseStock = async () => {
+    if (!form.warehouse_id || !bomItems.value.length) return
+    const specIds = bomItems.value.map(item => item.spec_id).filter(Boolean)
+    await Promise.all(specIds.map(specId => loadSpecWarehouseStock(specId)))
   }
 
   const bomColumns = [
@@ -217,10 +315,20 @@
   ]
 
   const bomView = computed(() =>
-    bomItems.value.map((r) => ({
-      ...r,
-      needed: (form.quantity || 0) * r.quantity_per_product
-    }))
+    bomItems.value.map((r) => {
+      let warehouseStock: number | null = null
+      if (form.warehouse_id && r.spec_id) {
+        const stockMap = warehousesWithStock.value.get(r.spec_id)
+        warehouseStock = stockMap?.get(form.warehouse_id) ?? 0
+      } else {
+        warehouseStock = r.current_stock
+      }
+      return {
+        ...r,
+        needed: (form.quantity || 0) * r.quantity_per_product,
+        warehouseStock
+      }
+    })
   )
 
   // ---- 数据加载 ----
@@ -256,12 +364,16 @@
   const validateBatch = (): string | null => {
     const rows = batchRows.value
     if (rows.length === 0) return '请至少添加一条出库明细'
+    if (!form.warehouse_id) return '请选择仓库'
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
       if (!row) continue
       if (!row.item_id) return `第 ${i + 1} 行未选择零件`
       if (needsSpec(row.item_id) && !row.spec_id) return `第 ${i + 1} 行未选择规格`
       if (!row.quantity || row.quantity < 1) return `第 ${i + 1} 行数量无效`
+      if (row.availableStock !== null && row.quantity > (row.availableStock ?? 0)) {
+        return `第 ${i + 1} 行出库数量超过可用库存`
+      }
     }
     const seen = new Set<string>()
     for (const row of rows) {
@@ -287,8 +399,12 @@
         let res
         if (batchRows.value.length === 1) {
           const r = batchRows.value[0]
-          if (!r) return
+          if (!r) {
+            loading.value = false
+            return
+          }
           res = await inventoryApi.stockOut({
+            warehouse_id: form.warehouse_id,
             item_id: r.item_id,
             spec_id: r.spec_id,
             quantity: r.quantity,
@@ -297,6 +413,7 @@
           })
         } else {
           res = await inventoryApi.stockOutBatch({
+            warehouse_id: form.warehouse_id,
             items: batchRows.value.map((r) => ({
               item_id: r.item_id,
               spec_id: r.spec_id,
@@ -327,6 +444,10 @@
     } catch {
       return
     }
+    if (!form.warehouse_id) {
+      message.warning('请选择仓库')
+      return
+    }
     if (!bomItems.value.length) {
       message.warning('该产品未配置零件')
       return
@@ -334,6 +455,7 @@
     loading.value = true
     try {
       const res = await inventoryApi.stockOutByProduct({
+        warehouse_id: form.warehouse_id,
         product_id: form.product_id,
         quantity: form.quantity,
         date: dateStr,
@@ -359,12 +481,14 @@
 
   const resetForm = () => {
     mode.value = 'item'
+    form.warehouse_id = ''
     form.product_id = ''
     form.quantity = 1
     form.date = dayjs()
     form.remark = ''
-    batchRows.value = [{ item_id: '', spec_id: '', quantity: 1 }]
+    batchRows.value = [{ item_id: '', spec_id: '', quantity: 1, availableStock: null }]
     bomItems.value = []
+    warehousesWithStock.value.clear()
     formRef.value?.clearValidate()
   }
 
@@ -414,6 +538,18 @@
   .row-qty {
     width: 110px;
     flex-shrink: 0;
+  }
+
+  .row-stock {
+    flex-shrink: 0;
+    font-size: 13px;
+    color: #71717a;
+    white-space: nowrap;
+  }
+
+  .stock-num {
+    font-weight: 600;
+    color: #16a34a;
   }
 
   .row-del {
