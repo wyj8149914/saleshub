@@ -1,6 +1,6 @@
 <template>
-  <!-- 产品零件关联管理弹窗：确定保存全量覆盖，取消不保存 -->
-  <a-modal :open="visible" title="管理产品零件" :width="960" :confirm-loading="saving" :mask-closable="false"
+  <!-- 产品零件关联管理弹窗 -->
+  <a-modal :open="visible" title="管理产品模块和零件" :width="1080" :confirm-loading="saving" :mask-closable="false"
     wrap-class-name="product-items-modal" @ok="handleSave" @cancel="handleCancel">
     <!-- 当前操作的产品摘要 -->
     <div v-if="product" class="product-info">
@@ -8,71 +8,172 @@
       <span class="product-code">{{ product.code }}</span>
     </div>
 
-    <!-- 添加面板：搜索未关联的「零件+规格」，设置单台数量与备注后加入列表 -->
-    <div class="add-panel">
-      <a-select v-model:value="addForm.selectedKey" placeholder="搜索零件或规格" show-search allow-clear
-        :filter-option="filterItem" :options="availableOptions" :loading="loadingAvailable"
-        :field-names="{ label: 'label', value: 'value' }" class="add-select" />
-      <a-input-number v-model:value="addForm.quantity_per_product" :min="1" :precision="0" :max="9999"
-        class="add-quantity">
-        <template #addonBefore>单台数量</template>
-      </a-input-number>
-      <a-input v-model:value="addForm.remark" placeholder="备注（可选，最长 100 字符）" :maxlength="100" class="add-remark" />
-      <a-button type="primary" class="add-btn" :disabled="!addForm.selectedKey" @click="handleAdd">
-        添加
-      </a-button>
+    <!-- 初始状态：选择管理方式 -->
+    <div v-if="mode === 'none'" class="mode-select">
+      <div class="mode-hint">请选择零件管理方式（选择后不可更改）</div>
+      <div class="mode-cards">
+        <div class="mode-card" @click="handleSelectMode('direct')">
+          <div class="mode-icon">📦</div>
+          <div class="mode-title">直接关联零件</div>
+          <div class="mode-desc">直接为产品添加零件，适合零件较少的产品</div>
+        </div>
+        <div class="mode-card" @click="handleSelectMode('module')">
+          <div class="mode-icon">📑</div>
+          <div class="mode-title">模块化管理</div>
+          <div class="mode-desc">通过模块分组管理零件，适合零件较多、结构复杂的产品</div>
+        </div>
+      </div>
     </div>
 
-    <!-- 已关联零件列表；row-key 使用 item_id+spec_id 保证同零件不同规格行唯一 -->
-    <a-table :columns="columns" :data-source="selectedItems" :loading="loading" :pagination="false"
-      :row-key="(record: SelectedItem) => `${record.item_id}_${record.spec_id}`" size="middle" class="items-table"
-      :locale="{ emptyText: '暂未关联任何零件，使用上方搜索框添加' }">
-      <template #bodyCell="{ column, record }">
-        <!-- 零件类型标签 -->
-        <template v-if="column.key === 'item_type'">
-          <span class="cell-type">{{ record.type_name || '-' }}</span>
-        </template>
+    <!-- 直接关联模式 -->
+    <div v-else-if="mode === 'direct'" class="direct-mode">
+      <!-- 添加面板 -->
+      <div class="add-panel">
+        <a-select v-model:value="addForm.parentTypeId" placeholder="一级类型" allow-clear :loading="typesLoading"
+          class="add-type" @change="handleParentTypeChange">
+          <a-select-option v-for="t in parentTypes" :key="t.type_id" :value="t.type_id">
+            {{ t.type_name }}
+          </a-select-option>
+        </a-select>
 
-        <template v-else-if="column.key === 'item_name'">
-          <span class="cell-name">{{ record.item_name }}</span>
-        </template>
+        <a-select v-model:value="addForm.childTypeId" placeholder="二级类型" allow-clear :loading="typesLoading"
+          class="add-type" @change="handleChildTypeChange">
+          <a-select-option v-for="t in childTypes" :key="t.type_id" :value="t.type_id">
+            {{ t.type_name }}
+          </a-select-option>
+        </a-select>
 
-        <template v-else-if="column.key === 'item_code'">
-          <span class="cell-code">{{ record.item_code }}</span>
-        </template>
+        <a-select v-model:value="addForm.selectedItemKey" placeholder="选择零件" show-search :filter-option="filterOption"
+          :loading="loadingAvailable" :options="itemOptions" class="add-item" @change="handleItemChange" />
 
-        <template v-else-if="column.key === 'spec'">
-          <span class="cell-spec">{{ record.spec || '-' }}</span>
-        </template>
+        <a-select v-if="showSpecSelect" v-model:value="addForm.selectedSpecId" placeholder="选择规格" :options="specOptions"
+          class="add-spec" />
 
-        <!-- 库存低于预警值时标红 -->
-        <template v-else-if="column.key === 'stock'">
-          <span class="stock-num" :class="{ 'text-danger': record.current_stock <= record.warn_stock }">
-            {{ record.current_stock }}
-          </span>
-        </template>
+        <a-input-number v-model:value="addForm.quantity_per_product" :min="1" :precision="0" :max="9999"
+          class="add-quantity">
+          <template #addonBefore>单台数量</template>
+        </a-input-number>
 
-        <template v-else-if="column.key === 'quantity_per_product'">
-          <a-input-number v-model:value="record.quantity_per_product" :min="1" :precision="0" :max="9999" size="small"
-            class="qty-input" />
-        </template>
+        <a-input v-model:value="addForm.remark" placeholder="备注（可选）" :maxlength="100" class="add-remark" />
 
-        <template v-else-if="column.key === 'remark'">
-          <a-input v-model:value="record.remark" placeholder="可选备注" :maxlength="100" size="small"
-            class="remark-input" />
-        </template>
+        <a-button type="primary" class="add-btn" :disabled="!canAdd" @click="handleAdd">
+          添加
+        </a-button>
+      </div>
 
-        <template v-else-if="column.key === 'actions'">
-          <a-button type="link" size="small" danger @click="handleRemove(record)">
-            移除
-          </a-button>
+      <!-- 已关联零件列表 -->
+      <a-table :columns="columns" :data-source="directItems" :loading="loading" :pagination="false"
+        :row-key="(record: SelectedItem) => `${record.item_id}_${record.spec_id}`" size="middle" class="items-table"
+        :locale="{ emptyText: '暂未关联任何零件，使用上方搜索框添加' }">
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'item_type'">
+            <span class="cell-type">{{ record.type_name || '-' }}</span>
+          </template>
+          <template v-else-if="column.key === 'item_name'">
+            <span class="cell-name">{{ record.item_name }}</span>
+          </template>
+          <template v-else-if="column.key === 'item_code'">
+            <span class="cell-code">{{ record.item_code }}</span>
+          </template>
+          <template v-else-if="column.key === 'spec'">
+            <span class="cell-spec">{{ record.spec || '-' }}</span>
+          </template>
+          <template v-else-if="column.key === 'stock'">
+            <span class="stock-num" :class="{ 'text-danger': record.current_stock <= record.warn_stock }">
+              {{ record.current_stock }}
+            </span>
+          </template>
+          <template v-else-if="column.key === 'quantity_per_product'">
+            <a-input-number v-model:value="record.quantity_per_product" :min="1" :precision="0" :max="9999" size="small"
+              class="qty-input" />
+          </template>
+          <template v-else-if="column.key === 'remark'">
+            <a-input v-model:value="record.remark" placeholder="可选备注" :maxlength="100" size="small"
+              class="remark-input" />
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <a-button type="link" size="small" danger @click="handleRemoveDirect(record)">
+              移除
+            </a-button>
+          </template>
         </template>
-      </template>
-    </a-table>
+      </a-table>
 
-    <div class="footer-hint">
-      共 {{ selectedItems.length }} 个零件关联；保存时将全量覆盖该产品的关联列表
+      <div class="footer-hint">
+        共 {{ directItems.length }} 个零件关联；保存时将全量覆盖该产品的关联列表
+      </div>
     </div>
+
+    <!-- 模块化管理模式 -->
+    <div v-else-if="mode === 'module'" class="module-mode">
+      <!-- 模块操作栏 -->
+      <div class="module-toolbar">
+        <a-button type="primary" @click="showCreateModule">
+          <template #icon>
+            <PlusOutlined />
+          </template>
+          创建模块
+        </a-button>
+      </div>
+
+      <!-- 模块列表 -->
+      <div v-if="modules.length > 0" class="module-list">
+        <a-collapse v-model:activeKey="activeModuleKeys">
+          <a-collapse-panel v-for="module in modules" :key="module.module_id">
+            <template #header>
+              <div class="module-header">
+                <span class="module-name">{{ module.name }}</span>
+                <span class="module-count">{{ module.items?.length || 0 }} 个零件</span>
+              </div>
+            </template>
+            <template #extra>
+              <a-space @click.stop>
+                <a-button type="link" size="small" @click="showEditModule(module)">编辑</a-button>
+                <a-popconfirm title="确定删除该模块吗？" :disabled="!!module.items?.length"
+                  @confirm="handleDeleteModule(module.module_id)">
+                  <a-button type="link" size="small" danger :disabled="!!module.items?.length">
+                    删除
+                  </a-button>
+                  <template v-if="module.items?.length" #title>
+                    <span class="delete-hint">模块下存在零件，请先移除零件后再删除</span>
+                  </template>
+                </a-popconfirm>
+              </a-space>
+            </template>
+
+            <!-- 模块内零件管理 -->
+            <div class="module-items-panel">
+              <ModuleItemsEditor :module-id="module.module_id" :initial-items="module.items || []"
+                :available-items="availableItems" :all-types="allTypes" />
+            </div>
+          </a-collapse-panel>
+        </a-collapse>
+      </div>
+
+      <a-empty v-else description="暂无模块，点击上方按钮创建" />
+
+      <div class="footer-hint">
+        共 {{ modules.length }} 个模块，{{ totalModuleItems }} 个零件
+      </div>
+    </div>
+
+    <a-skeleton avatar :paragraph="{ rows: 4 }" v-else-if="mode === 'loading'" />
+  </a-modal>
+
+  <!-- 创建/编辑模块弹窗 -->
+  <a-modal v-model:open="moduleModalVisible" :title="editingModule ? '编辑模块' : '创建模块'" :confirm-loading="moduleSaving"
+    @ok="handleModuleSubmit" @cancel="moduleModalVisible = false">
+    <a-form :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
+      <a-form-item label="模块名称" required>
+        <a-input v-model:value="moduleForm.name" placeholder="请输入模块名称" :maxlength="100" />
+      </a-form-item>
+      <a-form-item label="排序号">
+        <a-input-number v-model:value="moduleForm.sort_order" :min="0" style="width: 100%" />
+      </a-form-item>
+      <a-form-item label="备注">
+        <a-textarea v-model:value="moduleForm.remark" placeholder="可选，最长500字符" :maxlength="500" :rows="3" />
+      </a-form-item>
+    </a-form>
   </a-modal>
 </template>
 
@@ -80,36 +181,49 @@
   /**
    * ProductItemsManager — 产品零件关联管理弹窗
    *
-   * 职责：为指定产品维护「零件 + 规格」关联列表，支持增删改单台用量与备注，
-   * 保存时以全量覆盖方式提交到后端（非增量 PATCH）。
+   * 支持两种管理模式：
+   * 1. 直接关联模式：直接为产品添加零件
+   * 2. 模块化管理模式：通过模块分组管理零件
    *
-   * 唯一性：同一产品下，item_id + spec_id 组合唯一，不可重复关联。
+   * 模式互斥：产品只能选择一种方式，选定后不可更改（除非清空所有数据）
    */
   import { ref, reactive, computed, watch } from 'vue'
   import { message } from 'ant-design-vue'
+  import { PlusOutlined } from '@ant-design/icons-vue'
   import { inventoryApi } from '@/api/inventory'
-  import type { Product, InventoryItem } from '@/types/inventory'
+  import type { Product, InventoryItem, ItemTypeNode, ProductModule, ProductItemRelation } from '@/types/inventory'
+  import ModuleItemsEditor from './ModuleItemsEditor.vue'
 
-  /** 弹窗显隐，由父组件 v-model:visible 控制 */
+  /** 弹窗显隐 */
   interface Props {
     visible: boolean
-    /** 当前要管理零件关联的产品；为 null 时不加载数据 */
     product: Product | null
   }
 
   const props = defineProps<Props>()
 
   interface Emits {
-    /** 关闭弹窗时同步更新父组件的 visible 状态 */
     (e: 'update:visible', value: boolean): void
   }
 
   const emit = defineEmits<Emits>()
 
-  /**
-   * 已关联零件行数据（表格数据源）
-   * 数量与备注可在表格内直接编辑，保存时一并提交
-   */
+  /** 零件管理模式：none-未选择，direct-直接关联，module-模块化 */
+  type ManageMode = 'none' | 'direct' | 'module' | 'loading'
+  const mode = ref<ManageMode>('loading')
+
+  // ============ 公共状态 ============
+  const loading = ref(false)
+  const saving = ref(false)
+  const typesLoading = ref(false)
+  const loadingAvailable = ref(false)
+
+  const allTypes = ref<ItemTypeNode[]>([])
+  const parentTypes = ref<ItemTypeNode[]>([])
+  const childTypes = ref<ItemTypeNode[]>([])
+  const availableItems = ref<InventoryItem[]>([])
+
+  // ============ 直接关联模式状态 ============
   interface SelectedItem {
     item_id: string
     spec_id: string
@@ -120,249 +234,418 @@
     type_name: string
     current_stock: number
     warn_stock: number
-    /** 组装一台产品所需该零件的数量 */
     quantity_per_product: number
     remark: string
   }
 
-  /** 表格加载已有关联列表时的 loading 状态 */
-  const loading = ref(false)
-  /** 点击「确定」保存时的 loading，会禁用弹窗确认按钮 */
-  const saving = ref(false)
-  /** 顶部搜索下拉框加载可选零件时的 loading */
-  const loadingAvailable = ref(false)
+  const directItems = ref<SelectedItem[]>([])
 
-  /** 当前产品已关联的零件列表（本地编辑态，保存前未落库） */
-  const selectedItems = ref<SelectedItem[]>([])
-  /** 全库零件原始数据，用于添加时补全名称、编码、库存等展示字段 */
-  const availableItems = ref<InventoryItem[]>([])
-
-  /** 顶部「添加」面板的表单状态 */
-  const addForm = reactive<{
-    /** 下拉选中项，格式 item_id_spec_id，唯一标识「零件+规格」 */
-    selectedKey: string | undefined
-    quantity_per_product: number
-    remark: string
-  }>({
-    selectedKey: undefined,
+  const addForm = reactive({
+    parentTypeId: undefined as string | undefined,
+    childTypeId: undefined as string | undefined,
+    selectedItemKey: undefined as string | undefined,
+    selectedSpecId: undefined as string | undefined,
     quantity_per_product: 1,
     remark: ''
   })
 
-  /** 关联列表表格列定义，key 与模板 #bodyCell 中的 column.key 对应 */
   const columns = [
     { title: '类型', key: 'item_type', width: 90, align: 'center' },
-    { title: '名称', key: 'item_name', width: 100, },
+    { title: '名称', key: 'item_name', width: 100 },
     { title: '编码', key: 'item_code', width: 130, align: 'center' },
     { title: '规格', key: 'spec', width: 120, align: 'center' },
-    { title: '库存', key: 'stock', width: 120, align: 'right' },
-    { title: '单台数量', key: 'quantity_per_product', width: 130, align: 'center' },
-    { title: '备注', key: 'remark', width: 180 },
+    { title: '库存', key: 'stock', width: 100, align: 'right' },
+    { title: '单台数量', key: 'quantity_per_product', width: 120, align: 'center' },
+    { title: '备注', key: 'remark', width: 150 },
     { title: '操作', key: 'actions', width: 80, align: 'center' }
   ]
 
-  /**
-   * 下拉选项结构
-   * value 为 item_id + spec_id 复合键，保证同零件不同规格选项唯一
-   */
-  interface SelectOption {
-    label: string
-    value: string
-    itemId: string
-    specId: string
-    specName: string
+  // ============ 模块化模式状态 ============
+  interface ModuleWithItems extends ProductModule {
+    items: ProductItemRelation[]
   }
 
-  /**
-   * 可添加的下拉选项（计算属性）
-   *
-   * 逻辑：遍历全库零件及其规格，排除已在 selectedItems 中的 item_id+spec_id 组合，
-   * 生成「名称 - 规格（编码）」格式的 label 供搜索选择。
-   */
-  const availableOptions = computed<SelectOption[]>(() => {
-    const selectedKeys = new Set(
-      selectedItems.value.map(i => `${i.item_id}_${i.spec_id}`)
-    )
-    const options: SelectOption[] = []
+  const modules = ref<ModuleWithItems[]>([])
+  const activeModuleKeys = ref<string[]>([])
 
-    for (const item of availableItems.value) {
-      for (const spec of item.specs) {
-        const key = `${item.item_id}_${spec.spec_id}`
-        if (!selectedKeys.has(key)) {
-          const displaySpec = spec.spec ? ` - ${spec.spec}` : ''
-          options.push({
-            label: `${item.name}${displaySpec}（${item.code}）`,
-            value: key,
-            itemId: item.item_id,
-            specId: spec.spec_id,
-            specName: spec.spec
-          })
-        }
-      }
-    }
-
-    return options
+  // 模块弹窗
+  const moduleModalVisible = ref(false)
+  const moduleSaving = ref(false)
+  const editingModule = ref<ModuleWithItems | null>(null)
+  const moduleForm = reactive({
+    name: '',
+    code: '',
+    sort_order: 0,
+    remark: ''
   })
 
-  /**
-   * 下拉框本地搜索过滤
-   * 按选项 label 做不区分大小写的子串匹配
-   */
-  const filterItem = (input: string, option: SelectOption) => {
-    return option.label.toLowerCase().includes(input.toLowerCase())
-  }
+  // ============ 计算属性 ============
+  const filteredItems = computed(() => {
+    const typeId = addForm.childTypeId || addForm.parentTypeId
+    let items = availableItems.value
 
-  /**
-   * 加载当前产品已关联的零件列表
-   * 将 API 返回数据映射为 SelectedItem，并补全 quantity、remark 默认值
-   */
-  const loadCurrentItems = async () => {
-    if (!props.product) return
-    loading.value = true
-    try {
-      const res = await inventoryApi.listProductItems(props.product.product_id)
-      selectedItems.value = res.datas.items.map((i) => ({
-        item_id: i.item_id,
-        spec_id: i.spec_id,
-        spec: i.spec,
-        item_name: i.item_name,
-        item_code: i.item_code,
-        type_id: i.type_id,
-        type_name: i.type_name,
-        current_stock: i.current_stock,
-        warn_stock: i.warn_stock,
-        quantity_per_product: i.quantity_per_product || 1,
-        remark: i.remark || ''
+    if (typeId) {
+      items = items.filter(item => {
+        if (item.type_id === typeId) return true
+        const parent = allTypes.value.find(t => t.type_id === typeId)
+        if (parent?.children?.some(c => c.type_id === item.type_id)) return true
+        return false
+      })
+    }
+
+    return items
+  })
+
+  const itemOptions = computed(() => {
+    const selectedKeys = new Set(directItems.value.map(i => i.item_id))
+    return filteredItems.value
+      .filter(item => !selectedKeys.has(item.item_id) || item.specs.some(s => !selectedKeys.has(`${item.item_id}_${s.spec_id}`)))
+      .map(item => ({
+        label: `${item.name} (${item.code})`,
+        value: item.item_id
       }))
-    } catch {
-      // 错误由 request 拦截器统一处理
+  })
+
+  const selectedItem = computed(() =>
+    availableItems.value.find(i => i.item_id === addForm.selectedItemKey)
+  )
+
+  const showSpecSelect = computed(() => {
+    const item = selectedItem.value
+    if (!item?.specs?.length) return false
+    return !(item.specs.length === 1 && item.specs[0]?.spec === '')
+  })
+
+  const specOptions = computed(() => {
+    const item = selectedItem.value
+    if (!item?.specs) return []
+
+    const selectedKeys = new Set(
+      directItems.value
+        .filter(i => i.item_id === addForm.selectedItemKey)
+        .map(i => i.spec_id)
+    )
+
+    return item.specs
+      .filter(s => !selectedKeys.has(s.spec_id))
+      .map(s => ({
+        label: `${s.spec || '默认'} (库存: ${s.current_stock})`,
+        value: s.spec_id
+      }))
+  })
+
+  const canAdd = computed(() => {
+    if (!addForm.selectedItemKey) return false
+    if (showSpecSelect.value && !addForm.selectedSpecId) return false
+    return true
+  })
+
+  const totalModuleItems = computed(() =>
+    modules.value.reduce((sum, m) => sum + (m.items?.length || 0), 0)
+  )
+
+  const filterOption = (input: string, option: { label: string }) =>
+    option.label.toLowerCase().includes(input.toLowerCase())
+
+  // ============ 数据加载 ============
+  const loadTypes = async () => {
+    typesLoading.value = true
+    try {
+      const res = await inventoryApi.listItemTypes()
+      allTypes.value = (res.datas || res) as ItemTypeNode[]
+      parentTypes.value = allTypes.value
     } finally {
-      loading.value = false
+      typesLoading.value = false
     }
   }
 
-  /**
-   * 加载全库可选零件
-   * 一次性拉取较大分页（999 条），供添加面板搜索使用
-   */
   const loadAvailableItems = async () => {
     loadingAvailable.value = true
     try {
       const res = await inventoryApi.listItems({ pageIndex: 1, pageSize: 999 })
       availableItems.value = res.datas.items
-    } catch {
-      // 错误由 request 拦截器统一处理
     } finally {
       loadingAvailable.value = false
     }
   }
 
-  /**
-   * 将选中的零件规格加入关联列表
-   *
-   * 流程：
-   * 1. 校验 item_id、spec_id 均已选择
-   * 2. 从 availableOptions / availableItems 中查找对应记录
-   * 3. 组装 SelectedItem 推入 selectedItems
-   * 4. 重置添加表单
-   */
+  const loadProductItems = async () => {
+    if (!props.product) return
+    loading.value = true
+    try {
+      const res = await inventoryApi.listProductItems(props.product.product_id)
+      if (res.datas.use_module) {
+        mode.value = 'module'
+        modules.value = (res.datas.modules || []).map(m => ({
+          ...m,
+          items: m.items || []
+        })) as ModuleWithItems[]
+      } else if (res.datas.use_module == false && res.datas.items && res.datas.items.length > 0) {
+        mode.value = 'direct'
+        directItems.value = (res.datas.items || []).map(i => ({
+          item_id: i.item_id,
+          spec_id: i.spec_id,
+          spec: i.spec,
+          item_name: i.item_name,
+          item_code: i.item_code,
+          type_id: i.type_id,
+          type_name: i.type_name,
+          current_stock: i.current_stock,
+          warn_stock: i.warn_stock,
+          quantity_per_product: i.quantity_per_product || 1,
+          remark: i.remark || ''
+        }))
+      } else {
+        mode.value = 'none'
+      }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // ============ 模式选择 ============
+  const handleSelectMode = (selectedMode: 'direct' | 'module') => {
+    mode.value = selectedMode
+  }
+
+  // ============ 直接关联模式方法 ============
+  const handleParentTypeChange = (value: string | undefined) => {
+    addForm.childTypeId = undefined
+    addForm.selectedItemKey = undefined
+    addForm.selectedSpecId = undefined
+
+    if (value) {
+      const parent = allTypes.value.find(t => t.type_id === value)
+      childTypes.value = parent?.children || []
+    } else {
+      childTypes.value = []
+    }
+  }
+
+  const handleChildTypeChange = () => {
+    addForm.selectedItemKey = undefined
+    addForm.selectedSpecId = undefined
+  }
+
+  const handleItemChange = () => {
+    addForm.selectedSpecId = undefined
+    const defaultSpec = selectedItem.value?.specs?.[0]
+    if (selectedItem.value?.specs?.length === 1 && defaultSpec?.spec === '') {
+      addForm.selectedSpecId = defaultSpec.spec_id
+    }
+  }
+
   const handleAdd = () => {
-    if (!addForm.selectedKey) {
-      message.error('请选择零件和规格')
+    if (!addForm.selectedItemKey) {
+      message.error('请选择零件')
       return
     }
 
-    const option = availableOptions.value.find(opt => opt.value === addForm.selectedKey)
-    if (!option) return
-
-    const item = availableItems.value.find(i => i.item_id === option.itemId)
+    const item = selectedItem.value
     if (!item) return
 
-    const spec = item.specs?.find(s => s.spec_id === option.specId)
+    let specId = addForm.selectedSpecId
+    let specName = ''
 
-    selectedItems.value.push({
+    if (item.specs?.length === 1 && item.specs[0]?.spec === '') {
+      specId = item.specs[0].spec_id
+      specName = ''
+    } else if (!specId && showSpecSelect.value) {
+      message.error('请选择规格')
+      return
+    }
+
+    if (specId) {
+      const spec = item.specs?.find(s => s.spec_id === specId)
+      specName = spec?.spec || ''
+    }
+
+    const exists = directItems.value.some(
+      i => i.item_id === item.item_id && i.spec_id === specId
+    )
+    if (exists) {
+      message.warning('该零件规格已添加')
+      return
+    }
+
+    directItems.value.push({
       item_id: item.item_id,
-      spec_id: option.specId,
-      spec: option.specName,
+      spec_id: specId || '',
+      spec: specName,
       item_name: item.name,
       item_code: item.code,
       type_id: item.type_id,
       type_name: item.type_name || item.type_id,
-      current_stock: spec?.current_stock || 0,
+      current_stock: item.specs?.find(s => s.spec_id === specId)?.current_stock || 0,
       warn_stock: item.warn_stock,
       quantity_per_product: addForm.quantity_per_product,
       remark: addForm.remark
     })
 
-    addForm.selectedKey = undefined
+    addForm.selectedItemKey = undefined
+    addForm.selectedSpecId = undefined
     addForm.quantity_per_product = 1
     addForm.remark = ''
   }
 
-  /**
-   * 从关联列表中移除一行
-   * 按 item_id + spec_id 定位，移除后该规格会重新出现在下拉选项中
-   */
-  const handleRemove = (record: SelectedItem) => {
-    const idx = selectedItems.value.findIndex(
+  const handleRemoveDirect = (record: SelectedItem) => {
+    const idx = directItems.value.findIndex(
       i => i.item_id === record.item_id && i.spec_id === record.spec_id
     )
     if (idx >= 0) {
-      selectedItems.value.splice(idx, 1)
+      directItems.value.splice(idx, 1)
     }
   }
 
-  /**
-   * 保存关联列表（全量覆盖）
-   *
-   * 将 selectedItems 映射为 API 所需字段后调用 setProductItems，
-   * 成功后提示并关闭弹窗。空 remark 传 undefined 以省略字段。
-   */
+  // ============ 模块化模式方法 ============
+  const showCreateModule = () => {
+    editingModule.value = null
+    moduleForm.name = ''
+    moduleForm.code = ''
+    moduleForm.sort_order = 0
+    moduleForm.remark = ''
+    moduleModalVisible.value = true
+  }
+
+  const showEditModule = (module: ModuleWithItems) => {
+    editingModule.value = module
+    moduleForm.name = module.name
+    moduleForm.code = module.code || ''
+    moduleForm.sort_order = module.sort_order
+    moduleForm.remark = module.remark || ''
+    moduleModalVisible.value = true
+  }
+
+  const handleModuleSubmit = async () => {
+    if (!moduleForm.name.trim()) {
+      message.error('请输入模块名称')
+      return
+    }
+
+    if (!props.product) return
+
+    moduleSaving.value = true
+    try {
+      if (editingModule.value) {
+        await inventoryApi.updateModule({
+          module_id: editingModule.value.module_id,
+          name: moduleForm.name,
+          code: moduleForm.code || undefined,
+          sort_order: moduleForm.sort_order,
+          remark: moduleForm.remark || undefined
+        })
+        // 更新本地数据
+        const idx = modules.value.findIndex(m => m.module_id === editingModule.value!.module_id)
+        const targetModule = modules.value[idx]
+        if (idx >= 0 && targetModule) {
+          targetModule.name = moduleForm.name
+          targetModule.code = moduleForm.code || null
+          targetModule.sort_order = moduleForm.sort_order
+          targetModule.remark = moduleForm.remark || null
+        }
+        message.success('模块已更新')
+      } else {
+        const res = await inventoryApi.createModule({
+          product_id: props.product.product_id,
+          name: moduleForm.name,
+          code: moduleForm.code || undefined,
+          sort_order: moduleForm.sort_order,
+          remark: moduleForm.remark || undefined
+        })
+        modules.value.push({
+          module_id: res.datas.module_id,
+          product_id: props.product.product_id,
+          name: moduleForm.name,
+          code: moduleForm.code || null,
+          sort_order: moduleForm.sort_order,
+          remark: moduleForm.remark || null,
+          status: 1,
+          create_time: new Date().toISOString(),
+          update_time: new Date().toISOString(),
+          items: []
+        })
+        message.success('模块已创建')
+      }
+      moduleModalVisible.value = false
+    } catch {
+      // 错误由拦截器处理
+    } finally {
+      moduleSaving.value = false
+    }
+  }
+
+  const handleDeleteModule = async (moduleId: string) => {
+    try {
+      await inventoryApi.deleteModule(moduleId)
+      modules.value = modules.value.filter(m => m.module_id !== moduleId)
+      activeModuleKeys.value = activeModuleKeys.value.filter(k => k !== moduleId)
+      message.success('模块已删除')
+    } catch {
+      // 错误由拦截器处理
+    }
+  }
+
+  // ============ 保存 ============
   const handleSave = async () => {
     if (!props.product) return
+
+    if (mode.value === 'none') {
+      emit('update:visible', false)
+      return
+    }
+
     saving.value = true
     try {
-      await inventoryApi.setProductItems(
-        props.product.product_id,
-        selectedItems.value.map((i) => ({
-          item_id: i.item_id,
-          spec_id: i.spec_id,
-          quantity_per_product: i.quantity_per_product,
-          remark: i.remark || undefined
-        }))
-      )
-      message.success('关联已更新')
+      if (mode.value === 'direct') {
+        await inventoryApi.setProductItems(
+          props.product.product_id,
+          directItems.value.map(i => ({
+            item_id: i.item_id,
+            spec_id: i.spec_id,
+            quantity_per_product: i.quantity_per_product,
+            remark: i.remark || undefined
+          }))
+        )
+        message.success('保存成功')
+      }
+      // 模块模式下，零件保存由 ModuleItemsEditor 组件内部处理
       emit('update:visible', false)
     } catch {
-      // 错误由 request 拦截器统一处理
+      // 错误由拦截器处理
     } finally {
       saving.value = false
     }
   }
 
-  /** 取消编辑，直接关闭弹窗（不保存本地修改） */
   const handleCancel = () => {
     emit('update:visible', false)
   }
 
-  /**
-   * 监听弹窗显隐，负责数据加载与清理
-   *
-   * - 打开：并行加载已关联列表和全库零件，并重置添加表单
-   * - 关闭：清空 selectedItems、availableItems，释放内存
-   */
+  // ============ 监听弹窗显隐 ============
   watch(
     () => props.visible,
     (visible) => {
       if (visible && props.product) {
-        loadCurrentItems()
+        loadTypes()
         loadAvailableItems()
-        addForm.selectedKey = undefined
+        loadProductItems()
+
+        addForm.parentTypeId = undefined
+        addForm.childTypeId = undefined
+        addForm.selectedItemKey = undefined
+        addForm.selectedSpecId = undefined
         addForm.quantity_per_product = 1
         addForm.remark = ''
+        childTypes.value = []
+        activeModuleKeys.value = []
       } else {
-        selectedItems.value = []
+        mode.value = 'loading'
+        directItems.value = []
+        modules.value = []
         availableItems.value = []
+        allTypes.value = []
+        parentTypes.value = []
+        childTypes.value = []
       }
     }
   )
@@ -397,41 +680,93 @@
     border-radius: 4px;
   }
 
-  /* 添加面板 */
+  /* 模式选择 */
+  .mode-select {
+    padding: 24px 0;
+  }
+
+  .mode-hint {
+    text-align: center;
+    color: #52525b;
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+
+  .mode-cards {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+  }
+
+  .mode-card {
+    width: 220px;
+    padding: 24px;
+    border: 2px solid #e4e4e7;
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+
+  .mode-card:hover {
+    border-color: #2563eb;
+    background: #eff6ff;
+  }
+
+  .mode-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+  }
+
+  .mode-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #18181b;
+    margin-bottom: 8px;
+  }
+
+  .mode-desc {
+    font-size: 13px;
+    color: #71717a;
+    line-height: 1.5;
+  }
+
+  /* 直接关联模式 */
   .add-panel {
     display: flex;
     gap: 8px;
     margin-bottom: 16px;
     flex-wrap: wrap;
+    align-items: flex-start;
   }
 
-  .add-select {
+  .add-type {
+    width: 140px;
+    flex-shrink: 0;
+  }
+
+  .add-item {
     flex: 1;
-    min-width: 220px;
+    min-width: 150px;
+  }
+
+  .add-spec {
+    width: 180px;
+    flex-shrink: 0;
   }
 
   .add-remark {
     flex: 1;
-    min-width: 200px;
+    min-width: 120px;
   }
 
   .add-quantity {
-    width: 160px;
+    width: 140px;
     flex-shrink: 0;
   }
 
   .add-quantity :deep(.ant-input-number) {
     border-radius: 8px;
-  }
-
-  .add-quantity :deep(.ant-input-number-focused) {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
-  }
-
-  .add-quantity :deep(.ant-input-number-handler-wrap) {
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
   }
 
   .add-quantity :deep(.ant-input-group-addon) {
@@ -445,36 +780,12 @@
 
   .add-btn {
     border-radius: 8px;
-    background: #2563eb;
-    border-color: #2563eb;
-    color: #ffffff !important;
-    font-weight: 500;
-  }
 
-  .add-btn:hover:not(:disabled) {
-    background: #1d4ed8;
-    border-color: #1d4ed8;
-    color: #ffffff !important;
-  }
-
-  /* 禁用态保持蓝底白字可见，仅用透明度表达不可点击 */
-  .add-btn[disabled],
-  .add-btn[disabled]:hover {
-    background: #2563eb !important;
-    border-color: #2563eb !important;
-    color: #ffffff !important;
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 
   .add-panel :deep(.ant-select-selector),
   .add-panel :deep(.ant-input) {
     border-radius: 8px;
-  }
-
-  .add-panel :deep(.ant-select-focused .ant-select-selector) {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
   }
 
   /* 关联表格 */
@@ -486,10 +797,6 @@
     border-bottom: 1px solid #e4e4e7;
   }
 
-  .items-table :deep(.ant-table-tbody > tr > td) {
-    font-size: 14px;
-  }
-
   .items-table :deep(.ant-table-tbody > tr:nth-child(even) > td) {
     background: #f9fafb;
   }
@@ -498,7 +805,6 @@
     background: #eff6ff;
   }
 
-  /* 类型标签 */
   .cell-type {
     font-size: 13px;
     color: #52525b;
@@ -528,49 +834,59 @@
     font-weight: 600;
     color: #18181b;
     font-variant-numeric: tabular-nums;
-    margin-right: 4px;
   }
 
   .stock-num.text-danger {
     color: #dc2626;
   }
 
-  .stock-warn {
-    font-size: 12px;
-    color: #a1a1aa;
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* 备注输入框 */
+  .qty-input,
   .remark-input {
     border-radius: 6px;
   }
 
-  /* 行内单台数量输入 */
-  .qty-input {
-    width: 100%;
-    border-radius: 6px;
+  /* 模块化模式 */
+  .module-toolbar {
+    margin-bottom: 16px;
   }
 
-  .qty-input :deep(.ant-input-number-focused) {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  .module-list :deep(.ant-collapse) {
+    border-radius: 8px;
+    border: 1px solid #e4e4e7;
   }
 
-  .remark-input :deep(.ant-input:focus),
-  .remark-input :deep(.ant-input:hover) {
-    border-color: #2563eb;
+  .module-list :deep(.ant-collapse-header) {
+    background: #fafafa;
+    border-radius: 8px 8px 0 0;
   }
 
-  /* 移除按钮 */
-  .items-table :deep(.ant-btn-link) {
-    padding: 4px 8px;
-    height: auto;
+  .module-list :deep(.ant-collapse-content) {
+    border-top: 1px solid #e4e4e7;
+  }
+
+  .module-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .module-name {
+    font-weight: 600;
+    color: #18181b;
+  }
+
+  .module-count {
     font-size: 13px;
+    color: #71717a;
   }
 
-  .items-table :deep(.ant-btn-link:hover) {
+  .module-items-panel {
+    padding: 16px 0;
+  }
+
+  .delete-hint {
     color: #dc2626;
+    font-size: 13px;
   }
 
   /* 底部提示 */

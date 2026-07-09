@@ -5,10 +5,12 @@ import { asyncHandler } from '../middleware/errorHandler.middleware';
 import { CreateInventoryItemDto, ItemIdDto, ListInventoryItemDto, UpdateInventoryItemDto } from '../dto/item.dto';
 import {
     CreateProductDto, ProductIdDto, ListProductDto, UpdateProductDto, SetProductItemsDto, ProductItemIdDto,
+    CreateModuleDto, UpdateModuleDto, ModuleIdDto, ListModuleDto, SetModuleItemsDto,
 } from '../dto/product.dto';
 import {
     StockInDto, StockInBatchDto, StockOutDto, StockOutBatchDto, StockOutByProductDto, StockCheckDto, ListStockHistoryDto,
     ListStockInRecordsDto, ListStockOutRecordsDto, ListStockCheckRecordsDto, StockCheckBatchDto,
+    RevertStockInDto, RevertStockOutDto,
 } from '../dto/stock.dto';
 import {
     CreateItemTypeDto, UpdateItemTypeDto, DeleteItemTypeDto, ListItemTypeDto,
@@ -131,6 +133,85 @@ router.get('/listProductItems',
     })
 );
 
+// 查询产品详情
+router.get('/productDetail',
+    validationMiddleware(ProductIdDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(ProductIdDto, req.query);
+        const result = await productService.getProductDetail(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// ============ 模块管理 ============
+
+// 创建模块
+router.post('/createModule',
+    validationMiddleware(CreateModuleDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(CreateModuleDto, req.body);
+        const result = await productService.createModule(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 查询模块列表
+router.get('/listModule',
+    validationMiddleware(ListModuleDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(ListModuleDto, req.query);
+        const result = await productService.listModule(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 更新模块
+router.post('/updateModule',
+    validationMiddleware(UpdateModuleDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(UpdateModuleDto, req.body);
+        const result = await productService.updateModule(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 删除模块
+router.post('/deleteModule',
+    validationMiddleware(ModuleIdDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(ModuleIdDto, req.body);
+        const result = await productService.deleteModule(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 设置模块零件
+router.post('/setModuleItems',
+    validationMiddleware(SetModuleItemsDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(SetModuleItemsDto, req.body);
+        const result = await productService.setModuleItems(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 查询模块零件列表
+router.get('/listModuleItems',
+    validationMiddleware(ModuleIdDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(ModuleIdDto, req.query);
+        const result = await productService.getModuleItems(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
 // 入库操作(单条)
 router.post('/stockIn',
     validationMiddleware(StockInDto),
@@ -247,6 +328,28 @@ router.post('/stockCheckBatch',
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(StockCheckBatchDto, req.body);
         const result = await stockService.stockCheckBatch(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 撤销入库
+router.post('/revertStockIn',
+    validationMiddleware(RevertStockInDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(RevertStockInDto, req.body);
+        const result = await stockService.revertStockIn(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 撤销出库
+router.post('/revertStockOut',
+    validationMiddleware(RevertStockOutDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(RevertStockOutDto, req.body);
+        const result = await stockService.revertStockOut(dtoObj);
         res.locals.datas = result;
         next();
     })

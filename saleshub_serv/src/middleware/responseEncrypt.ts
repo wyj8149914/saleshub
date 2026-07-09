@@ -23,7 +23,7 @@ export async function responseEncrypt(req: Request, res: Response, next: NextFun
         return next();
     }
 
-    const logger = getLogger('CARD_SERV');
+    const logger = getLogger('SALESHUB_SERV');
     const dntEncrypt = res.locals.dntEncrypt;
     if (result.alg && !dntEncrypt) {
         const aesKey = res.locals.aesKey;

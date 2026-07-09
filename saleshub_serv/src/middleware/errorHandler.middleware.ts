@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../utils/error.util';
 import { getLogger } from '../utils/logger.util';
 
-const logger = getLogger('CARD_SERV');
+const logger = getLogger('SALESHUB_SERV');
 
 /**
  * 全局错误处理中间件

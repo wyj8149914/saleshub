@@ -18,7 +18,7 @@ export interface ItemTypeTree {
 export class ItemTypeService {
     private itemTypeRepo = AppDataSource.getRepository(ItemType);
     private inventoryItemRepo = AppDataSource.getRepository(InventoryItem);
-    private logger = getLogger('SALES_SERV');
+    private logger = getLogger('SALESHUB_SERV');
 
     /**
      * 创建类型
@@ -51,7 +51,6 @@ export class ItemTypeService {
 
             // 创建类型
             const typeId = v7().replace(/-/g, '');
-            const now = new Date();
             const itemType = new ItemType();
             itemType.type_id = typeId;
             if (dto.parent_id) {

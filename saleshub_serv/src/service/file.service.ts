@@ -32,7 +32,7 @@ interface DeleteResult {
 
 class FileService {
     private fileRepository = AppDataSource.getRepository(MinioFile);
-    private logger = getLogger('FILE_SERV');
+    private logger = getLogger('SALESHUB_SERV');
 
     /**
      * 上传文件到 MinIO 并登记到 file 表

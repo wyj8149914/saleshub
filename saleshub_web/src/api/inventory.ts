@@ -4,7 +4,8 @@ import type {
     ItemUpdatePayload, ProductItemPayload, StockHistoryQuery, StockHistoryRecord, StockInRecord, StockOutRecord, StockInPayload,
     StockInBatchPayload, StockOutPayload, StockOutBatchPayload, StockOutByProductPayload, StockCheckRecord, StockCheckPayload,
     StockCheckBatchPayload, PaginatedData, Product, InventoryItem, ProductItemRelation, StockRecordListQuery,
-    ItemTypeNode, ItemTypeListQuery, ItemTypeCreatePayload, ItemTypeUpdatePayload
+    ItemTypeNode, ItemTypeListQuery, ItemTypeCreatePayload, ItemTypeUpdatePayload,
+    ProductModule, ModuleCreatePayload, ModuleUpdatePayload, ProductItemsResponse, ProductDetailResponse
 } from '@/types/inventory'
 import type {
     Warehouse, WarehouseListQuery, WarehouseCreatePayload, WarehouseUpdatePayload, SpecWarehouseStock,
@@ -41,6 +42,9 @@ export const inventoryApi = {
     deleteProduct(product_id: string) {
         return http.post('/saleshub/inventory/deleteProduct', { product_id })
     },
+    getProductDetail(product_id: string) {
+        return http.get<ProductDetailResponse>('/saleshub/inventory/productDetail', { params: { product_id } })
+    },
 
     // ---- 零件 ----
     listItems(query: ItemListQuery) {
@@ -61,8 +65,32 @@ export const inventoryApi = {
         return http.post('/saleshub/inventory/setProductItems', { product_id, items })
     },
     listProductItems(product_id: string) {
-        return http.get<{ items: ProductItemRelation[] }>('/saleshub/inventory/listProductItems', {
+        return http.get<ProductItemsResponse>('/saleshub/inventory/listProductItems', {
             params: { product_id }
+        })
+    },
+
+    // ---- 模块管理 ----
+    createModule(payload: ModuleCreatePayload) {
+        return http.post<{ module_id: string }>('/saleshub/inventory/createModule', payload)
+    },
+    listModule(product_id: string) {
+        return http.get<{ items: ProductModule[] }>('/saleshub/inventory/listModule', {
+            params: { product_id }
+        })
+    },
+    updateModule(payload: ModuleUpdatePayload) {
+        return http.post('/saleshub/inventory/updateModule', payload)
+    },
+    deleteModule(module_id: string) {
+        return http.post('/saleshub/inventory/deleteModule', { module_id })
+    },
+    setModuleItems(module_id: string, items: ProductItemPayload[]) {
+        return http.post('/saleshub/inventory/setModuleItems', { module_id, items })
+    },
+    listModuleItems(module_id: string) {
+        return http.get<{ items: ProductItemRelation[] }>('/saleshub/inventory/listModuleItems', {
+            params: { module_id }
         })
     },
 
@@ -114,6 +142,15 @@ export const inventoryApi = {
 
     stockCheckBatch(payload: StockCheckBatchPayload) {
         return http.post('/saleshub/inventory/stockCheckBatch', payload)
+    },
+
+    // ---- 撤销操作 ----
+    revertStockIn(record_id: string) {
+        return http.post('/saleshub/inventory/revertStockIn', { record_id })
+    },
+
+    revertStockOut(record_id: string) {
+        return http.post('/saleshub/inventory/revertStockOut', { record_id })
     },
 
     // ---- 零件类型 ----

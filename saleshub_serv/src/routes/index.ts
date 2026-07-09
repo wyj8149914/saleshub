@@ -4,7 +4,7 @@ import fileRouter from './file.route';
 import userRouter from './user.route';
 import { getLogger } from '../utils/logger.util';
 import { appConfig } from '../config/env.config';
-const logger = getLogger('CARD_SERV');
+const logger = getLogger('SALESHUB_SERV');
 
 /**
  * 初始化所有路由

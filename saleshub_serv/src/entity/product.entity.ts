@@ -77,6 +77,9 @@ export class ProductItem {
     @Column({ type: 'varchar', length: 32, comment: '产品ID' })
     product_id: string;
 
+    @Column({ type: 'varchar', length: 32, nullable: true, comment: '所属模块ID，NULL表示产品直接关联' })
+    module_id: string;
+
     @Column({ type: 'varchar', length: 32, comment: '零件ID' })
     item_id: string;
 
@@ -149,6 +152,33 @@ export class ItemType {
 
     @Column({ type: 'text', nullable: true, comment: '备注' })
     remark: string;
+
+    @Column({ type: 'timestamp', comment: '创建时间' })
+    create_time: Date;
+
+    @Column({ type: 'timestamp', comment: '更新时间' })
+    update_time: Date;
+}
+
+@Entity({ schema: 'inventory', name: 'product_module' })
+export class ProductModule {
+    @PrimaryColumn({ type: 'varchar', length: 32 })
+    module_id: string;
+
+    @Column({ type: 'varchar', length: 32, comment: '产品ID' })
+    product_id: string;
+
+    @Column({ type: 'varchar', length: 100, comment: '模块名称' })
+    name: string;
+
+    @Column({ type: 'int', default: 0, comment: '排序号' })
+    sort_order: number;
+
+    @Column({ type: 'text', nullable: true, comment: '备注' })
+    remark: string;
+
+    @Column({ type: 'int', default: 1, comment: '状态:1-正常,2-停用' })
+    status: number;
 
     @Column({ type: 'timestamp', comment: '创建时间' })
     create_time: Date;

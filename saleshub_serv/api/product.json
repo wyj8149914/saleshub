@@ -96,6 +96,213 @@
             }
         }
     },
+    "/saleshub/inventory/productDetail": {
+        "method": "GET",
+        "summary": "产品详情",
+        "description": "查询指定产品的完整详情，聚合返回产品基础信息及 BOM 零件结构。仅当 product_id 对应的产品存在且 status=1 时可查询。根据产品的零件管理方式返回不同结构：① 直接关联方式（mode=direct）：返回 items 零件列表；② 模块方式（mode=module）：返回 modules 模块列表，每个模块包含其下的 items 零件列表；③ 未配置零件（mode=none）：仅返回 product 与 mode。与 listProductItems 不同，本接口一次返回产品基础信息与 BOM 结构，且零件项额外包含规格单价 price（来自 inventory_item_spec.price）。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string",
+                    "description": "产品主键 UUID（Query 参数）"
+                }
+            },
+            "required": [
+                "product_id"
+            ]
+        },
+        "example_request": {
+            "product_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-产品不存在或查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息；产品不存在时返回「产品不存在」"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "产品详情结果",
+                    "properties": {
+                        "product": {
+                            "type": "object",
+                            "description": "产品基础信息",
+                            "properties": {
+                                "product_id": {
+                                    "type": "string",
+                                    "description": "产品主键 UUID（无连字符）"
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "description": "产品名称"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "description": "产品编码，格式 PR + 6 位数字（如 PR000001）"
+                                },
+                                "description": {
+                                    "type": "string",
+                                    "description": "产品描述，可能为 null"
+                                },
+                                "image_id": {
+                                    "type": "string",
+                                    "description": "产品图片 ID（关联 file.relation_id），可能为 null"
+                                },
+                                "price": {
+                                    "type": "number",
+                                    "description": "产品价格，可能为 null"
+                                },
+                                "remark": {
+                                    "type": "string",
+                                    "description": "备注，可能为 null"
+                                }
+                            }
+                        },
+                        "mode": {
+                            "type": "string",
+                            "enum": [
+                                "none",
+                                "direct",
+                                "module"
+                            ],
+                            "description": "零件关联模式：none-未配置零件，direct-直接关联方式，module-模块方式"
+                        },
+                        "items": {
+                            "type": "array",
+                            "description": "直接关联方式时的零件列表（mode=direct）；无关联时不返回此字段",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "item_id": {
+                                        "type": "string",
+                                        "description": "零件 ID"
+                                    },
+                                    "spec_id": {
+                                        "type": "string",
+                                        "description": "BOM 指定的零件规格 ID（inventory_item_spec.spec_id）"
+                                    },
+                                    "spec": {
+                                        "type": "string",
+                                        "description": "规格名称（来自 inventory_item_spec.spec）"
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "description": "规格单价（来自 inventory_item_spec.price），可能为 null"
+                                    },
+                                    "current_stock": {
+                                        "type": "number",
+                                        "description": "该规格的当前库存（来自 inventory_item_spec.current_stock），可能为 null"
+                                    },
+                                    "module_id": {
+                                        "type": "string",
+                                        "description": "所属模块 ID（直接关联时为 null）"
+                                    },
+                                    "item_name": {
+                                        "type": "string",
+                                        "description": "零件名称（来自 inventory_items.name）"
+                                    },
+                                    "item_code": {
+                                        "type": "string",
+                                        "description": "零件编码（来自 inventory_items.code）"
+                                    },
+                                    "quantity_per_product": {
+                                        "type": "number",
+                                        "description": "单台产品所需数量"
+                                    },
+                                    "remark": {
+                                        "type": "string",
+                                        "description": "备注，可能为 null"
+                                    }
+                                }
+                            }
+                        },
+                        "modules": {
+                            "type": "array",
+                            "description": "模块方式时的模块列表（mode=module）；无模块时不返回此字段。按 sort_order 升序排列",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "module_id": {
+                                        "type": "string",
+                                        "description": "模块主键 UUID"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "模块名称"
+                                    },
+                                    "sort_order": {
+                                        "type": "number",
+                                        "description": "排序号"
+                                    },
+                                    "remark": {
+                                        "type": "string",
+                                        "description": "备注，可能为 null"
+                                    },
+                                    "items": {
+                                        "type": "array",
+                                        "description": "该模块下的零件列表；无零件时为空数组",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "item_id": {
+                                                    "type": "string",
+                                                    "description": "零件 ID"
+                                                },
+                                                "spec_id": {
+                                                    "type": "string",
+                                                    "description": "BOM 指定的零件规格 ID"
+                                                },
+                                                "spec": {
+                                                    "type": "string",
+                                                    "description": "规格名称"
+                                                },
+                                                "price": {
+                                                    "type": "number",
+                                                    "description": "规格单价，可能为 null"
+                                                },
+                                                "current_stock": {
+                                                    "type": "number",
+                                                    "description": "该规格的当前库存，可能为 null"
+                                                },
+                                                "module_id": {
+                                                    "type": "string",
+                                                    "description": "所属模块 ID"
+                                                },
+                                                "item_name": {
+                                                    "type": "string",
+                                                    "description": "零件名称"
+                                                },
+                                                "item_code": {
+                                                    "type": "string",
+                                                    "description": "零件编码"
+                                                },
+                                                "quantity_per_product": {
+                                                    "type": "number",
+                                                    "description": "单台产品所需数量"
+                                                },
+                                                "remark": {
+                                                    "type": "string",
+                                                    "description": "备注，可能为 null"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
     "/saleshub/inventory/createProduct": {
         "method": "POST",
         "summary": "创建产品",
@@ -255,7 +462,7 @@
     "/saleshub/inventory/setProductItems": {
         "method": "POST",
         "summary": "设置产品零件",
-        "description": "全量覆盖语义：传入 product_id 与完整的 item 列表（含 spec_id），使该产品的有效关联（product_items.status=1）等价于传入列表。事务执行：① 校验产品存在（status=1）；② 校验列表中 (item_id, spec_id) 组合无重复；③ 校验所有 item_id 在 inventory_items 中存在且 status=1；④ 校验每条 spec_id 在 inventory_item_spec 中存在（status=1）且属于对应 item_id；⑤ 将该产品既有 product_items 全部置为 status=2；⑥ 插入新的关联记录（每条 relation_id 为 UUID v7 去连字符，quantity_per_product 取入参值默认 1，spec_id 取入参，remark 取入参）。支持同一零件不同规格的多条记录。",
+        "description": "全量覆盖语义：传入 product_id 与完整的 item 列表（含 spec_id），使该产品的有效关联（product_items.status=1 且 module_id 为空）等价于传入列表。事务执行：① 校验产品存在（status=1）；② 校验产品未使用模块方式管理零件（即产品下无活跃模块）；③ 校验列表中 (item_id, spec_id) 组合无重复；④ 校验所有 item_id 在 inventory_items 中存在且 status=1；⑤ 校验每条 spec_id 在 inventory_item_spec 中存在（status=1）且属于对应 item_id；⑥ 将该产品既有直接关联记录全部置为 status=2；⑦ 插入新的关联记录（module_id 为 null）。注意：产品只能选择「直接关联零件」或「通过模块管理零件」其中一种方式，若产品已有模块则无法使用此接口。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -326,11 +533,11 @@
             "properties": {
                 "result": {
                     "type": "number",
-                    "description": "结果码：0-成功，1-产品不存在/(零件+规格)重复/零件不存在或已停用/规格不存在或已停用/规格不属于该零件/设置失败"
+                    "description": "结果码：0-成功，1-产品不存在/产品已使用模块方式/零件+规格重复/零件不存在或已停用/规格不存在或已停用/规格不属于该零件/设置失败"
                 },
                 "msg": {
                     "type": "string",
-                    "description": "提示信息；零件不存在时返回「零件不存在或已停用: <缺失item_id列表>」；规格不存在时返回「规格不存在或已停用: <spec_id>」；规格归属错误时返回「规格 <spec_id> 不属于零件 <item_id>」"
+                    "description": "提示信息；零件不存在时返回「零件不存在或已停用: <缺失item_id列表>」；规格不存在时返回「规格不存在或已停用: <spec_id>」；规格归属错误时返回「规格 <spec_id> 不属于零件 <item_id>」；产品已有模块时返回「该产品已使用模块方式管理零件，无法直接关联零件」"
                 }
             }
         }
@@ -338,7 +545,7 @@
     "/saleshub/inventory/listProductItems": {
         "method": "GET",
         "summary": "产品零件列表",
-        "description": "查询指定产品关联的零件列表（product_items.status=1），并 innerJoin inventory_items 返回零件详情（名称、编码、类型、预警阈值），leftJoin inventory_item_spec（通过 spec_id）返回规格名称 spec 及该规格的当前库存 current_stock。按 product_items.create_time 降序。仅返回零件存在的关联记录（inventory_items 中无匹配项的关联会被 innerJoin 过滤）。",
+        "description": "查询指定产品关联的零件列表。根据产品的零件管理方式返回不同结构：① 直接关联方式（use_module=false）：返回零件列表；② 模块方式（use_module=true）：返回模块列表，每个模块包含其下的零件列表。系统根据产品下是否存在活跃模块自动判断使用哪种方式。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -371,9 +578,13 @@
                     "type": "object",
                     "description": "产品零件列表结果",
                     "properties": {
+                        "use_module": {
+                            "type": "boolean",
+                            "description": "是否使用模块方式管理零件：true-模块方式，返回 modules；false-直接关联方式，返回 items"
+                        },
                         "items": {
                             "type": "array",
-                            "description": "关联记录列表；无关联时为空数组",
+                            "description": "直接关联方式时的零件列表（use_module=false）；无关联时为空数组",
                             "items": {
                                 "type": "object",
                                 "properties": {
@@ -384,6 +595,10 @@
                                     "product_id": {
                                         "type": "string",
                                         "description": "所属产品 ID"
+                                    },
+                                    "module_id": {
+                                        "type": "string",
+                                        "description": "所属模块 ID（直接关联时为 null）"
                                     },
                                     "item_id": {
                                         "type": "string",
@@ -413,13 +628,13 @@
                                         "type": "string",
                                         "description": "零件编码（来自 inventory_items.code）"
                                     },
-                                    "item_type": {
+                                    "type_id": {
                                         "type": "string",
-                                        "enum": [
-                                            "device",
-                                            "common"
-                                        ],
-                                        "description": "零件类型（来自 inventory_items.type）"
+                                        "description": "零件类型 ID（来自 inventory_items.type_id）"
+                                    },
+                                    "type_name": {
+                                        "type": "string",
+                                        "description": "零件类型名称（来自 item_type.type_name）"
                                     },
                                     "warn_stock": {
                                         "type": "number",
@@ -427,7 +642,513 @@
                                     },
                                     "current_stock": {
                                         "type": "number",
-                                        "description": "该规格的当前库存（来自 inventory_item_spec.current_stock，按 spec_id 关联匹配；无匹配规格时为 0）"
+                                        "description": "该规格的当前库存（来自 inventory_item_spec.current_stock，按 spec_id 关联匹配；无匹配规格时为 null）"
+                                    }
+                                }
+                            }
+                        },
+                        "modules": {
+                            "type": "array",
+                            "description": "模块方式时的模块列表（use_module=true）",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "module_id": {
+                                        "type": "string",
+                                        "description": "模块主键 UUID"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "模块名称"
+                                    },
+                                    "code": {
+                                        "type": "string",
+                                        "description": "模块编码，可能为 null"
+                                    },
+                                    "sort_order": {
+                                        "type": "number",
+                                        "description": "排序号"
+                                    },
+                                    "remark": {
+                                        "type": "string",
+                                        "description": "备注，可能为 null"
+                                    },
+                                    "items": {
+                                        "type": "array",
+                                        "description": "该模块下的零件列表",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "relation_id": {
+                                                    "type": "string",
+                                                    "description": "关联记录主键 UUID（无连字符）"
+                                                },
+                                                "product_id": {
+                                                    "type": "string",
+                                                    "description": "所属产品 ID"
+                                                },
+                                                "module_id": {
+                                                    "type": "string",
+                                                    "description": "所属模块 ID"
+                                                },
+                                                "item_id": {
+                                                    "type": "string",
+                                                    "description": "零件 ID"
+                                                },
+                                                "quantity_per_product": {
+                                                    "type": "number",
+                                                    "description": "单台产品所需数量"
+                                                },
+                                                "spec_id": {
+                                                    "type": "string",
+                                                    "description": "BOM 指定的零件规格 ID"
+                                                },
+                                                "spec": {
+                                                    "type": "string",
+                                                    "description": "规格名称"
+                                                },
+                                                "remark": {
+                                                    "type": "string",
+                                                    "description": "备注，可能为 null"
+                                                },
+                                                "item_name": {
+                                                    "type": "string",
+                                                    "description": "零件名称"
+                                                },
+                                                "item_code": {
+                                                    "type": "string",
+                                                    "description": "零件编码"
+                                                },
+                                                "type_id": {
+                                                    "type": "string",
+                                                    "description": "零件类型 ID"
+                                                },
+                                                "type_name": {
+                                                    "type": "string",
+                                                    "description": "零件类型名称"
+                                                },
+                                                "warn_stock": {
+                                                    "type": "number",
+                                                    "description": "零件预警阈值"
+                                                },
+                                                "current_stock": {
+                                                    "type": "number",
+                                                    "description": "该规格的当前库存，可能为 null"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/createModule": {
+        "method": "POST",
+        "summary": "创建模块",
+        "description": "为产品创建模块。仅当产品存在（status=1）且未使用直接关联方式管理零件时（即产品下无直接关联的活跃零件）可创建。同一产品下模块名称不能重复。module_id 由 UUID v7 去连字符生成。status 默认 1。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string",
+                    "description": "产品主键 UUID"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "模块名称，最长 100 字符"
+                },
+                "sort_order": {
+                    "type": "number",
+                    "description": "排序号（可选，默认 0）"
+                },
+                "remark": {
+                    "type": "string",
+                    "description": "备注（可选，最长 500 字符）"
+                }
+            },
+            "required": [
+                "product_id",
+                "name"
+            ]
+        },
+        "example_request": {
+            "product_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "name": "显示模块",
+            "sort_order": 1,
+            "remark": "包含屏幕及相关配件"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-产品不存在/产品已直接关联零件/模块名称已存在/创建失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "成功时返回新建模块 ID",
+                    "properties": {
+                        "module_id": {
+                            "type": "string",
+                            "description": "新建模块主键 UUID"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/listModule": {
+        "method": "GET",
+        "summary": "模块列表",
+        "description": "查询指定产品的模块列表（status=1）。按 sort_order 升序、create_time 升序排列。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string",
+                    "description": "产品主键 UUID（Query 参数）"
+                }
+            },
+            "required": [
+                "product_id"
+            ]
+        },
+        "example_request": {
+            "product_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "模块列表结果",
+                    "properties": {
+                        "items": {
+                            "type": "array",
+                            "description": "模块列表；无模块时为空数组",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "module_id": {
+                                        "type": "string",
+                                        "description": "模块主键 UUID"
+                                    },
+                                    "product_id": {
+                                        "type": "string",
+                                        "description": "所属产品 ID"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "模块名称"
+                                    },
+                                    "sort_order": {
+                                        "type": "number",
+                                        "description": "排序号"
+                                    },
+                                    "remark": {
+                                        "type": "string",
+                                        "description": "备注，可能为 null"
+                                    },
+                                    "status": {
+                                        "type": "number",
+                                        "description": "状态：1-正常，2-停用"
+                                    },
+                                    "create_time": {
+                                        "type": "string",
+                                        "description": "创建时间"
+                                    },
+                                    "update_time": {
+                                        "type": "string",
+                                        "description": "更新时间"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/updateModule": {
+        "method": "POST",
+        "summary": "更新模块",
+        "description": "更新模块基础信息（名称、编码、排序号、备注）。仅当 module_id 对应的模块存在且 status=1 时可更新。若修改名称，需校验同一产品下名称不重复。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "module_id": {
+                    "type": "string",
+                    "description": "模块主键 UUID"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "模块名称（可选，最长 100 字符）"
+                },
+                "sort_order": {
+                    "type": "number",
+                    "description": "排序号（可选）"
+                },
+                "remark": {
+                    "type": "string",
+                    "description": "备注（可选，最长 500 字符；传入 null 可清空）"
+                }
+            },
+            "required": [
+                "module_id"
+            ]
+        },
+        "example_request": {
+            "module_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "name": "显示模块（更新）",
+            "sort_order": 2
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-模块不存在/模块名称已存在/更新失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/deleteModule": {
+        "method": "POST",
+        "summary": "删除模块",
+        "description": "软删除模块（将 status 置为 2）。仅当模块下无活跃零件（product_items.status=1）时可删除。删除模块后，产品可切换为直接关联方式管理零件。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "module_id": {
+                    "type": "string",
+                    "description": "模块主键 UUID"
+                }
+            },
+            "required": [
+                "module_id"
+            ]
+        },
+        "example_request": {
+            "module_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-模块不存在/模块下存在零件/删除失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/setModuleItems": {
+        "method": "POST",
+        "summary": "设置模块零件",
+        "description": "全量覆盖语义：传入 module_id 与完整的 item 列表（含 spec_id），使该模块的有效关联（product_items.status=1）等价于传入列表。事务执行：① 校验模块存在（status=1）；② 校验列表中 (item_id, spec_id) 组合无重复；③ 校验所有 item_id 在 inventory_items 中存在且 status=1；④ 校验每条 spec_id 在 inventory_item_spec 中存在（status=1）且属于对应 item_id；⑤ 将该模块既有零件关联记录全部置为 status=2；⑥ 插入新的关联记录（关联到指定模块）。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "module_id": {
+                    "type": "string",
+                    "description": "模块主键 UUID"
+                },
+                "items": {
+                    "type": "array",
+                    "description": "零件关联列表（全量覆盖）",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "item_id": {
+                                "type": "string",
+                                "description": "零件主键 UUID"
+                            },
+                            "quantity_per_product": {
+                                "type": "number",
+                                "description": "单台产品所需数量（可选，最小 1，默认 1）"
+                            },
+                            "spec_id": {
+                                "type": "string",
+                                "description": "BOM 指定的零件规格 ID"
+                            },
+                            "remark": {
+                                "type": "string",
+                                "description": "备注（可选，最长 500 字符）"
+                            }
+                        },
+                        "required": [
+                            "item_id",
+                            "spec_id"
+                        ]
+                    }
+                }
+            },
+            "required": [
+                "module_id",
+                "items"
+            ]
+        },
+        "example_request": {
+            "module_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "items": [
+                {
+                    "item_id": "0194b1c0a2d34e5f6789012345678abc",
+                    "quantity_per_product": 1,
+                    "spec_id": "0194b1d0e3f45a6b7890123456789def",
+                    "remark": "10寸显示屏"
+                },
+                {
+                    "item_id": "0194b1c0a2d34e5f6789012345678abd",
+                    "quantity_per_product": 4,
+                    "spec_id": "0194b1d0e3f45a6b7890123456789deh",
+                    "remark": "固定螺丝"
+                }
+            ]
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-模块不存在/零件+规格重复/零件不存在或已停用/规格不存在或已停用/规格不属于该零件/设置失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                }
+            }
+        }
+    },
+    "/saleshub/inventory/listModuleItems": {
+        "method": "GET",
+        "summary": "模块零件列表",
+        "description": "查询指定模块关联的零件列表（product_items.status=1），并 innerJoin inventory_items 返回零件详情（名称、编码、类型、预警阈值），leftJoin inventory_item_spec（通过 spec_id）返回规格名称 spec 及该规格的当前库存 current_stock。按 product_items.create_time 降序。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "module_id": {
+                    "type": "string",
+                    "description": "模块主键 UUID（Query 参数）"
+                }
+            },
+            "required": [
+                "module_id"
+            ]
+        },
+        "example_request": {
+            "module_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-模块不存在/查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "模块零件列表结果",
+                    "properties": {
+                        "items": {
+                            "type": "array",
+                            "description": "关联记录列表；无关联时为空数组",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "relation_id": {
+                                        "type": "string",
+                                        "description": "关联记录主键 UUID（无连字符）"
+                                    },
+                                    "product_id": {
+                                        "type": "string",
+                                        "description": "所属产品 ID"
+                                    },
+                                    "module_id": {
+                                        "type": "string",
+                                        "description": "所属模块 ID"
+                                    },
+                                    "item_id": {
+                                        "type": "string",
+                                        "description": "零件 ID"
+                                    },
+                                    "quantity_per_product": {
+                                        "type": "number",
+                                        "description": "单台产品所需数量"
+                                    },
+                                    "spec_id": {
+                                        "type": "string",
+                                        "description": "BOM 指定的零件规格 ID"
+                                    },
+                                    "spec": {
+                                        "type": "string",
+                                        "description": "规格名称（来自 inventory_item_spec.spec）"
+                                    },
+                                    "remark": {
+                                        "type": "string",
+                                        "description": "备注，可能为 null"
+                                    },
+                                    "item_name": {
+                                        "type": "string",
+                                        "description": "零件名称（来自 inventory_items.name）"
+                                    },
+                                    "item_code": {
+                                        "type": "string",
+                                        "description": "零件编码（来自 inventory_items.code）"
+                                    },
+                                    "type_id": {
+                                        "type": "string",
+                                        "description": "零件类型 ID（来自 inventory_items.type_id）"
+                                    },
+                                    "type_name": {
+                                        "type": "string",
+                                        "description": "零件类型名称（来自 item_type.type_name）"
+                                    },
+                                    "warn_stock": {
+                                        "type": "number",
+                                        "description": "零件预警阈值（来自 inventory_items.warn_stock）"
+                                    },
+                                    "current_stock": {
+                                        "type": "number",
+                                        "description": "该规格的当前库存（来自 inventory_item_spec.current_stock；无匹配规格时为 null）"
                                     }
                                 }
                             }

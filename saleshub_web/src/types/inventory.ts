@@ -140,10 +140,40 @@ export interface ItemUpdatePayload {
     is_custom?: 1 | 2
 }
 
+// ============ 模块 ============
+export interface ProductModule {
+    module_id: string
+    product_id: string
+    name: string
+    code: string | null
+    sort_order: number
+    remark: string | null
+    status: number
+    create_time: string
+    update_time: string
+}
+
+export interface ModuleCreatePayload {
+    product_id: string
+    name: string
+    code?: string
+    sort_order?: number
+    remark?: string
+}
+
+export interface ModuleUpdatePayload {
+    module_id: string
+    name?: string
+    code?: string
+    sort_order?: number
+    remark?: string
+}
+
 // ============ 产品-零件关联 ============
 export interface ProductItemRelation {
     relation_id: string
     product_id: string
+    module_id: string | null
     item_id: string
     spec_id: string
     spec: string
@@ -157,11 +187,65 @@ export interface ProductItemRelation {
     warn_stock: number
 }
 
+export interface ModuleWithItems {
+    module_id: string
+    name: string
+    code: string | null
+    sort_order: number
+    remark: string | null
+    items: ProductItemRelation[]
+}
+
+export interface ProductItemsResponse {
+    use_module: boolean
+    items?: ProductItemRelation[]
+    modules?: ModuleWithItems[]
+}
+
 export interface ProductItemPayload {
     item_id: string
     spec_id: string
     quantity_per_product?: number
     remark?: string
+}
+
+// ============ 产品详情 ============
+export interface ProductDetailItem {
+    item_id: string
+    spec_id: string
+    spec: string
+    price: number | null
+    current_stock: number | null
+    module_id: string | null
+    item_name: string
+    item_code: string
+    quantity_per_product: number
+    remark: string | null
+}
+
+export interface ProductDetailModule {
+    module_id: string
+    name: string
+    sort_order: number
+    remark: string | null
+    items: ProductDetailItem[]
+}
+
+export interface ProductDetailProduct {
+    product_id: string
+    name: string
+    code: string
+    description: string | null
+    image_id: string | null
+    price: number | null
+    remark: string | null
+}
+
+export interface ProductDetailResponse {
+    product: ProductDetailProduct
+    mode: 'none' | 'direct' | 'module'
+    items?: ProductDetailItem[]
+    modules?: ProductDetailModule[]
 }
 
 export interface StockRecord {

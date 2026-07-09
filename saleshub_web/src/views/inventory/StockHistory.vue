@@ -1,11 +1,29 @@
 <template>
   <a-card title="库存历史" :bordered="false">
     <template #extra>
-      <a-space>
-        <a-select v-model:value="selectedItemId" placeholder="选择零件" show-search :filter-option="filterItemOption"
-          :loading="itemsLoading" :options="itemOptions" style="width: 300px" @change="handleItemChange" />
-        <a-select v-model:value="selectedSpecId" placeholder="选择规格" allow-clear :options="specOptions"
-          style="width: 200px" :disabled="!selectedItemId" @change="handleSpecChange" />
+      <a-space :size="12" wrap>
+        <a-select v-model:value="filterParentTypeId" placeholder="一级类型" allow-clear style="width: 140px"
+          :loading="typesLoading" @change="handleParentTypeChange">
+          <a-select-option v-for="t in parentTypes" :key="t.type_id" :value="t.type_id">
+            {{ t.type_name }}
+          </a-select-option>
+        </a-select>
+
+        <a-select v-model:value="filterChildTypeId" placeholder="二级类型" allow-clear style="width: 140px"
+          :loading="typesLoading" @change="handleChildTypeChange">
+          <a-select-option v-for="t in filterChildTypes" :key="t.type_id" :value="t.type_id">
+            {{ t.type_name }}
+          </a-select-option>
+        </a-select>
+
+        <a-select v-model:value="selectedItemId" placeholder="选择零件" show-search style="width: 240px"
+          :loading="itemsLoading" :options="itemOptions" :filter-option="filterOption" @change="handleItemChange" />
+
+        <a-select v-model:value="selectedSpecId" placeholder="选择规格" allow-clear style="width: 160px"
+          :options="specOptions" :disabled="!selectedItemId" @change="handleSpecChange" />
+
+        <a-button type="primary" @click="handleSearch">查询</a-button>
+        <a-button @click="handleReset">重置</a-button>
       </a-space>
     </template>
 
@@ -48,7 +66,7 @@
   import { ref, computed, onMounted } from 'vue'
   import { message } from 'ant-design-vue'
   import { inventoryApi } from '@/api/inventory'
-  import type { StockHistoryRecord, InventoryItem } from '@/types/inventory'
+  import type { StockHistoryRecord, InventoryItem, ItemTypeNode } from '@/types/inventory'
 
   const columns = [
     { title: '类型', dataIndex: 'type', key: 'type', width: 90 },
@@ -62,35 +80,74 @@
   ]
 
   const loading = ref(false)
-  const itemsLoading = ref(false)
-  const inventoryItems = ref<InventoryItem[]>([])
-  const selectedItemId = ref<string>('')
-  const selectedSpecId = ref<string>('')
   const historyRecords = ref<StockHistoryRecord[]>([])
   const pageIndex = ref(1)
   const pageSize = ref(20)
   const total = ref(0)
 
+  // 类型相关
+  const typesLoading = ref(false)
+  const allTypes = ref<ItemTypeNode[]>([])
+  const parentTypes = ref<ItemTypeNode[]>([])
+  const filterParentTypeId = ref<string | undefined>(undefined)
+  const filterChildTypeId = ref<string | undefined>(undefined)
+  const filterChildTypes = ref<ItemTypeNode[]>([])
+
+  // 零件相关
+  const itemsLoading = ref(false)
+  const allItemsUnfiltered = ref<InventoryItem[]>([])  // 所有零件（未筛选）
+  const allItems = ref<InventoryItem[]>([])            // 筛选后的零件
+  const selectedItemId = ref<string>('')
+  const selectedSpecId = ref<string>('')
+
+  // 加载所有零件
+  const loadAllItems = async () => {
+    itemsLoading.value = true
+    try {
+      const res = await inventoryApi.listItems({ pageIndex: 1, pageSize: 1000 })
+      allItemsUnfiltered.value = res.datas.items || []
+      allItems.value = allItemsUnfiltered.value
+    } catch {
+      allItemsUnfiltered.value = []
+      allItems.value = []
+    } finally {
+      itemsLoading.value = false
+    }
+  }
+
+  // 根据类型筛选零件
+  const filterItems = () => {
+    const typeId = filterChildTypeId.value || filterParentTypeId.value
+    if (typeId) {
+      allItems.value = allItemsUnfiltered.value.filter(item => {
+        if (item.type_id === typeId) return true
+        const parent = allTypes.value.find(t => t.type_id === typeId)
+        if (parent?.children?.some(c => c.type_id === item.type_id)) return true
+        return false
+      })
+    } else {
+      allItems.value = allItemsUnfiltered.value
+    }
+  }
+
+  // 零件选项
   const itemOptions = computed(() =>
-    inventoryItems.value.map((item: InventoryItem) => ({
+    allItems.value.map((item: InventoryItem) => ({
       label: `${item.name} (${item.code})`,
       value: item.item_id
     }))
   )
 
+  // 规格选项
   const specOptions = computed(() => {
     if (!selectedItemId.value) return []
-    const item = inventoryItems.value.find((i: InventoryItem) => i.item_id === selectedItemId.value)
+    const item = allItems.value.find((i: InventoryItem) => i.item_id === selectedItemId.value)
     if (!item) return []
     return item.specs.map((spec: any) => ({
       label: spec.spec || '默认规格',
       value: spec.spec_id
     }))
   })
-
-  const filterItemOption = (input: string, option: { label: string; value: string }) => {
-    return option.label.toLowerCase().includes(input.toLowerCase())
-  }
 
   const getTypeColor = (type: string): string => {
     switch (type) {
@@ -149,23 +206,17 @@
     })
   }
 
-  const loadInventoryItems = async () => {
-    itemsLoading.value = true
+  // 加载类型
+  const loadTypes = async () => {
+    typesLoading.value = true
     try {
-      const response = await inventoryApi.listItems({
-        pageIndex: 1,
-        pageSize: 1000
-      })
-      if (response.result === 0) {
-        inventoryItems.value = response.datas.items
-      } else {
-        message.error(response.msg || '加载零件列表失败')
-      }
-    } catch (error) {
-      console.error('加载零件列表失败:', error)
-      message.error('加载零件列表失败')
+      const res = await inventoryApi.listItemTypes()
+      allTypes.value = (res.datas || res) as ItemTypeNode[]
+      parentTypes.value = allTypes.value
+    } catch {
+      // 错误由拦截器处理
     } finally {
-      itemsLoading.value = false
+      typesLoading.value = false
     }
   }
 
@@ -198,6 +249,28 @@
     }
   }
 
+  // 一级类型变更
+  const handleParentTypeChange = (value: string | undefined) => {
+    filterChildTypeId.value = undefined
+    selectedItemId.value = ''
+    selectedSpecId.value = ''
+
+    if (value) {
+      const parent = allTypes.value.find(t => t.type_id === value)
+      filterChildTypes.value = parent?.children || []
+    } else {
+      filterChildTypes.value = []
+    }
+    filterItems()
+  }
+
+  // 二级类型变更
+  const handleChildTypeChange = (value: string | undefined) => {
+    selectedItemId.value = ''
+    selectedSpecId.value = ''
+    filterItems()
+  }
+
   const handleItemChange = () => {
     selectedSpecId.value = ''
     pageIndex.value = 1
@@ -215,8 +288,28 @@
     loadHistory()
   }
 
+  const handleSearch = () => {
+    pageIndex.value = 1
+    loadHistory()
+  }
+
+  const handleReset = () => {
+    filterParentTypeId.value = undefined
+    filterChildTypeId.value = undefined
+    selectedItemId.value = ''
+    selectedSpecId.value = ''
+    filterChildTypes.value = []
+    allItems.value = allItemsUnfiltered.value
+    historyRecords.value = []
+    total.value = 0
+  }
+
+  const filterOption = (input: string, option: { label: string }) =>
+    option.label.toLowerCase().includes(input.toLowerCase())
+
   onMounted(() => {
-    loadInventoryItems()
+    loadTypes()
+    loadAllItems()
   })
 </script>
 

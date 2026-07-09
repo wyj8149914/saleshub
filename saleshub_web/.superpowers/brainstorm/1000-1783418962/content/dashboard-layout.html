@@ -1,0 +1,204 @@
+<h2>首页布局方案</h2>
+<p class="subtitle">基于混合场景设计：业务概览 + 快速操作</p>
+
+<div class="section">
+  <div class="label">方案 A：经典三段式</div>
+  <div class="mockup">
+    <div class="mockup-header">预览：经典三段式布局</div>
+    <div class="mockup-body">
+      <div style="background:#f0f2f5;padding:16px;border-radius:8px;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+          <div class="placeholder" style="height:100px;text-align:center;padding:12px;">
+            <div style="font-size:28px;font-weight:600;color:#1890ff;">128</div>
+            <div style="font-size:12px;color:#666;margin-top:4px;">产品总数</div>
+            <div style="height:20px;margin-top:8px;background:linear-gradient(90deg,#e6f7ff 0%,#1890ff 100%);border-radius:4px;opacity:0.6;"></div>
+          </div>
+          <div class="placeholder" style="height:100px;text-align:center;padding:12px;">
+            <div style="font-size:28px;font-weight:600;color:#52c41a;">456</div>
+            <div style="font-size:12px;color:#666;margin-top:4px;">零件总数</div>
+            <div style="height:20px;margin-top:8px;background:linear-gradient(90deg,#f6ffed 0%,#52c41a 100%);border-radius:4px;opacity:0.6;"></div>
+          </div>
+          <div class="placeholder" style="height:100px;text-align:center;padding:12px;">
+            <div style="font-size:28px;font-weight:600;color:#faad14;">12</div>
+            <div style="font-size:12px;color:#666;margin-top:4px;">库存预警</div>
+            <div style="height:20px;margin-top:8px;background:linear-gradient(90deg,#fffbe6 0%,#faad14 100%);border-radius:4px;opacity:0.6;"></div>
+          </div>
+          <div class="placeholder" style="height:100px;text-align:center;padding:12px;">
+            <div style="font-size:28px;font-weight:600;color:#722ed1;">¥89.5K</div>
+            <div style="font-size:12px;color:#666;margin-top:4px;">库存总值</div>
+            <div style="height:20px;margin-top:8px;background:linear-gradient(90deg,#f9f0ff 0%,#722ed1 100%);border-radius:4px;opacity:0.6;"></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:16px;">
+          <div class="placeholder" style="height:200px;padding:12px;">
+            <div style="font-weight:500;margin-bottom:8px;">最近出入库记录</div>
+            <div style="font-size:12px;color:#999;">表格：时间 | 零件 | 类型 | 数量</div>
+          </div>
+          <div class="placeholder" style="height:200px;padding:12px;">
+            <div style="font-weight:500;margin-bottom:8px;">快速操作</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <button class="mock-button">入库</button>
+              <button class="mock-button">出库</button>
+              <button class="mock-button">盘点</button>
+            </div>
+          </div>
+        </div>
+        <div class="placeholder" style="height:150px;padding:12px;">
+          <div style="font-weight:500;margin-bottom:8px;">库存分布趋势（最近30天）</div>
+          <div style="font-size:12px;color:#999;">迷你趋势图</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">方案 B：仪表盘式</div>
+  <div class="mockup">
+    <div class="mockup-header">预览：仪表盘式布局</div>
+    <div class="mockup-body">
+      <div style="background:#f0f2f5;padding:16px;border-radius:8px;">
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:16px;">
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+            <div class="placeholder" style="height:120px;text-align:center;padding:16px;background:#fff;border-left:4px solid #1890ff;">
+              <div style="font-size:36px;font-weight:700;color:#1890ff;">128</div>
+              <div style="font-size:14px;color:#666;margin-top:6px;">产品总数</div>
+              <div style="font-size:11px;color:#999;margin-top:4px;">↑ 8 本周新增</div>
+            </div>
+            <div class="placeholder" style="height:120px;text-align:center;padding:16px;background:#fff;border-left:4px solid #52c41a;">
+              <div style="font-size:36px;font-weight:700;color:#52c41a;">456</div>
+              <div style="font-size:14px;color:#666;margin-top:6px;">零件总数</div>
+              <div style="font-size:11px;color:#999;margin-top:4px;">↑ 23 本周新增</div>
+            </div>
+            <div class="placeholder" style="height:120px;text-align:center;padding:16px;background:#fff;border-left:4px solid #faad14;">
+              <div style="font-size:36px;font-weight:700;color:#faad14;">12</div>
+              <div style="font-size:14px;color:#666;margin-top:6px;">库存预警</div>
+              <div style="font-size:11px;color:#ff4d4f;margin-top:4px;">⚠ 需要处理</div>
+            </div>
+            <div class="placeholder" style="height:120px;text-align:center;padding:16px;background:#fff;border-left:4px solid #722ed1;">
+              <div style="font-size:36px;font-weight:700;color:#722ed1;">892</div>
+              <div style="font-size:14px;color:#666;margin-top:6px;">规格数量</div>
+              <div style="font-size:11px;color:#999;margin-top:4px;">平均 1.96 规格/零件</div>
+            </div>
+          </div>
+          <div class="placeholder" style="height:252px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;">
+            <div style="font-weight:600;margin-bottom:12px;">快速操作</div>
+            <button class="mock-button" style="padding:12px;">📦 入库管理</button>
+            <button class="mock-button" style="padding:12px;">📤 出库管理</button>
+            <button class="mock-button" style="padding:12px;">🔍 盘点管理</button>
+            <button class="mock-button" style="padding:12px;">📋 库存历史</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+          <div class="placeholder" style="height:160px;padding:12px;">
+            <div style="font-weight:500;margin-bottom:8px;font-size:13px;">今日入库</div>
+            <div style="font-size:24px;font-weight:600;color:#52c41a;">+156</div>
+            <div style="font-size:11px;color:#999;margin-top:8px;">5 笔记录</div>
+          </div>
+          <div class="placeholder" style="height:160px;padding:12px;">
+            <div style="font-weight:500;margin-bottom:8px;font-size:13px;">今日出库</div>
+            <div style="font-size:24px;font-weight:600;color:#1890ff;">-89</div>
+            <div style="font-size:11px;color:#999;margin-top:8px;">3 笔记录</div>
+          </div>
+          <div class="placeholder" style="height:160px;padding:12px;">
+            <div style="font-weight:500;margin-bottom:8px;font-size:13px;">库存总值</div>
+            <div style="font-size:24px;font-weight:600;color:#722ed1;">¥89.5K</div>
+            <div style="font-size:11px;color:#999;margin-top:8px;">456 个零件</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">方案 C：卡片网格式</div>
+  <div class="mockup">
+    <div class="mockup-header">预览：卡片网格式布局</div>
+    <div class="mockup-body">
+      <div style="background:#f0f2f5;padding:16px;border-radius:8px;">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px;">
+          <div class="placeholder" style="height:140px;padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:start;">
+              <div>
+                <div style="font-size:12px;color:#999;">产品总数</div>
+                <div style="font-size:32px;font-weight:600;color:#1890ff;margin-top:4px;">128</div>
+              </div>
+              <div style="font-size:24px;">📦</div>
+            </div>
+            <div style="margin-top:12px;height:24px;background:#e6f7ff;border-radius:4px;position:relative;">
+              <div style="position:absolute;left:0;top:0;height:100%;width:70%;background:#1890ff;opacity:0.3;border-radius:4px;"></div>
+            </div>
+          </div>
+          <div class="placeholder" style="height:140px;padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:start;">
+              <div>
+                <div style="font-size:12px;color:#999;">零件总数</div>
+                <div style="font-size:32px;font-weight:600;color:#52c41a;margin-top:4px;">456</div>
+              </div>
+              <div style="font-size:24px;">🔧</div>
+            </div>
+            <div style="margin-top:12px;height:24px;background:#f6ffed;border-radius:4px;position:relative;">
+              <div style="position:absolute;left:0;top:0;height:100%;width:85%;background:#52c41a;opacity:0.3;border-radius:4px;"></div>
+            </div>
+          </div>
+          <div class="placeholder" style="height:140px;padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:start;">
+              <div>
+                <div style="font-size:12px;color:#999;">库存预警</div>
+                <div style="font-size:32px;font-weight:600;color:#faad14;margin-top:4px;">12</div>
+              </div>
+              <div style="font-size:24px;">⚠️</div>
+            </div>
+            <div style="margin-top:12px;height:24px;background:#fffbe6;border-radius:4px;position:relative;">
+              <div style="position:absolute;left:0;top:0;height:100%;width:25%;background:#faad14;opacity:0.3;border-radius:4px;"></div>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;">
+          <div class="placeholder" style="height:180px;padding:16px;">
+            <div style="font-weight:500;margin-bottom:12px;">最近活动</div>
+            <div style="font-size:12px;color:#666;line-height:1.8;">
+              • 10:30 入库 电阻 10KΩ × 100<br/>
+              • 09:15 出库 电容 100μF × 50<br/>
+              • 昨天 盘点 完成全部盘点
+            </div>
+          </div>
+          <div class="placeholder" style="height:180px;padding:16px;">
+            <div style="font-weight:500;margin-bottom:12px;">快速操作</div>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
+              <button class="mock-button" style="padding:16px;font-size:13px;">入库</button>
+              <button class="mock-button" style="padding:16px;font-size:13px;">出库</button>
+              <button class="mock-button" style="padding:16px;font-size:13px;">盘点</button>
+              <button class="mock-button" style="padding:16px;font-size:13px;">历史</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>经典三段式</h3>
+      <p>指标卡片 → 详情表格 → 趋势图，信息层次清晰，适合全面了解</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>仪表盘式</h3>
+      <p>大数字突出，快速操作醒目，适合日常运营快速查看</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>卡片网格式</h3>
+      <p>模块化卡片布局，视觉平衡，适合混合场景</p>
+    </div>
+  </div>
+</div>

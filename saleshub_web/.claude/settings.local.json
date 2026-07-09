@@ -1,11 +1,12 @@
 {
-    "permissions": {
-        "allow": [
-            "Bash(pnpm add *)",
-            "Bash(pnpm run *)",
-            "Bash(npm run *)",
-            "Bash(git add *)",
-            "Bash(git commit *)"
-        ]
-    }
+  "permissions": {
+    "allow": [
+      "Bash(pnpm add *)",
+      "Bash(pnpm run *)",
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(bash *)"
+    ]
+  }
 }

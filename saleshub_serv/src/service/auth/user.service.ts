@@ -10,7 +10,7 @@ import { v7 } from 'uuid';
 
 export class UserService {
     private userRepository = AppDataSource.getRepository(User);
-    private logger = getLogger('AUTH_SERV');
+    private logger = getLogger('SALESHUB_SERV');
 
     /**
      * 用户登录
