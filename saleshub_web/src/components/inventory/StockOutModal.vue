@@ -145,7 +145,8 @@
               </template>
 
               <template v-else-if="column.key === 'stock'">
-                <span :class="{ 'text-warn': record.needed > record.warehouseStock }">{{ record.warehouseStock ?? '-' }}</span>
+                <span :class="{ 'text-warn': record.needed > record.warehouseStock }">{{ record.warehouseStock ?? '-'
+                  }}</span>
               </template>
             </template>
           </a-table>
@@ -168,6 +169,13 @@
 </template>
 
 <script setup lang="ts">
+  /**
+   * 出库弹窗组件
+   *
+   * 支持两种出库模式：
+   * 1. 按零件出库：用户选择零件、规格、总数量，系统自动从各仓库分配库存（按库存降序），用户可手动调整
+   * 2. 按产品出库：用户选择产品、仓库、台数，系统根据 BOM 自动扣减零件库存
+   */
   import { ref, reactive, computed, watch } from 'vue'
   import { message } from 'ant-design-vue'
   import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue'
@@ -188,33 +196,39 @@
   }
   const emit = defineEmits<Emits>()
 
+  // ==================== 公共状态 ====================
   const formRef = ref()
   const loading = ref(false)
   const productsLoading = ref(false)
 
+  // 出库模式：item=按零件，product=按产品
   const mode = ref<'item' | 'product'>('item')
+
+  // 产品列表（产品出库模式用）
   const products = ref<Product[]>([])
+  // BOM 零件列表（产品出库模式用）
   const bomItems = ref<ProductItemRelation[]>([])
 
-  // 仓库库存缓存（产品出库模式用）
+  // 仓库库存缓存：Map<spec_id, Map<warehouse_id, stock>>（产品出库模式用）
   const warehousesWithStock = ref<Map<string, Map<string, number>>>(new Map())
 
+  // 表单数据
   const form = reactive({
-    warehouse_id: '',
-    product_id: '',
-    quantity: 1 as number,
+    warehouse_id: '',      // 仓库ID（产品出库模式必填）
+    product_id: '',        // 产品ID（产品出库模式必填）
+    quantity: 1 as number, // 出库台数（产品出库模式用）
     date: dayjs() as Dayjs,
     remark: ''
   })
 
-  // 类型相关（共享）
+  // ==================== 零件类型数据 ====================
   const typesLoading = ref(false)
   const allTypes = ref<ItemTypeNode[]>([])
   const parentTypes = ref<ItemTypeNode[]>([])
   const itemsLoading = ref(false)
   const allItems = ref<InventoryItem[]>([])
 
-  // 加载类型列表
+  // 加载零件类型列表
   const loadTypes = async () => {
     typesLoading.value = true
     try {
@@ -241,27 +255,30 @@
     }
   }
 
-  // 仓库分配
+  // ==================== 按零件出库：数据结构 ====================
+
+  // 仓库分配项：表示从某个仓库出库的数量
   interface WarehouseAllocation {
     warehouse_id: string
     warehouse_name: string
-    availableStock: number
-    quantity: number
+    availableStock: number  // 该仓库可用库存
+    quantity: number        // 从该仓库出库数量（可编辑）
   }
 
-  // 批量行
+  // 批量出库行
   interface BatchRow {
-    parentTypeId: string | undefined
-    childTypeId: string | undefined
-    childTypes: ItemTypeNode[]
-    item_id: string
-    spec_id: string
-    totalQuantity: number
-    allocations: WarehouseAllocation[]
-    totalAvailable: number
-    allocationsLoading: boolean
+    parentTypeId: string | undefined   // 一级类型ID
+    childTypeId: string | undefined    // 二级类型ID
+    childTypes: ItemTypeNode[]          // 二级类型选项列表
+    item_id: string                     // 零件ID
+    spec_id: string                     // 规格ID
+    totalQuantity: number               // 用户输入的总出库数量
+    allocations: WarehouseAllocation[]  // 各仓库分配明细
+    totalAvailable: number              // 所有仓库库存合计
+    allocationsLoading: boolean         // 加载中状态
   }
 
+  // 创建空行
   function createEmptyRow(): BatchRow {
     return {
       parentTypeId: undefined,
@@ -278,6 +295,8 @@
 
   const batchRows = ref<BatchRow[]>([createEmptyRow()])
 
+  // ==================== 按零件出库：工具函数 ====================
+
   // 根据类型筛选零件选项
   const getFilteredItemOptions = (row: BatchRow) => {
     const typeId = row.childTypeId || row.parentTypeId
@@ -293,7 +312,7 @@
     return items.map((i) => ({ label: `${i.name} (${i.code})`, value: i.item_id }))
   }
 
-  // 获取当前行的零件列表
+  // 获取当前行的零件列表（用于规格选择）
   const getRowItems = (row: BatchRow) => {
     const typeId = row.childTypeId || row.parentTypeId
     let items = allItems.value
@@ -308,23 +327,27 @@
     return items
   }
 
-  // 自动分配仓库
+  /**
+   * 自动分配仓库库存
+   * 策略：按库存降序排列，优先从库存多的仓库出库
+   */
   function autoAllocate(allocations: WarehouseAllocation[], totalQuantity: number) {
-    // 按库存降序排列
-    const sorted = [...allocations].sort((a, b) => b.availableStock - a.availableStock)
     let remaining = totalQuantity
-    for (const alloc of sorted) {
+    for (const alloc of allocations) {
       alloc.quantity = Math.min(alloc.availableStock, remaining)
       remaining -= alloc.quantity
     }
   }
 
-  // 获取分配合计
+  // 计算分配合计
   function getAllocationTotal(row: BatchRow): number {
     return row.allocations.reduce((sum, a) => sum + a.quantity, 0)
   }
 
-  // 加载仓库库存并自动分配
+  /**
+   * 加载规格在各仓库的库存分布
+   * 并自动按库存降序分配出库数量
+   */
   const loadWarehouseAllocations = async (row: BatchRow) => {
     if (!row.spec_id) {
       row.allocations = []
@@ -336,12 +359,14 @@
       const res = await inventoryApi.listSpecWarehouseStock(row.spec_id)
       if (res.result === 0) {
         const data = res.datas || []
+        // 构建仓库分配列表
         row.allocations = data.map((item: SpecWarehouseStock) => ({
           warehouse_id: item.warehouse_id,
           warehouse_name: item.warehouse_name,
           availableStock: item.current_stock,
           quantity: 0
         }))
+        // 计算总库存
         row.totalAvailable = data.reduce((sum: number, item: SpecWarehouseStock) => sum + item.current_stock, 0)
         // 自动分配
         autoAllocate(row.allocations, row.totalQuantity)
@@ -354,7 +379,9 @@
     }
   }
 
-  // ---- 行操作 ----
+  // ==================== 按零件出库：事件处理 ====================
+
+  // 一级类型变更：清空下游选择
   const handleRowParentTypeChange = (idx: number, value: string | undefined) => {
     const row = batchRows.value[idx]
     if (!row) return
@@ -373,6 +400,7 @@
     }
   }
 
+  // 二级类型变更：清空下游选择
   const handleRowChildTypeChange = (idx: number, value: string | undefined) => {
     const row = batchRows.value[idx]
     if (!row) return
@@ -383,6 +411,7 @@
     row.totalAvailable = 0
   }
 
+  // 零件变更：清空下游选择，自动选择唯一默认规格
   const handleRowItemChange = (idx: number, value: string) => {
     const row = batchRows.value[idx]
     if (!row) return
@@ -393,13 +422,14 @@
 
     const items = getRowItems(row)
     const item = items.find((i) => i.item_id === value)
-    // 如果只有一个默认规格，自动选择
+    // 如果只有一个默认规格（spec 为空），自动选择并加载库存
     if (item?.specs?.length === 1 && item.specs[0]?.spec === '') {
       row.spec_id = item.specs[0].spec_id
       loadWarehouseAllocations(row)
     }
   }
 
+  // 规格变更：加载仓库库存分布
   const handleRowSpecChange = (idx: number, value: string) => {
     const row = batchRows.value[idx]
     if (!row) return
@@ -407,6 +437,7 @@
     loadWarehouseAllocations(row)
   }
 
+  // 总数量变更：重新自动分配
   const handleRowQuantityChange = (idx: number, value: number) => {
     const row = batchRows.value[idx]
     if (!row) return
@@ -416,23 +447,28 @@
     }
   }
 
+  // 手动调整某仓库出库数量
   const handleAllocationChange = (rowIdx: number, allocIdx: number, value: number) => {
     const row = batchRows.value[rowIdx]
     if (!row || !row.allocations[allocIdx]) return
     row.allocations[allocIdx].quantity = value
   }
 
+  // 添加行
   const addRow = () => {
     batchRows.value.push(createEmptyRow())
   }
 
+  // 删除行
   const removeRow = (idx: number) => {
     batchRows.value.splice(idx, 1)
   }
 
+  // 下拉框搜索过滤
   const filterOption = (input: string, option: { label: string }) =>
     option.label.toLowerCase().includes(input.toLowerCase())
 
+  // 判断是否需要显示规格选择（多规格或非默认规格时显示）
   function needsSpec(row: BatchRow) {
     const items = getRowItems(row)
     const item = items.find((i) => i.item_id === row.item_id)
@@ -440,6 +476,7 @@
     return !(item.specs.length === 1 && item.specs[0]?.spec === '')
   }
 
+  // 构建规格选项（显示总库存）
   function specOptionsFor(row: BatchRow) {
     const items = getRowItems(row)
     const item = items.find((i) => i.item_id === row.item_id)
@@ -450,11 +487,13 @@
     }))
   }
 
-  // 产品相关
+  // ==================== 按产品出库 ====================
+
   const productOptions = computed(() =>
     products.value.map((p) => ({ label: `${p.name} (${p.code})`, value: p.product_id }))
   )
 
+  // 产品变更：加载 BOM
   const handleProductChange = async (productId: string) => {
     bomItems.value = []
     if (!productId) return
@@ -471,13 +510,14 @@
     }
   }
 
-  // 加载BOM仓库库存
+  // 加载 BOM 中各规格在指定仓库的库存
   const loadBomWarehouseStock = async () => {
     if (!form.warehouse_id || !bomItems.value.length) return
     const specIds = bomItems.value.map(item => item.spec_id).filter(Boolean)
     await Promise.all(specIds.map(specId => loadSpecWarehouseStock(specId)))
   }
 
+  // 加载单个规格的仓库库存分布（用于产品出库 BOM 预览）
   const loadSpecWarehouseStock = async (specId: string) => {
     if (!specId || warehousesWithStock.value.has(specId)) return
     try {
@@ -494,12 +534,14 @@
     }
   }
 
+  // 仓库变更：更新 BOM 预览中的库存数据
   const handleWarehouseChange = async () => {
     if (mode.value === 'product' && form.product_id) {
       await loadBomWarehouseStock()
     }
   }
 
+  // BOM 表格列定义
   const bomColumns = [
     { title: '零件', key: 'item', ellipsis: true },
     { title: '规格', key: 'spec', width: 110 },
@@ -508,6 +550,7 @@
     { title: '当前库存', key: 'stock', width: 100, align: 'center' as const }
   ]
 
+  // BOM 视图计算：计算每个零件的需求量和库存
   const bomView = computed(() =>
     bomItems.value.map((r) => {
       let warehouseStock: number | null = null
@@ -525,6 +568,7 @@
     })
   )
 
+  // 加载产品列表
   const loadProducts = async () => {
     productsLoading.value = true
     try {
@@ -539,7 +583,9 @@
     }
   }
 
-  // 校验
+  // ==================== 校验与提交 ====================
+
+  // 校验按零件出库
   const validateBatch = (): string | null => {
     const rows = batchRows.value
     if (rows.length === 0) return '请至少添加一条出库明细'
@@ -562,10 +608,11 @@
     return null
   }
 
-  // 提交
+  // 提交出库
   const handleSubmit = async () => {
     const dateStr = form.date.format('YYYY-MM-DD')
 
+    // 按零件出库
     if (mode.value === 'item') {
       const err = validateBatch()
       if (err) {
@@ -574,7 +621,7 @@
       }
       loading.value = true
       try {
-        // 展开分配为多条记录
+        // 展开分配为多条记录（每个仓库+零件+规格组合为一条）
         const items = batchRows.value.flatMap(row =>
           row.allocations
             .filter(a => a.quantity > 0)
@@ -642,10 +689,12 @@
     }
   }
 
+  // 取消
   const handleCancel = () => {
     emit('update:visible', false)
   }
 
+  // 重置表单
   const resetForm = () => {
     mode.value = 'item'
     form.warehouse_id = ''
@@ -660,6 +709,7 @@
     formRef.value?.clearValidate()
   }
 
+  // 弹窗打开时初始化
   watch(
     () => props.visible,
     (val) => {

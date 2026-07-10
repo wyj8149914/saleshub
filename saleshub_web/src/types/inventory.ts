@@ -330,12 +330,12 @@ export interface StockRecordListQuery {
 
 // ============ 出入库 Payload ============
 export interface StockInPayload {
-    warehouse_id: string
+    warehouse_id?: string
     item_id: string
     spec_id: string
     quantity: number
     date: string
-    photo_id: string
+    photo_id?: string
     remark?: string
 }
 
@@ -346,10 +346,10 @@ export interface StockInBatchItem {
 }
 
 export interface StockInBatchPayload {
-    warehouse_id: string
+    warehouse_id?: string
     items: StockInBatchItem[]
     date: string
-    photo_id: string
+    photo_id?: string
     remark?: string
 }
 

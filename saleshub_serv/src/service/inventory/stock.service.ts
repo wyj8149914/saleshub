@@ -58,12 +58,14 @@ export class StockService {
                 return { result: 1, msg: '零件不存在规格' };
             }
 
-            // 校验仓库
-            const warehouse = await this.warehouseRepository.findOne({
-                where: { warehouse_id: dto.warehouse_id, status: 1 },
-            });
-            if (!warehouse) {
-                return { result: 1, msg: '仓库不存在' };
+            // 校验仓库（可选）
+            if (dto.warehouse_id) {
+                const warehouse = await this.warehouseRepository.findOne({
+                    where: { warehouse_id: dto.warehouse_id, status: 1 },
+                });
+                if (!warehouse) {
+                    return { result: 1, msg: '仓库不存在' };
+                }
             }
 
             const recordNo = await this.generateStockInRecordNo();
@@ -73,7 +75,9 @@ export class StockService {
             record.record_no = recordNo;
             record.item_id = dto.item_id;
             record.spec_id = dto.spec_id;
-            record.warehouse_id = dto.warehouse_id;
+            if (dto.warehouse_id) {
+                record.warehouse_id = dto.warehouse_id;
+            }
             record.quantity = dto.quantity;
             record.before_stock = spec.current_stock;
             record.after_stock = spec.current_stock + dto.quantity;
@@ -90,23 +94,25 @@ export class StockService {
             await this.inventoryItemSpecRepository.manager.transaction(async (manager) => {
                 await manager.save(StockInRecord, record);
 
-                // 更新或创建库存明细
-                let specWarehouse = await manager.findOne(InventoryItemSpecWarehouse, {
-                    where: { spec_id: dto.spec_id, warehouse_id: dto.warehouse_id, status: 1 },
-                });
-                if (specWarehouse) {
-                    specWarehouse.current_stock += dto.quantity;
-                    specWarehouse.update_time = now;
-                    await manager.save(InventoryItemSpecWarehouse, specWarehouse);
-                } else {
-                    specWarehouse = new InventoryItemSpecWarehouse();
-                    specWarehouse.id = v7().replace(/-/g, '');
-                    specWarehouse.spec_id = dto.spec_id;
-                    specWarehouse.warehouse_id = dto.warehouse_id;
-                    specWarehouse.current_stock = dto.quantity;
-                    specWarehouse.status = 1;
-                    specWarehouse.create_time = now;
-                    await manager.save(InventoryItemSpecWarehouse, specWarehouse);
+                // 如果指定了仓库，更新或创建库存明细
+                if (dto.warehouse_id) {
+                    let specWarehouse = await manager.findOne(InventoryItemSpecWarehouse, {
+                        where: { spec_id: dto.spec_id, warehouse_id: dto.warehouse_id, status: 1 },
+                    });
+                    if (specWarehouse) {
+                        specWarehouse.current_stock += dto.quantity;
+                        specWarehouse.update_time = now;
+                        await manager.save(InventoryItemSpecWarehouse, specWarehouse);
+                    } else {
+                        specWarehouse = new InventoryItemSpecWarehouse();
+                        specWarehouse.id = v7().replace(/-/g, '');
+                        specWarehouse.spec_id = dto.spec_id;
+                        specWarehouse.warehouse_id = dto.warehouse_id;
+                        specWarehouse.current_stock = dto.quantity;
+                        specWarehouse.status = 1;
+                        specWarehouse.create_time = now;
+                        await manager.save(InventoryItemSpecWarehouse, specWarehouse);
+                    }
                 }
 
                 await manager.update(
@@ -138,12 +144,14 @@ export class StockService {
                 return { result: 1, msg: validated.msg };
             }
 
-            // 校验仓库
-            const warehouse = await this.warehouseRepository.findOne({
-                where: { warehouse_id: dto.warehouse_id, status: 1 },
-            });
-            if (!warehouse) {
-                return { result: 1, msg: '仓库不存在' };
+            // 校验仓库（可选）
+            if (dto.warehouse_id) {
+                const warehouse = await this.warehouseRepository.findOne({
+                    where: { warehouse_id: dto.warehouse_id, status: 1 },
+                });
+                if (!warehouse) {
+                    return { result: 1, msg: '仓库不存在' };
+                }
             }
 
             await this.executeStockIn(itemSpecs, dto.date, dto.warehouse_id, dto.photo_id, dto.remark);
@@ -397,7 +405,7 @@ export class StockService {
                 .select([
                     'rec.record_id AS record_id',
                     'rec.record_no AS record_no',
-                    'warehouse.name AS warehouse_name',
+                    'COALESCE(warehouse.name, \'未分配仓库\') AS warehouse_name',
                     'to_char(rec.date, \'YYYY-MM-DD\') AS date',
                     'rec.quantity AS quantity',
                     'rec.remark AS remark',
@@ -455,9 +463,11 @@ export class StockService {
             const queryBuilder = this.stockOutRepository.createQueryBuilder('rec')
                 .leftJoin(InventoryItem, 'item', 'item.item_id = rec.item_id AND item.status = 1')
                 .leftJoin(InventoryItemSpec, 'spec', 'spec.spec_id = rec.spec_id AND spec.status = 1')
+                .leftJoin(Warehouse, 'warehouse', 'warehouse.warehouse_id = rec.warehouse_id AND warehouse.status = 1')
                 .select([
                     'rec.record_id AS record_id',
                     'rec.record_no AS record_no',
+                    'COALESCE(warehouse.name, \'未分配\') AS warehouse_name',
                     'to_char(rec.date, \'YYYY-MM-DD\') AS date',
                     'rec.quantity AS quantity',
                     'rec.remark AS remark',
@@ -721,7 +731,7 @@ export class StockService {
     /**
      * 执行入库(同一批次共用 record_no,事务原子)
      */
-    private async executeStockIn(itemSpecs: StockItem[], date: string, warehouseId: string, photoId: string, remark?: string) {
+    private async executeStockIn(itemSpecs: StockItem[], date: string, warehouseId?: string, photoId?: string, remark?: string) {
         const recordNo = await this.generateStockInRecordNo();
         const now = new Date();
         const inDate = new Date(date);
@@ -739,15 +749,18 @@ export class StockService {
             .getMany();
         const specById = new Map(specs.map((s) => [s.spec_id, s]));
 
-        // 获取该仓库的库存明细
-        const specWarehouses = await this.specWarehouseRepository
-            .createQueryBuilder('sw')
-            .where('sw.spec_id IN (:...specIds) AND sw.warehouse_id = :warehouseId AND sw.status = 1', {
-                specIds,
-                warehouseId,
-            })
-            .getMany();
-        const specWarehouseBySpec = new Map(specWarehouses.map((sw) => [sw.spec_id, sw]));
+        // 获取该仓库的库存明细（仅当指定了仓库时）
+        let specWarehouseBySpec = new Map<string, InventoryItemSpecWarehouse>();
+        if (warehouseId) {
+            const specWarehouses = await this.specWarehouseRepository
+                .createQueryBuilder('sw')
+                .where('sw.spec_id IN (:...specIds) AND sw.warehouse_id = :warehouseId AND sw.status = 1', {
+                    specIds,
+                    warehouseId,
+                })
+                .getMany();
+            specWarehouseBySpec = new Map(specWarehouses.map((sw) => [sw.spec_id, sw]));
+        }
 
         await this.stockInRepository.manager.transaction(async (manager) => {
             for (const itemSpec of itemSpecs) {
@@ -760,7 +773,9 @@ export class StockService {
                 record.record_no = recordNo;
                 record.item_id = itemSpec.item_id;
                 record.spec_id = itemSpec.spec_id;
-                record.warehouse_id = warehouseId;
+                if (warehouseId) {
+                    record.warehouse_id = warehouseId;
+                }
                 record.quantity = itemSpec.quantity;
                 record.before_stock = spec.current_stock;
                 record.after_stock = spec.current_stock + itemSpec.quantity;
@@ -775,29 +790,38 @@ export class StockService {
                 await manager.save(StockInRecord, record);
             }
 
-            // 更新库存明细
+            // 如果指定了仓库，更新库存明细
+            if (warehouseId) {
+                for (const [specId, add] of stockDelta) {
+                    const spec = specById.get(specId);
+                    if (!spec) {
+                        throw new Error(`规格 ${specId} 未找到`);
+                    }
+
+                    let specWarehouse = specWarehouseBySpec.get(specId);
+                    if (specWarehouse) {
+                        specWarehouse.current_stock += add;
+                        specWarehouse.update_time = now;
+                        await manager.save(InventoryItemSpecWarehouse, specWarehouse);
+                    } else {
+                        specWarehouse = new InventoryItemSpecWarehouse();
+                        specWarehouse.id = v7().replace(/-/g, '');
+                        specWarehouse.spec_id = specId;
+                        specWarehouse.warehouse_id = warehouseId;
+                        specWarehouse.current_stock = add;
+                        specWarehouse.status = 1;
+                        specWarehouse.create_time = now;
+                        await manager.save(InventoryItemSpecWarehouse, specWarehouse);
+                    }
+                }
+            }
+
+            // 更新总库存
             for (const [specId, add] of stockDelta) {
                 const spec = specById.get(specId);
                 if (!spec) {
                     throw new Error(`规格 ${specId} 未找到`);
                 }
-
-                let specWarehouse = specWarehouseBySpec.get(specId);
-                if (specWarehouse) {
-                    specWarehouse.current_stock += add;
-                    specWarehouse.update_time = now;
-                    await manager.save(InventoryItemSpecWarehouse, specWarehouse);
-                } else {
-                    specWarehouse = new InventoryItemSpecWarehouse();
-                    specWarehouse.id = v7().replace(/-/g, '');
-                    specWarehouse.spec_id = specId;
-                    specWarehouse.warehouse_id = warehouseId;
-                    specWarehouse.current_stock = add;
-                    specWarehouse.status = 1;
-                    specWarehouse.create_time = now;
-                    await manager.save(InventoryItemSpecWarehouse, specWarehouse);
-                }
-
                 await manager.update(
                     InventoryItemSpec,
                     { spec_id: specId },
@@ -915,12 +939,13 @@ export class StockService {
                 // 获取该仓库的库存明细
                 const specQb = this.specWarehouseRepository
                     .createQueryBuilder('sw')
-                    .where('sw.spec_id = :specId AND  AND sw.status = 1', { specIds, });
+                    .where('sw.spec_id = :specId AND sw.status = 1', { specId: itemSpec.spec_id });
 
                 if (itemSpec.warehouse_id) {
                     specQb.andWhere('sw.warehouse_id = :warehouseId', { warehouseId: itemSpec.warehouse_id });
                 }
-                const specWarehouse = await specQb.getRawOne();
+                const specWarehouse = await specQb.getOne();
+                console.log('specWarehouse', specWarehouse)
                 if (!specWarehouse) {
                     throw new Error(`规格 ${itemSpec.spec_id} 在该仓库无库存`);
                 }
@@ -946,9 +971,12 @@ export class StockService {
 
                 // 更新仓库库存,如果指定了仓库ID,那么更新仓库库存
                 if (itemSpec.warehouse_id) {
-                    specWarehouse.current_stock -= itemSpec.quantity;
-                    specWarehouse.update_time = now;
-                    await manager.save(InventoryItemSpecWarehouse, specWarehouse);
+                    console.log(specWarehouse.current_stock, itemSpec.quantity)
+                    await manager.update(
+                        InventoryItemSpecWarehouse,
+                        { spec_id: itemSpec.spec_id, warehouse_id: itemSpec.warehouse_id },
+                        { current_stock: specWarehouse.current_stock - itemSpec.quantity, update_time: now }
+                    );
                 }
             }
 

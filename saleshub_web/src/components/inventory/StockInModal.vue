@@ -13,7 +13,7 @@
       <template v-if="mode === 'single'">
         <a-row :gutter="12">
           <a-col :span="12">
-            <a-form-item label="仓库" name="warehouse_id" :rules="[{ required: true, message: '请选择仓库' }]">
+            <a-form-item label="仓库（可选）" name="warehouse_id">
               <WarehouseSelect v-model="form.warehouse_id" />
             </a-form-item>
           </a-col>
@@ -89,7 +89,7 @@
 
         <a-row :gutter="12">
           <a-col :span="12">
-            <a-form-item label="仓库" name="warehouse_id" :rules="[{ required: true, message: '请选择仓库' }]">
+            <a-form-item label="仓库（可选）" name="warehouse_id">
               <WarehouseSelect v-model="form.warehouse_id" />
             </a-form-item>
           </a-col>
@@ -485,12 +485,12 @@
       loading.value = true
       try {
         const res = await inventoryApi.stockIn({
-          warehouse_id: form.warehouse_id,
+          warehouse_id: form.warehouse_id || undefined,
           item_id: form.item_id,
           spec_id: form.spec_id,
           quantity: form.quantity,
           date: dateStr,
-          photo_id: form.photo_id,
+          photo_id: form.photo_id || undefined,
           remark: form.remark || undefined
         })
         if (res.result === 0) {
@@ -509,10 +509,6 @@
     }
 
     // 批量
-    if (!form.warehouse_id) {
-      message.warning('请选择仓库')
-      return
-    }
     if (!form.date) {
       message.warning('请选择入库日期')
       return
@@ -525,14 +521,14 @@
     loading.value = true
     try {
       const res = await inventoryApi.stockInBatch({
-        warehouse_id: form.warehouse_id,
+        warehouse_id: form.warehouse_id || undefined,
         items: batchRows.value.map((r) => ({
           item_id: r.item_id,
           spec_id: r.spec_id,
           quantity: r.quantity
         })),
         date: dateStr,
-        photo_id: form.photo_id,
+        photo_id: form.photo_id || undefined,
         remark: form.remark || undefined
       })
       if (res.result === 0) {

@@ -5,8 +5,9 @@ import {
 import { PageDto } from './base.dto';
 
 export class StockInDto {
-    @IsNotEmpty({ message: '仓库ID不能为空' })
-    warehouse_id: string;
+    @IsOptional()
+    @MaxLength(32, { message: '仓库ID长度不能超过32' })
+    warehouse_id?: string;
 
     @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
@@ -48,8 +49,9 @@ export class StockInItemEntryDto {
 }
 
 export class StockInBatchDto {
-    @IsNotEmpty({ message: '仓库ID不能为空' })
-    warehouse_id: string;
+    @IsOptional()
+    @MaxLength(32, { message: '仓库ID长度不能超过32' })
+    warehouse_id?: string;
 
     @IsArray({ message: '入库零件列表必须是数组' })
     @IsNotEmpty({ message: '入库零件列表不能为空' })

@@ -171,7 +171,6 @@ export class WarehouseService {
             });
 
             const now = new Date();
-
             if (specWarehouse) {
                 // 累加库存
                 specWarehouse.current_stock += dto.quantity;
@@ -221,6 +220,21 @@ export class WarehouseService {
                 .where('sw.spec_id = :specId AND sw.status = 1', { specId: dto.spec_id })
                 .orderBy('sw.create_time', 'ASC')
                 .getRawMany();
+
+            // 计算已分配的库存总和
+            const assignedTotal = items.reduce((sum: number, item: any) => sum + (item.current_stock || 0), 0);
+
+            // 计算未分配库存
+            const unassignedStock = spec.current_stock - assignedTotal;
+            if (unassignedStock > 0) {
+                items.push({
+                    id: null,
+                    warehouse_id: null,
+                    warehouse_name: '未分配仓库',
+                    warehouse_location: null,
+                    current_stock: unassignedStock,
+                });
+            }
 
             return { result: 0, msg: 'success', datas: items };
         } catch (error) {
