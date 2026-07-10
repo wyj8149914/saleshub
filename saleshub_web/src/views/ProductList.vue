@@ -103,9 +103,9 @@
   import { PlusOutlined, SearchOutlined, TagOutlined } from '@ant-design/icons-vue'
   import { inventoryApi } from '@/api/inventory'
   import type { Product } from '@/types/inventory'
-  import ProductForm from '@/components/inventory/ProductForm.vue'
-  import ProductItemsManager from '@/components/inventory/ProductItemsManager.vue'
-  import ProductDetail from '@/components/inventory/ProductDetail.vue'
+  import ProductForm from '@/components/product/ProductForm.vue'
+  import ProductItemsManager from '@/components/product/ProductItemsManager.vue'
+  import ProductDetail from '@/components/product/ProductDetail.vue'
 
   /** 表格列定义，key 与模板 #bodyCell 中的 column.key 对应 */
   const columns = [

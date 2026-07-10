@@ -40,20 +40,19 @@
         <!-- 库存分布 -->
         <div class="section">
           <div class="section-title">库存分布</div>
-          <div v-for="spec in item.specs" :key="spec.spec_id" class="spec-distribution">
-            <div class="spec-header" @click="toggleSpec(spec.spec_id)">
-              <span class="spec-name">{{ spec.spec || '默认' }}</span>
-              <span class="spec-total">总库存: {{ spec.current_stock }}</span>
-              <DownOutlined :class="{ 'expanded': expandedSpecs[spec.spec_id] }" />
-            </div>
-            <div v-if="expandedSpecs[spec.spec_id]" class="warehouse-list">
-              <a-spin :spinning="stockLoading[spec.spec_id]">
-                <a-table v-if="specStockData[spec.spec_id]?.length" :columns="warehouseColumns"
-                  :data-source="specStockData[spec.spec_id]" :pagination="false" size="small" bordered />
-                <a-empty v-else description="暂无库存分布" :image="Empty.PRESENTED_IMAGE_SIMPLE" />
-              </a-spin>
-            </div>
-          </div>
+          <a-spin :spinning="stockLoading">
+            <a-table :columns="distributionColumns" :data-source="distributionData" :pagination="false" size="small"
+              bordered row-key="key">
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.key === 'spec'">
+                  <span class="spec-tag">{{ record.spec || '默认' }}</span>
+                </template>
+                <template v-if="column.key === 'warehouse_location'">
+                  <span>{{ record.warehouse_location || '-' }}</span>
+                </template>
+              </template>
+            </a-table>
+          </a-spin>
         </div>
 
         <!-- 总库存 -->
@@ -65,9 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, reactive } from 'vue'
-import { Empty } from 'ant-design-vue'
-import { DownOutlined } from '@ant-design/icons-vue'
+import { computed, watch, ref } from 'vue'
 import { inventoryApi } from '@/api/inventory'
 import type { InventoryItem } from '@/types/inventory'
 import type { SpecWarehouseStock } from '@/types/warehouse'
@@ -85,11 +82,8 @@ interface Emits {
 
 const emit = defineEmits<Emits>()
 
-// 使用 reactive 对象而非 Set，因为 Vue 的响应式系统不会追踪 Set/Map 的变更
-const expandedSpecs = reactive<Record<string, boolean>>({})
-
-const specStockData = reactive<Record<string, SpecWarehouseStock[]>>({})
-const stockLoading = reactive<Record<string, boolean>>({})
+const stockLoading = ref(false)
+const specStockData = ref<Record<string, SpecWarehouseStock[]>>({})
 
 // 规格表格列
 const specColumns = [
@@ -113,26 +107,30 @@ const specColumns = [
   }
 ]
 
-// 仓库库存分布表格列
-const warehouseColumns = [
+// 库存分布表格列
+const distributionColumns = [
   {
-    title: '仓库名称',
+    title: '规格',
+    key: 'spec',
+    width: 120
+  },
+  {
+    title: '仓库',
     dataIndex: 'warehouse_name',
     key: 'warehouse_name',
     width: 150
   },
   {
-    title: '仓库位置',
-    dataIndex: 'warehouse_location',
+    title: '位置',
     key: 'warehouse_location',
-    width: 150,
-    customRender: ({ text }: { text: string | null }) => text || '-'
+    width: 120
   },
   {
-    title: '当前库存',
+    title: '库存',
     dataIndex: 'current_stock',
     key: 'current_stock',
-    width: 100
+    width: 80,
+    align: 'center' as const
   }
 ]
 
@@ -142,30 +140,64 @@ const totalStock = computed(() => {
   return props.item.specs.reduce((sum, spec) => sum + (spec.current_stock || 0), 0)
 })
 
-// 切换规格展开/折叠
-const toggleSpec = async (specId: string) => {
-  if (expandedSpecs[specId]) {
-    delete expandedSpecs[specId]
-  } else {
-    expandedSpecs[specId] = true
-    // 如果还没有加载过该规格的仓库分布数据，则加载
-    if (!specStockData[specId]) {
-      await loadSpecWarehouseStock(specId)
+// 计算分布表格数据
+const distributionData = computed(() => {
+  const data: Array<SpecWarehouseStock & { key: string; spec: string }> = []
+  if (!props.item?.specs) return data
+
+  for (const spec of props.item.specs) {
+    const warehouseList = specStockData.value[spec.spec_id] || []
+    if (warehouseList.length > 0) {
+      for (const wh of warehouseList) {
+        data.push({
+          ...wh,
+          key: `${spec.spec_id}-${wh.warehouse_id}`,
+          spec: spec.spec || '默认'
+        })
+      }
+    } else {
+      // 即使没有仓库数据也显示规格行
+      data.push({
+        id: '',
+        warehouse_id: '',
+        warehouse_name: '-',
+        warehouse_location: null,
+        current_stock: 0,
+        key: `${spec.spec_id}-empty`,
+        spec: spec.spec || '默认'
+      })
     }
   }
-}
+  return data
+})
 
-// 加载规格在各仓库的库存分布
-const loadSpecWarehouseStock = async (specId: string) => {
-  stockLoading[specId] = true
+// 加载所有规格的仓库库存分布
+const loadAllSpecWarehouseStock = async () => {
+  if (!props.item?.specs?.length) return
+
+  stockLoading.value = true
   try {
-    const res = await inventoryApi.listSpecWarehouseStock(specId)
-    specStockData[specId] = (res.datas || res) as SpecWarehouseStock[]
+    const results = await Promise.all(
+      props.item.specs.map(spec =>
+        inventoryApi.listSpecWarehouseStock(spec.spec_id).then(res => ({
+          spec_id: spec.spec_id,
+          data: res.datas || []
+        })).catch(() => ({
+          spec_id: spec.spec_id,
+          data: []
+        }))
+      )
+    )
+
+    const newData: Record<string, SpecWarehouseStock[]> = {}
+    for (const result of results) {
+      newData[result.spec_id] = result.data
+    }
+    specStockData.value = newData
   } catch (error) {
-    console.error('加载规格仓库库存分布失败:', error)
-    specStockData[specId] = []
+    console.error('加载库存分布失败:', error)
   } finally {
-    stockLoading[specId] = false
+    stockLoading.value = false
   }
 }
 
@@ -174,21 +206,13 @@ const handleClose = () => {
   emit('update:visible', false)
 }
 
-// 监听弹窗关闭，清空数据
+// 监听弹窗打开，加载数据
 watch(
   () => props.visible,
   (visible) => {
-    if (!visible) {
-      // 清空展开状态和缓存数据
-      Object.keys(expandedSpecs).forEach(key => {
-        delete expandedSpecs[key]
-      })
-      Object.keys(specStockData).forEach(key => {
-        delete specStockData[key]
-      })
-      Object.keys(stockLoading).forEach(key => {
-        delete stockLoading[key]
-      })
+    if (visible && props.item) {
+      specStockData.value = {}
+      loadAllSpecWarehouseStock()
     }
   }
 )
@@ -229,55 +253,13 @@ watch(
   font-weight: 500;
 }
 
-.spec-distribution {
-  border: 1px solid #e4e4e7;
-  border-radius: 6px;
-  margin-bottom: 8px;
-  overflow: hidden;
-}
-
-.spec-distribution:last-child {
-  margin-bottom: 0;
-}
-
-.spec-header {
-  display: flex;
-  align-items: center;
-  padding: 10px 12px;
-  background: #fafafa;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.spec-header:hover {
+.spec-tag {
+  display: inline-block;
+  padding: 2px 8px;
   background: #f4f4f5;
-}
-
-.spec-name {
-  font-weight: 500;
-  color: #18181b;
-  margin-right: 12px;
-}
-
-.spec-total {
+  border-radius: 4px;
   font-size: 13px;
-  color: #71717a;
-  margin-right: auto;
-}
-
-.spec-header :deep(.anticon-down) {
-  color: #a1a1aa;
-  transition: transform 0.2s;
-}
-
-.spec-header :deep(.anticon-down.expanded) {
-  transform: rotate(180deg);
-}
-
-.warehouse-list {
-  padding: 12px;
-  background: #fff;
-  border-top: 1px solid #e4e4e7;
+  color: #52525b;
 }
 
 .total-stock {

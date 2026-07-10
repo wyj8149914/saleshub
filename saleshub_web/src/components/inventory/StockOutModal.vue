@@ -1,12 +1,7 @@
 <template>
-  <a-modal :open="visible" title="出库" :confirm-loading="loading" :mask-closable="false" width="950px" ok-text="提交出库"
+  <a-modal :open="visible" title="出库" :confirm-loading="loading" :mask-closable="false" width="1000px" ok-text="提交出库"
     cancel-text="取消" @ok="handleSubmit" @cancel="handleCancel">
     <a-form ref="formRef" :model="form" layout="vertical">
-      <!-- 仓库选择（所有模式共用） -->
-      <a-form-item label="仓库" name="warehouse_id" :rules="[{ required: true, message: '请选择仓库' }]">
-        <WarehouseSelect v-model="form.warehouse_id" @change="handleWarehouseChange" />
-      </a-form-item>
-
       <a-form-item>
         <a-radio-group v-model:value="mode" button-style="solid">
           <a-radio-button value="item">按零件出库</a-radio-button>
@@ -14,7 +9,13 @@
         </a-radio-group>
       </a-form-item>
 
-      <!-- 按零件出库：每行独立选择类型 -->
+      <!-- 仓库选择（仅产品出库模式） -->
+      <a-form-item v-if="mode === 'product'" label="仓库" name="warehouse_id"
+        :rules="[{ required: true, message: '请选择仓库' }]">
+        <WarehouseSelect v-model="form.warehouse_id" @change="handleWarehouseChange" />
+      </a-form-item>
+
+      <!-- 按零件出库：自动分配仓库 -->
       <template v-if="mode === 'item'">
         <div class="batch-header">
           <span class="batch-label">出库明细{{ batchRows.length > 1 ? '（同一批次共用单号）' : '' }}</span>
@@ -24,39 +25,77 @@
           </a-button>
         </div>
 
-        <div v-for="(row, idx) in batchRows" :key="idx" class="batch-row">
-          <a-select class="row-type" :value="row.parentTypeId" placeholder="一级类型" allow-clear :loading="typesLoading"
-            @change="(v: string) => handleRowParentTypeChange(idx, v)">
-            <a-select-option v-for="t in parentTypes" :key="t.type_id" :value="t.type_id">
-              {{ t.type_name }}
-            </a-select-option>
-          </a-select>
+        <div v-for="(row, idx) in batchRows" :key="idx" class="batch-row-wrapper">
+          <div class="batch-row">
+            <a-select class="row-type" :value="row.parentTypeId" placeholder="一级类型" allow-clear :loading="typesLoading"
+              @change="(v: string) => handleRowParentTypeChange(idx, v)">
+              <a-select-option v-for="t in parentTypes" :key="t.type_id" :value="t.type_id">
+                {{ t.type_name }}
+              </a-select-option>
+            </a-select>
 
-          <a-select class="row-type" :value="row.childTypeId" placeholder="二级类型" allow-clear :loading="typesLoading"
-            @change="(v: string) => handleRowChildTypeChange(idx, v)">
-            <a-select-option v-for="t in row.childTypes" :key="t.type_id" :value="t.type_id">
-              {{ t.type_name }}
-            </a-select-option>
-          </a-select>
+            <a-select class="row-type" :value="row.childTypeId" placeholder="二级类型" allow-clear :loading="typesLoading"
+              @change="(v: string) => handleRowChildTypeChange(idx, v)">
+              <a-select-option v-for="t in row.childTypes" :key="t.type_id" :value="t.type_id">
+                {{ t.type_name }}
+              </a-select-option>
+            </a-select>
 
-          <a-select class="row-item" :value="row.item_id" placeholder="选择零件" show-search :filter-option="filterOption"
-            :loading="itemsLoading" :options="getFilteredItemOptions(row)"
-            @change="(v: string) => handleRowItemChange(idx, v)" />
+            <a-select class="row-item" :value="row.item_id" placeholder="选择零件" show-search :filter-option="filterOption"
+              :loading="itemsLoading" :options="getFilteredItemOptions(row)"
+              @change="(v: string) => handleRowItemChange(idx, v)" />
 
-          <a-select v-if="needsSpec(row)" class="row-spec" :value="row.spec_id" placeholder="规格"
-            :options="specOptionsFor(row)" @change="(v: string) => (row.spec_id = v)" />
+            <a-select v-if="needsSpec(row)" class="row-spec" :value="row.spec_id" placeholder="规格"
+              :options="specOptionsFor(row)" @change="(v: string) => handleRowSpecChange(idx, v)" />
 
-          <a-input-number class="row-qty" :value="row.quantity" placeholder="数量" :min="1" :precision="0"
-            :max="row.availableStock ?? undefined"
-            @change="(v: number | null) => (row.quantity = v ?? 1)" />
+            <a-input-number class="row-qty" :value="row.totalQuantity" placeholder="数量" :min="1" :precision="0"
+              @change="(v: number | null) => handleRowQuantityChange(idx, v ?? 1)" />
 
-          <span v-if="row.availableStock !== null && row.availableStock !== undefined" class="row-stock">
-            库存: <span class="stock-num">{{ row.availableStock }}</span>
-          </span>
+            <a-button class="row-del" type="link" danger :disabled="batchRows.length === 1" @click="removeRow(idx)">
+              <DeleteOutlined />
+            </a-button>
+          </div>
 
-          <a-button class="row-del" type="link" danger :disabled="batchRows.length === 1" @click="removeRow(idx)">
-            <DeleteOutlined />
-          </a-button>
+          <!-- 仓库分配表 -->
+          <div v-if="row.spec_id && row.allocations.length > 0" class="allocation-table">
+            <a-spin :spinning="row.allocationsLoading">
+              <table>
+                <thead>
+                  <tr>
+                    <th>仓库</th>
+                    <th>可用库存</th>
+                    <th>出库数量</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(alloc, aIdx) in row.allocations" :key="alloc.warehouse_id">
+                    <td>{{ alloc.warehouse_name }}</td>
+                    <td>{{ alloc.availableStock }}</td>
+                    <td>
+                      <a-input-number :value="alloc.quantity" :min="0" :max="alloc.availableStock" :precision="0"
+                        size="small" style="width: 80px"
+                        @change="(v: number | null) => handleAllocationChange(idx, aIdx, v ?? 0)" />
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td><strong>合计</strong></td>
+                    <td :class="{ 'text-warn': row.totalAvailable < row.totalQuantity }">{{ row.totalAvailable }}</td>
+                    <td :class="{ 'text-warn': getAllocationTotal(row) !== row.totalQuantity }">
+                      {{ getAllocationTotal(row) }}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </a-spin>
+            <div v-if="row.totalAvailable < row.totalQuantity" class="stock-warning">
+              库存不足，缺少 {{ row.totalQuantity - row.totalAvailable }} 件
+            </div>
+            <div v-else-if="getAllocationTotal(row) !== row.totalQuantity" class="stock-warning">
+              出库数量与分配合计不一致
+            </div>
+          </div>
         </div>
       </template>
 
@@ -135,6 +174,7 @@
   import dayjs, { type Dayjs } from 'dayjs'
   import { inventoryApi } from '@/api/inventory'
   import type { InventoryItem, Product, ProductItemRelation, ItemTypeNode } from '@/types/inventory'
+  import type { SpecWarehouseStock } from '@/types/warehouse'
   import WarehouseSelect from './WarehouseSelect.vue'
 
   interface Props {
@@ -156,7 +196,7 @@
   const products = ref<Product[]>([])
   const bomItems = ref<ProductItemRelation[]>([])
 
-  // 仓库库存缓存: Map<spec_id, Map<warehouse_id, stock>>
+  // 仓库库存缓存（产品出库模式用）
   const warehousesWithStock = ref<Map<string, Map<string, number>>>(new Map())
 
   const form = reactive({
@@ -172,7 +212,7 @@
   const allTypes = ref<ItemTypeNode[]>([])
   const parentTypes = ref<ItemTypeNode[]>([])
   const itemsLoading = ref(false)
-  const allItems = ref<InventoryItem[]>([])  // 所有零件（共享）
+  const allItems = ref<InventoryItem[]>([])
 
   // 加载类型列表
   const loadTypes = async () => {
@@ -201,6 +241,14 @@
     }
   }
 
+  // 仓库分配
+  interface WarehouseAllocation {
+    warehouse_id: string
+    warehouse_name: string
+    availableStock: number
+    quantity: number
+  }
+
   // 批量行
   interface BatchRow {
     parentTypeId: string | undefined
@@ -208,8 +256,10 @@
     childTypes: ItemTypeNode[]
     item_id: string
     spec_id: string
-    quantity: number
-    availableStock: number | null
+    totalQuantity: number
+    allocations: WarehouseAllocation[]
+    totalAvailable: number
+    allocationsLoading: boolean
   }
 
   function createEmptyRow(): BatchRow {
@@ -219,8 +269,10 @@
       childTypes: [],
       item_id: '',
       spec_id: '',
-      quantity: 1,
-      availableStock: null
+      totalQuantity: 1,
+      allocations: [],
+      totalAvailable: 0,
+      allocationsLoading: false
     }
   }
 
@@ -241,7 +293,7 @@
     return items.map((i) => ({ label: `${i.name} (${i.code})`, value: i.item_id }))
   }
 
-  // 获取当前行的零件列表（用于规格选择）
+  // 获取当前行的零件列表
   const getRowItems = (row: BatchRow) => {
     const typeId = row.childTypeId || row.parentTypeId
     let items = allItems.value
@@ -256,53 +308,53 @@
     return items
   }
 
-  // ---- 仓库切换 ----
-  const handleWarehouseChange = async () => {
-    // 清空所有行的库存显示
-    for (const row of batchRows.value) {
-      row.availableStock = null
-    }
-    // 重新加载当前有规格的行的库存
-    for (const row of batchRows.value) {
-      if (row.spec_id) {
-        await loadSpecWarehouseStock(row.spec_id)
-        updateRowAvailableStock(row)
-      }
-    }
-    // 更新产品BOM的仓库库存
-    if (mode.value === 'product' && form.product_id) {
-      await loadBomWarehouseStock()
+  // 自动分配仓库
+  function autoAllocate(allocations: WarehouseAllocation[], totalQuantity: number) {
+    // 按库存降序排列
+    const sorted = [...allocations].sort((a, b) => b.availableStock - a.availableStock)
+    let remaining = totalQuantity
+    for (const alloc of sorted) {
+      alloc.quantity = Math.min(alloc.availableStock, remaining)
+      remaining -= alloc.quantity
     }
   }
 
-  // 查询某规格在各仓库的库存
-  const loadSpecWarehouseStock = async (specId: string) => {
-    if (!specId || warehousesWithStock.value.has(specId)) return
+  // 获取分配合计
+  function getAllocationTotal(row: BatchRow): number {
+    return row.allocations.reduce((sum, a) => sum + a.quantity, 0)
+  }
+
+  // 加载仓库库存并自动分配
+  const loadWarehouseAllocations = async (row: BatchRow) => {
+    if (!row.spec_id) {
+      row.allocations = []
+      row.totalAvailable = 0
+      return
+    }
+    row.allocationsLoading = true
     try {
-      const res = await inventoryApi.listSpecWarehouseStock(specId)
+      const res = await inventoryApi.listSpecWarehouseStock(row.spec_id)
       if (res.result === 0) {
-        const stockMap = new Map<string, number>()
-        for (const item of (res.datas || [])) {
-          stockMap.set(item.warehouse_id, item.current_stock)
-        }
-        warehousesWithStock.value.set(specId, stockMap)
+        const data = res.datas || []
+        row.allocations = data.map((item: SpecWarehouseStock) => ({
+          warehouse_id: item.warehouse_id,
+          warehouse_name: item.warehouse_name,
+          availableStock: item.current_stock,
+          quantity: 0
+        }))
+        row.totalAvailable = data.reduce((sum: number, item: SpecWarehouseStock) => sum + item.current_stock, 0)
+        // 自动分配
+        autoAllocate(row.allocations, row.totalQuantity)
       }
     } catch {
-      // ignore
+      row.allocations = []
+      row.totalAvailable = 0
+    } finally {
+      row.allocationsLoading = false
     }
   }
 
-  // 更新单行的可用库存
-  const updateRowAvailableStock = (row: BatchRow) => {
-    if (row.spec_id && form.warehouse_id) {
-      const stockMap = warehousesWithStock.value.get(row.spec_id)
-      row.availableStock = stockMap?.get(form.warehouse_id) ?? 0
-    } else {
-      row.availableStock = null
-    }
-  }
-
-  // ---- 按零件出库：行操作 ----
+  // ---- 行操作 ----
   const handleRowParentTypeChange = (idx: number, value: string | undefined) => {
     const row = batchRows.value[idx]
     if (!row) return
@@ -310,7 +362,8 @@
     row.childTypeId = undefined
     row.item_id = ''
     row.spec_id = ''
-    row.availableStock = null
+    row.allocations = []
+    row.totalAvailable = 0
 
     if (value) {
       const parent = allTypes.value.find(t => t.type_id === value)
@@ -326,7 +379,8 @@
     row.childTypeId = value
     row.item_id = ''
     row.spec_id = ''
-    row.availableStock = null
+    row.allocations = []
+    row.totalAvailable = 0
   }
 
   const handleRowItemChange = (idx: number, value: string) => {
@@ -334,16 +388,38 @@
     if (!row) return
     row.item_id = value
     row.spec_id = ''
-    row.availableStock = null
+    row.allocations = []
+    row.totalAvailable = 0
+
     const items = getRowItems(row)
     const item = items.find((i) => i.item_id === value)
-    const defaultSpec = item?.specs?.[0]
-    if (item?.specs?.length === 1 && defaultSpec?.spec === '') {
-      row.spec_id = defaultSpec.spec_id
-      if (form.warehouse_id) {
-        loadSpecWarehouseStock(defaultSpec.spec_id).then(() => updateRowAvailableStock(row))
-      }
+    // 如果只有一个默认规格，自动选择
+    if (item?.specs?.length === 1 && item.specs[0]?.spec === '') {
+      row.spec_id = item.specs[0].spec_id
+      loadWarehouseAllocations(row)
     }
+  }
+
+  const handleRowSpecChange = (idx: number, value: string) => {
+    const row = batchRows.value[idx]
+    if (!row) return
+    row.spec_id = value
+    loadWarehouseAllocations(row)
+  }
+
+  const handleRowQuantityChange = (idx: number, value: number) => {
+    const row = batchRows.value[idx]
+    if (!row) return
+    row.totalQuantity = value
+    if (row.allocations.length > 0) {
+      autoAllocate(row.allocations, value)
+    }
+  }
+
+  const handleAllocationChange = (rowIdx: number, allocIdx: number, value: number) => {
+    const row = batchRows.value[rowIdx]
+    if (!row || !row.allocations[allocIdx]) return
+    row.allocations[allocIdx].quantity = value
   }
 
   const addRow = () => {
@@ -368,20 +444,10 @@
     const items = getRowItems(row)
     const item = items.find((i) => i.item_id === row.item_id)
     if (!item?.specs) return []
-    return item.specs.map((s) => {
-      let stockLabel = ''
-      if (form.warehouse_id) {
-        const stockMap = warehousesWithStock.value.get(s.spec_id)
-        const stock = stockMap?.get(form.warehouse_id)
-        stockLabel = stock !== undefined ? `库存: ${stock}` : '库存: 0'
-      } else {
-        stockLabel = `库存: ${s.current_stock}`
-      }
-      return {
-        label: `${s.spec || '默认'} (${stockLabel})`,
-        value: s.spec_id
-      }
-    })
+    return item.specs.map((s) => ({
+      label: `${s.spec || '默认'} (库存: ${s.current_stock})`,
+      value: s.spec_id
+    }))
   }
 
   // 产品相关
@@ -396,7 +462,6 @@
       const res = await inventoryApi.listProductItems(productId)
       if (res.result === 0) {
         bomItems.value = res.datas.items || []
-        // 如果已选仓库，加载仓库库存
         if (form.warehouse_id) {
           await loadBomWarehouseStock()
         }
@@ -406,11 +471,33 @@
     }
   }
 
-  // 加载BOM中所有规格的仓库库存
+  // 加载BOM仓库库存
   const loadBomWarehouseStock = async () => {
     if (!form.warehouse_id || !bomItems.value.length) return
     const specIds = bomItems.value.map(item => item.spec_id).filter(Boolean)
     await Promise.all(specIds.map(specId => loadSpecWarehouseStock(specId)))
+  }
+
+  const loadSpecWarehouseStock = async (specId: string) => {
+    if (!specId || warehousesWithStock.value.has(specId)) return
+    try {
+      const res = await inventoryApi.listSpecWarehouseStock(specId)
+      if (res.result === 0) {
+        const stockMap = new Map<string, number>()
+        for (const item of (res.datas || [])) {
+          stockMap.set(item.warehouse_id, item.current_stock)
+        }
+        warehousesWithStock.value.set(specId, stockMap)
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleWarehouseChange = async () => {
+    if (mode.value === 'product' && form.product_id) {
+      await loadBomWarehouseStock()
+    }
   }
 
   const bomColumns = [
@@ -456,22 +543,21 @@
   const validateBatch = (): string | null => {
     const rows = batchRows.value
     if (rows.length === 0) return '请至少添加一条出库明细'
-    if (!form.warehouse_id) return '请选择仓库'
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
       if (!row) continue
       if (!row.item_id) return `第 ${i + 1} 行未选择零件`
       if (needsSpec(row) && !row.spec_id) return `第 ${i + 1} 行未选择规格`
-      if (!row.quantity || row.quantity < 1) return `第 ${i + 1} 行数量无效`
-      if (row.availableStock !== null && row.quantity > (row.availableStock ?? 0)) {
-        return `第 ${i + 1} 行出库数量超过可用库存`
+      if (!row.totalQuantity || row.totalQuantity < 1) return `第 ${i + 1} 行数量无效`
+      if (row.allocations.length === 0) return `第 ${i + 1} 行无可用库存`
+      const allocTotal = getAllocationTotal(row)
+      if (allocTotal !== row.totalQuantity) return `第 ${i + 1} 行出库数量与分配合计不一致`
+      // 检查是否超出库存
+      for (const alloc of row.allocations) {
+        if (alloc.quantity > alloc.availableStock) {
+          return `第 ${i + 1} 行 ${alloc.warehouse_name} 出库数量超出库存`
+        }
       }
-    }
-    const seen = new Set<string>()
-    for (const row of rows) {
-      const key = `${row.item_id}|${row.spec_id}`
-      if (seen.has(key)) return '出库列表存在重复的(零件+规格)'
-      seen.add(key)
     }
     return null
   }
@@ -488,33 +574,22 @@
       }
       loading.value = true
       try {
-        let res
-        if (batchRows.value.length === 1) {
-          const r = batchRows.value[0]
-          if (!r) {
-            loading.value = false
-            return
-          }
-          res = await inventoryApi.stockOut({
-            warehouse_id: form.warehouse_id,
-            item_id: r.item_id,
-            spec_id: r.spec_id,
-            quantity: r.quantity,
-            date: dateStr,
-            remark: form.remark || undefined
-          })
-        } else {
-          res = await inventoryApi.stockOutBatch({
-            warehouse_id: form.warehouse_id,
-            items: batchRows.value.map((r) => ({
-              item_id: r.item_id,
-              spec_id: r.spec_id,
-              quantity: r.quantity
-            })),
-            date: dateStr,
-            remark: form.remark || undefined
-          })
-        }
+        // 展开分配为多条记录
+        const items = batchRows.value.flatMap(row =>
+          row.allocations
+            .filter(a => a.quantity > 0)
+            .map(a => ({
+              warehouse_id: a.warehouse_id,
+              item_id: row.item_id,
+              spec_id: row.spec_id,
+              quantity: a.quantity
+            }))
+        )
+        const res = await inventoryApi.stockOutBatch({
+          items,
+          date: dateStr,
+          remark: form.remark || undefined
+        })
         if (res.result === 0) {
           message.success('出库成功')
           emit('update:visible', false)
@@ -612,11 +687,14 @@
     color: #52525b;
   }
 
+  .batch-row-wrapper {
+    margin-bottom: 12px;
+  }
+
   .batch-row {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 8px;
   }
 
   .row-type {
@@ -630,7 +708,7 @@
   }
 
   .row-spec {
-    width: 200px;
+    width: 180px;
     flex-shrink: 0;
   }
 
@@ -639,21 +717,49 @@
     flex-shrink: 0;
   }
 
-  .row-stock {
-    flex-shrink: 0;
-    font-size: 13px;
-    color: #71717a;
-    white-space: nowrap;
-  }
-
-  .stock-num {
-    font-weight: 600;
-    color: #16a34a;
-  }
-
   .row-del {
     flex-shrink: 0;
     padding: 0 8px;
+  }
+
+  .allocation-table {
+    margin-top: 8px;
+    margin-left: 0;
+  }
+
+  .allocation-table table {
+    width: auto;
+    min-width: 360px;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .allocation-table th,
+  .allocation-table td {
+    padding: 6px 12px;
+    border: 1px solid #e5e7eb;
+    text-align: left;
+  }
+
+  .allocation-table th {
+    background: #f9fafb;
+    font-weight: 500;
+    color: #374151;
+  }
+
+  .allocation-table tfoot td {
+    background: #f9fafb;
+  }
+
+  .stock-warning {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #dc2626;
+  }
+
+  .text-warn {
+    color: #dc2626;
+    font-weight: 600;
   }
 
   .bom-block {
@@ -691,10 +797,5 @@
     font-weight: 600;
     color: #dc2626;
     font-variant-numeric: tabular-nums;
-  }
-
-  .text-warn {
-    color: #dc2626;
-    font-weight: 600;
   }
 </style>

@@ -14,14 +14,14 @@
 
       <!-- 类型列表 -->
       <a-table :columns="columns" :data-source="typeList" :loading="loading" :pagination="false" bordered
-        row-key="type_id" size="middle" :indent-size="20" default-expand-all-rows>
+        row-key="type_id" size="middle" :indent-size="20" expand-row-by-click>
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'type_name'">
             <span :class="record.parent_type_id ? 'child-name' : 'parent-name'">{{ record.type_name }}</span>
           </template>
 
           <template v-else-if="column.key === 'actions'">
-            <a-space :size="4">
+            <a-space :size="4" @click.stop>
               <a-button v-if="!record.parent_type_id" type="link" size="small" @click="handleAddChild(record)">
                 新增子类型
               </a-button>

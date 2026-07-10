@@ -363,13 +363,14 @@ export interface StockOutPayload {
 }
 
 export interface StockOutBatchItem {
+    warehouse_id: string
     item_id: string
     spec_id: string
     quantity: number
 }
 
 export interface StockOutBatchPayload {
-    warehouse_id: string
+    warehouse_id?: string
     items: StockOutBatchItem[]
     date: string
     remark?: string

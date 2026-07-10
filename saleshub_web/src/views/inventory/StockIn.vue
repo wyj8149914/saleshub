@@ -80,8 +80,9 @@
           </template>
 
           <template v-else-if="column.key === 'remark'">
-            <span v-if="record.remark">{{ record.remark }}</span>
-            <span v-else class="cell-muted">-</span>
+            <a-tooltip :title="record.remark">
+              <span class="cell-desc">{{ record.remark || '-' }}</span>
+            </a-tooltip>
           </template>
 
           <template v-else-if="column.key === 'create_time'">
@@ -111,11 +112,12 @@
   import StockInModal from '@/components/inventory/StockInModal.vue'
 
   const columns = [
-    { title: '入库单号', dataIndex: 'record_no', key: 'record_no', width: 140, align: 'center' as const },
-    { title: '零件', key: 'item', width: 180, ellipsis: true, align: 'center' as const },
+    { title: '入库单号', dataIndex: 'record_no', key: 'record_no', width: 130, align: 'center' as const },
+    { title: '零件', key: 'item', width: 150, ellipsis: true, align: 'center' as const },
     { title: '规格', dataIndex: 'spec', key: 'spec', width: 120, align: 'center' as const },
     { title: '入库数量', dataIndex: 'quantity', key: 'quantity', width: 110, align: 'center' as const },
-    { title: '库存变更', key: 'stockChange', width: 150, align: 'center' as const },
+    { title: '库存变更', key: 'stockChange', width: 140, align: 'center' as const },
+    { title: '仓库', dataIndex: 'warehouse_name', key: 'warehouse_name', width: 130, align: 'center' as const },
     { title: '入库日期', dataIndex: 'date', key: 'date', width: 130, align: 'center' as const },
     { title: '照片', dataIndex: 'photo_url', key: 'photo', width: 80, align: 'center' as const },
     { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true, align: 'center' as const },
