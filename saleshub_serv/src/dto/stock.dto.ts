@@ -96,6 +96,9 @@ export class StockOutDto {
 }
 
 export class StockOutItemEntryDto {
+    @IsOptional()
+    warehouse_id: string;
+
     @IsNotEmpty({ message: '零件ID不能为空' })
     item_id: string;
 
@@ -110,9 +113,6 @@ export class StockOutItemEntryDto {
 }
 
 export class StockOutBatchDto {
-    @IsNotEmpty({ message: '仓库ID不能为空' })
-    warehouse_id: string;
-
     @IsArray({ message: '出库零件列表必须是数组' })
     @IsNotEmpty({ message: '出库零件列表不能为空' })
     @ValidateNested({ each: true })

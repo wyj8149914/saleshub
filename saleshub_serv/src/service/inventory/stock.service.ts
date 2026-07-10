@@ -13,6 +13,7 @@ import { MinioFile } from '../../entity/file.entity';
 import { generateFileUrl } from '../../config/minio.config';
 
 interface StockItem {
+    warehouse_id?: string;
     item_id: string;
     spec_id: string;
     quantity: number;
@@ -242,22 +243,15 @@ export class StockService {
                 item_id: it.item_id,
                 spec_id: it.spec_id,
                 quantity: it.quantity,
+                warehouse_id: it.warehouse_id,
             }));
 
-            // 校验仓库
-            const warehouse = await this.warehouseRepository.findOne({
-                where: { warehouse_id: dto.warehouse_id, status: 1 },
-            });
-            if (!warehouse) {
-                return { result: 1, msg: '仓库不存在' };
-            }
-
-            const validated = await this.validateStockOutItems(itemSpecs, dto.warehouse_id);
+            const validated = await this.validateStockOutItems(itemSpecs);
             if (!validated.ok) {
                 return { result: 1, msg: validated.msg };
             }
 
-            await this.executeStockOut(itemSpecs, dto.date, dto.warehouse_id, dto.remark);
+            await this.executeStockOut(itemSpecs, dto.date, dto.remark);
             return { result: 0, msg: '出库成功' };
         } catch (error) {
             this.logger.error('批量出库失败:', error);
@@ -308,18 +302,20 @@ export class StockService {
                 item_id: string;
                 spec_id: string;
                 quantity_per_product: number;
+                warehouse_id: string;
             }) => ({
                 item_id: row.item_id,
                 spec_id: row.spec_id,
                 quantity: Number(row.quantity_per_product) * dto.quantity,
+                warehouse_id: row.warehouse_id,
             }));
 
-            const validated = await this.validateStockOutItems(itemSpecs, dto.warehouse_id);
+            const validated = await this.validateStockOutItems(itemSpecs);
             if (!validated.ok) {
                 return { result: 1, msg: validated.msg };
             }
 
-            await this.executeStockOut(itemSpecs, dto.date, dto.warehouse_id, dto.remark);
+            await this.executeStockOut(itemSpecs, dto.date, dto.remark);
             return { result: 0, msg: '出库成功' };
         } catch (error) {
             this.logger.error('按产品出库失败:', error);
@@ -396,10 +392,12 @@ export class StockService {
             const queryBuilder = this.stockInRepository.createQueryBuilder('rec')
                 .leftJoin(InventoryItem, 'item', 'item.item_id = rec.item_id AND item.status = 1')
                 .leftJoin(InventoryItemSpec, 'spec', 'spec.spec_id = rec.spec_id AND spec.status = 1')
+                .leftJoin(Warehouse, 'warehouse', 'warehouse.warehouse_id = rec.warehouse_id AND warehouse.status = 1')
                 .leftJoin(MinioFile, 'file', 'file.relation_id = rec.photo_id')
                 .select([
                     'rec.record_id AS record_id',
                     'rec.record_no AS record_no',
+                    'warehouse.name AS warehouse_name',
                     'to_char(rec.date, \'YYYY-MM-DD\') AS date',
                     'rec.quantity AS quantity',
                     'rec.remark AS remark',
@@ -812,8 +810,14 @@ export class StockService {
     /**
      * 校验出库明细(设备件、BOM 关联、库存充足)
      */
-    private async validateStockOutItems(itemSpecs: StockItem[], warehouseId: string) {
-        const keys = itemSpecs.map((l) => `${l.item_id}||${l.spec_id}`);
+    private async validateStockOutItems(itemSpecs: StockItem[]) {
+        const keys = itemSpecs.map((l) => {
+            if (l.warehouse_id) {
+                // 如果指定仓库
+                return `${l.item_id}||${l.spec_id}|${l.warehouse_id}`;
+            }
+            return `${l.item_id}||${l.spec_id}`;
+        });
         if (new Set(keys).size !== keys.length) {
             return { ok: false, msg: '出库列表存在重复的(零件+规格)' };
         }
@@ -829,33 +833,44 @@ export class StockService {
             this.logger.error(`零件不存在或已停用: ${missing.join(',')}`);
             return { ok: false, msg: `零件不存在或已停用: ${missing.join(',')}` };
         }
+        const warehouseIds = [...new Set(itemSpecs.filter((l) => l.warehouse_id).map((l) => l.warehouse_id))];
+        const warehouses = await this.warehouseRepository
+            .createQueryBuilder('w')
+            .where('w.warehouse_id IN (:...ids) AND w.status = :status', { ids: warehouseIds, status: 1 })
+            .getMany();
+        const warehouseMap = new Map(warehouses.map((w) => [w.warehouse_id, w]));
+        if (warehouses.length !== warehouseIds.length) {
+            const missing = warehouseIds.filter((id) => !warehouseMap.has(id!));
+            this.logger.error(`仓库不存在或已停用: ${missing.join(',')}`);
+            return { ok: false, msg: `仓库不存在或已停用: ${missing.join(',')}` };
+        }
 
-        const specIds = itemSpecs.map((l) => l.spec_id);
+        // 查询规格信息
         const specs = await this.inventoryItemSpecRepository
             .createQueryBuilder('s')
-            .where('s.spec_id IN (:...ids) AND s.status = :status', { ids: specIds, status: 1 })
+            .where('s.spec_id IN (:...specIds) AND s.status = :status', { specIds: itemSpecs.map((l) => l.spec_id), status: 1 })
             .getMany();
-        const specMap = new Map(specs.map((s) => [`${s.item_id}||${s.spec_id}`, s]));
-
-        // 获取该仓库的库存明细
-        const specWarehouses = await this.specWarehouseRepository
-            .createQueryBuilder('sw')
-            .where('sw.spec_id IN (:...specIds) AND sw.warehouse_id = :warehouseId AND sw.status = 1', {
-                specIds,
-                warehouseId,
-            })
-            .getMany();
-        const specWarehouseMap = new Map(specWarehouses.map((sw) => [sw.spec_id, sw]));
+        const specMap = new Map(specs.map((s) => [s.spec_id, s]));
 
         for (const itemSpec of itemSpecs) {
-            const spec = specMap.get(`${itemSpec.item_id}||${itemSpec.spec_id}`);
+            const spec = specMap.get(itemSpec.spec_id);
             if (!spec) {
                 this.logger.error(`零件 ${itemSpec.item_id} 不存在规格 ${itemSpec.spec_id}`);
                 return { ok: false, msg: `零件 ${itemSpec.item_id} 不存在规格 ${itemSpec.spec_id}` };
             }
 
-            const specWarehouse = specWarehouseMap.get(itemSpec.spec_id);
-            if (!specWarehouse || specWarehouse.current_stock < itemSpec.quantity) {
+            // 获取该仓库的库存明细
+            const specQb = this.specWarehouseRepository
+                .createQueryBuilder('sw')
+                .where('sw.spec_id = :specId AND sw.status = 1', {
+                    specId: itemSpec.spec_id,
+                });
+            if (itemSpec.warehouse_id) {
+                specQb.andWhere('sw.warehouse_id = :warehouseId', { warehouseId: itemSpec.warehouse_id });
+            }
+            const specWarehouse = await specQb.getRawOne();
+
+            if (!specWarehouse || Number(specWarehouse.current_stock) < itemSpec.quantity) {
                 const currentStock = specWarehouse?.current_stock || 0;
                 this.logger.error(`该仓库规格 ${spec.spec} 库存不足(当前 ${currentStock},需要 ${itemSpec.quantity})`);
                 return {
@@ -865,48 +880,47 @@ export class StockService {
             }
         }
 
-        return { ok: true, specMap, specWarehouseMap };
+        return { ok: true };
     }
 
     /**
      * 执行出库(同一批次共用 record_no,事务原子)
      */
-    private async executeStockOut(itemSpecs: StockItem[], date: string, warehouseId: string, remark?: string) {
+    private async executeStockOut(itemSpecs: StockItem[], date: string, remark?: string) {
         const recordNo = await this.generateStockOutRecordNo();
         const now = new Date();
         const outDate = new Date(date);
         const stockDelta = new Map<string, number>();
 
+        // 同一规格合并一条数据,方便计算该规格总库存
         for (const itemSpec of itemSpecs) {
             const prev = stockDelta.get(itemSpec.spec_id) ?? 0;
             stockDelta.set(itemSpec.spec_id, prev + itemSpec.quantity);
         }
 
+        // 查询规格信息,并将数据转为Map,key为spec_id,value为具体的规格
         const specIds = [...stockDelta.keys()];
         const specs = await this.inventoryItemSpecRepository
             .createQueryBuilder('s')
             .where('s.spec_id IN (:...ids) AND s.status = :status', { ids: specIds, status: 1 })
             .getMany();
-        const specById = new Map(specs.map((s) => [s.spec_id, s]));
-
-        // 获取该仓库的库存明细
-        const specWarehouses = await this.specWarehouseRepository
-            .createQueryBuilder('sw')
-            .where('sw.spec_id IN (:...specIds) AND sw.warehouse_id = :warehouseId AND sw.status = 1', {
-                specIds,
-                warehouseId,
-            })
-            .getMany();
-        const specWarehouseBySpec = new Map(specWarehouses.map((sw) => [sw.spec_id, sw]));
+        const specMap = new Map(specs.map((s) => [s.spec_id, s]));
 
         await this.stockOutRepository.manager.transaction(async (manager) => {
             for (const itemSpec of itemSpecs) {
-                const spec = specById.get(itemSpec.spec_id);
+                const spec = specMap.get(itemSpec.spec_id);
                 if (!spec) {
                     throw new Error(`规格 ${itemSpec.spec_id} 未找到`);
                 }
+                // 获取该仓库的库存明细
+                const specQb = this.specWarehouseRepository
+                    .createQueryBuilder('sw')
+                    .where('sw.spec_id = :specId AND  AND sw.status = 1', { specIds, });
 
-                const specWarehouse = specWarehouseBySpec.get(itemSpec.spec_id);
+                if (itemSpec.warehouse_id) {
+                    specQb.andWhere('sw.warehouse_id = :warehouseId', { warehouseId: itemSpec.warehouse_id });
+                }
+                const specWarehouse = await specQb.getRawOne();
                 if (!specWarehouse) {
                     throw new Error(`规格 ${itemSpec.spec_id} 在该仓库无库存`);
                 }
@@ -916,7 +930,9 @@ export class StockService {
                 record.record_no = recordNo;
                 record.item_id = itemSpec.item_id;
                 record.spec_id = itemSpec.spec_id;
-                record.warehouse_id = warehouseId;
+                if (itemSpec.warehouse_id) {
+                    record.warehouse_id = itemSpec.warehouse_id;
+                }
                 record.quantity = itemSpec.quantity;
                 record.before_stock = spec.current_stock;
                 record.after_stock = spec.current_stock - itemSpec.quantity;
@@ -927,24 +943,21 @@ export class StockService {
                 record.status = 1;
                 record.create_time = now;
                 await manager.save(StockOutRecord, record);
+
+                // 更新仓库库存,如果指定了仓库ID,那么更新仓库库存
+                if (itemSpec.warehouse_id) {
+                    specWarehouse.current_stock -= itemSpec.quantity;
+                    specWarehouse.update_time = now;
+                    await manager.save(InventoryItemSpecWarehouse, specWarehouse);
+                }
             }
 
-            // 更新库存明细和总库存
+            // 一次性更新总库存,多个规格合为一次更新总库存
             for (const [specId, deduct] of stockDelta) {
-                const spec = specById.get(specId);
+                const spec = specMap.get(specId);
                 if (!spec) {
                     throw new Error(`规格 ${specId} 未找到`);
                 }
-
-                const specWarehouse = specWarehouseBySpec.get(specId);
-                if (!specWarehouse) {
-                    throw new Error(`规格 ${specId} 在该仓库无库存`);
-                }
-
-                specWarehouse.current_stock -= deduct;
-                specWarehouse.update_time = now;
-                await manager.save(InventoryItemSpecWarehouse, specWarehouse);
-
                 await manager.update(
                     InventoryItemSpec,
                     { spec_id: specId },
