@@ -109,6 +109,9 @@ export class UpdateItemTypeDto {
 
     @IsOptional()
     remark?: string;
+
+    @IsOptional()
+    parent_id?: string;
 }
 
 export class DeleteItemTypeDto {

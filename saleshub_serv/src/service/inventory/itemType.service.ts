@@ -76,6 +76,23 @@ export class ItemTypeService {
      */
     async update(dto: UpdateItemTypeDto) {
         try {
+            // 如果有 parent_id，验证父类型存在且状态正常
+            if (dto.parent_id) {
+                const parent = await this.itemTypeRepo.findOne({
+                    where: { type_id: dto.parent_id },
+                });
+                if (!parent) {
+                    return { result: 1, msg: '父类型不存在' };
+                }
+                if (parent.status !== 1) {
+                    return { result: 1, msg: '父类型已停用' };
+                }
+                // 检查父类型是否是二级类型（不支持三级）
+                if (parent.parent_id) {
+                    return { result: 1, msg: '不支持创建三级类型' };
+                }
+            }
+
             const itemType = await this.itemTypeRepo.findOne({
                 where: { type_id: dto.type_id, status: 1 },
             });
@@ -97,6 +114,9 @@ export class ItemTypeService {
             }
             if (dto.remark) {
                 itemType.remark = dto.remark;
+            }
+            if (dto.parent_id) {
+                itemType.parent_id = dto.parent_id;
             }
             itemType.update_time = new Date();
 
