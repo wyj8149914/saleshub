@@ -26,6 +26,7 @@ export interface ItemTypeUpdatePayload {
     type_name: string
     sort_order?: number
     remark?: string
+    parent_id?: string
 }
 
 // ============ 通用类型 ============

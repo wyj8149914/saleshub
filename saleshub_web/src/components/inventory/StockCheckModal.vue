@@ -147,7 +147,8 @@ const form = reactive({
   spec_id: '',
   after_stock: 0 as number,
   date: dayjs() as Dayjs,
-  remark: ''
+  remark: '',
+  warehouse_id: ''
 })
 
 // 类型相关（共享）
@@ -441,6 +442,7 @@ const handleSubmit = async () => {
     loading.value = true
     try {
       const res = await inventoryApi.stockCheck({
+        warehouse_id: form.warehouse_id,
         item_id: form.item_id,
         spec_id: form.spec_id,
         after_stock: form.after_stock,
@@ -474,6 +476,7 @@ const handleSubmit = async () => {
       const r = batchRows.value[0]
       if (!r) return
       res = await inventoryApi.stockCheck({
+        warehouse_id: form.warehouse_id,
         item_id: r.item_id,
         spec_id: r.spec_id,
         after_stock: r.after_stock,
@@ -482,6 +485,7 @@ const handleSubmit = async () => {
       })
     } else {
       res = await inventoryApi.stockCheckBatch({
+        warehouse_id: form.warehouse_id,
         items: batchRows.value.map((r) => ({
           item_id: r.item_id,
           spec_id: r.spec_id,
