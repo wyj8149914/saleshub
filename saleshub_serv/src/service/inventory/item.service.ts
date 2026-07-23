@@ -22,7 +22,7 @@ export class InventoryItemService {
         try {
             // 查询是否已有同名零件 
             const existing = await this.inventoryItemRepository.findOne({
-                where: { name: dto.name, status: 1 },
+                where: { name: dto.name, status: 1, type_id: dto.type_id },
             });
             if (existing) {
                 return { result: 1, msg: '零件名称已存在' };
@@ -190,7 +190,7 @@ export class InventoryItemService {
         try {
             // 查询是否已有同名零件
             const existing = await this.inventoryItemRepository.findOne({
-                where: { name: dto.name, item_id: Not(dto.item_id), status: 1 },
+                where: { name: dto.name, item_id: Not(dto.item_id), status: 1, type_id: dto.type_id },
             });
             if (existing) {
                 return { result: 1, msg: '零件名称已存在' };
