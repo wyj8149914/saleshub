@@ -1,6 +1,7 @@
 <template>
   <div class="page">
-    <div class="page-head">
+    <!-- 桌面端：保持原有筛选区 -->
+    <div v-if="!isMobileDevice" class="page-head">
       <a-space class="filters" :size="12" wrap>
         <a-input v-model:value="filters.name" placeholder="按名称搜索" allow-clear class="filter-input"
           @press-enter="handleSearch" @change="handleFilterChange">
@@ -56,7 +57,42 @@
       </a-space>
     </div>
 
-    <a-card :bordered="false" class="table-card">
+    <!-- 移动端：筛选区 -->
+    <div v-else class="mobile-filters">
+      <div class="mobile-filter-row">
+        <a-input v-model:value="filters.name" placeholder="搜索零件名称" allow-clear class="mobile-search"
+          @press-enter="handleSearch">
+          <template #prefix>
+            <SearchOutlined />
+          </template>
+        </a-input>
+      </div>
+      <div class="mobile-filter-row">
+        <a-select v-model:value="filterParentTypeId" placeholder="一级类型" allow-clear class="mobile-type-select"
+          :loading="typesLoading" @change="handleFilterParentChange">
+          <a-select-option v-for="t in parentTypes" :key="t.type_id" :value="t.type_id">
+            {{ t.type_name }}
+          </a-select-option>
+        </a-select>
+        <a-select v-model:value="filterChildTypeId" placeholder="二级类型" allow-clear class="mobile-type-select"
+          :loading="typesLoading" :disabled="!filterParentTypeId" @change="handleSearch">
+          <a-select-option v-for="t in filterChildTypes" :key="t.type_id" :value="t.type_id">
+            {{ t.type_name }}
+          </a-select-option>
+        </a-select>
+      </div>
+      <div class="mobile-filter-row">
+        <a-button type="primary" class="mobile-search-btn" @click="handleSearch">
+          <template #icon>
+            <SearchOutlined />
+          </template>
+          搜索
+        </a-button>
+      </div>
+    </div>
+
+    <!-- 桌面端：表格 -->
+    <a-card v-if="!isMobileDevice" :bordered="false" class="table-card">
       <a-table :columns="columns" :data-source="items" :loading="loading" :pagination="pagination" bordered
         row-key="item_id" expand-row-by-click :row-expandable="isRowExpandable" @change="handleTableChange">
         <template #expandedRowRender="{ record: item }">
@@ -143,6 +179,51 @@
       </a-table>
     </a-card>
 
+    <!-- 移动端：卡片列表 -->
+    <div v-else class="mobile-card-list">
+      <!-- 隐藏的 file input，用于拍照 -->
+      <input ref="cameraInputRef" type="file" accept="image/*" capture="environment" style="display: none"
+        @change="handlePhotoCapture($event)" />
+      <a-spin :spinning="loading">
+        <div v-if="items.length === 0 && !loading" class="mobile-empty">
+          暂无数据
+        </div>
+        <div v-else class="mobile-cards">
+          <div v-for="item in items" :key="item.item_id" class="mobile-card">
+            <div class="mobile-card-image">
+              <a-image v-if="item.image_url" :src="item.image_url" :width="80" :height="80" :preview="true"
+                style="border-radius: 8px; object-fit: cover;" />
+              <div v-else class="mobile-card-no-image">
+                <CameraOutlined class="no-image-icon" />
+              </div>
+            </div>
+            <div class="mobile-card-info">
+              <div class="mobile-card-type">{{ item.type_full_name || item.type_name || '-' }}</div>
+              <div class="mobile-card-name">{{ item.name }}</div>
+              <div class="mobile-card-code">{{ item.code }}</div>
+              <div class="mobile-card-stock">
+                库存：<span :class="{ 'text-danger': isItemWarning(item) }">{{ getTotalStock(item) }}</span>
+              </div>
+            </div>
+            <div class="mobile-card-action">
+              <a-button type="primary" :loading="uploadingItemId === item.item_id" @click="openCamera(item)">
+                <template #icon>
+                  <CameraOutlined />
+                </template>
+                拍照
+              </a-button>
+            </div>
+          </div>
+        </div>
+      </a-spin>
+
+      <!-- 移动端分页 -->
+      <div v-if="items.length > 0" class="mobile-pagination">
+        <a-pagination simple :current="pagination.current" :total="pagination.total" :pageSize="pagination.pageSize"
+          @change="(page: number) => { pagination.current = page; loadItems() }" />
+      </div>
+    </div>
+
     <InventoryItemForm v-model:visible="formVisible" :item="currentItem" @success="handleFormSuccess" />
     <InventoryItemDetail v-model:visible="detailVisible" :item="detailItem" />
     <ItemTypeManager v-model:visible="typeManagerVisible" @success="loadTypes" />
@@ -150,14 +231,15 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive, onMounted } from 'vue'
+  import { ref, reactive, onMounted, onUnmounted } from 'vue'
   import { message } from 'ant-design-vue'
-  import { PlusOutlined, SearchOutlined, TagOutlined, AppstoreOutlined } from '@ant-design/icons-vue'
-  import { inventoryApi } from '@/api/inventory'
+  import { PlusOutlined, SearchOutlined, TagOutlined, AppstoreOutlined, CameraOutlined } from '@ant-design/icons-vue'
+  import { inventoryApi, fileApi } from '@/api/inventory'
   import type { InventoryItem, ItemSpec, ItemTypeNode } from '@/types/inventory'
   import InventoryItemForm from '@/components/inventory/InventoryItemForm.vue'
   import InventoryItemDetail from '@/components/inventory/InventoryItemDetail.vue'
   import ItemTypeManager from '@/components/inventory/ItemTypeManager.vue'
+  import { isMobile, onDeviceChange } from '@/utils/device'
 
   const columns = [
     { title: '图片', dataIndex: 'image_url', key: 'image', width: 80, align: 'center' },
@@ -187,6 +269,15 @@
   const detailVisible = ref(false)
   const currentItem = ref<InventoryItem | null>(null)
   const detailItem = ref<InventoryItem | null>(null)
+
+  // 移动端状态追踪
+  const isMobileDevice = ref(isMobile())
+  let cleanupDeviceChange: (() => void) | null = null
+
+  // 拍照上传相关状态
+  const cameraInputRef = ref<HTMLInputElement | null>(null)
+  const currentCaptureItem = ref<InventoryItem | null>(null)
+  const uploadingItemId = ref<string | null>(null)
 
   // 类型筛选相关
   const typesLoading = ref(false)
@@ -348,9 +439,172 @@
     loadItems()
   }
 
+  /**
+   * 打开摄像头
+   * 记录当前操作的零件，然后触发隐藏的 file input 的 click 事件
+   */
+  const openCamera = (item: InventoryItem) => {
+    currentCaptureItem.value = item
+    cameraInputRef.value?.click()
+  }
+
+  /**
+   * 压缩图片
+   * 将图片压缩到小于 maxSizeKB 的文件
+   * @param file 原始图片文件
+   * @param maxSizeKB 最大文件大小（KB），默认 400KB
+   * @returns 压缩后的 File 对象
+   */
+  const compressImage = (file: File, maxSizeKB: number = 400): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          const ctx = canvas.getContext('2d')
+
+          if (!ctx) {
+            reject(new Error('无法创建 Canvas 上下文'))
+            return
+          }
+
+          // 初始尺寸
+          let width = img.width
+          let height = img.height
+
+          // 如果尺寸过大，先缩小尺寸（最大边不超过 1920px）
+          const maxDimension = 1920
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.round((height * maxDimension) / width)
+              width = maxDimension
+            } else {
+              width = Math.round((width * maxDimension) / height)
+              height = maxDimension
+            }
+          }
+
+          canvas.width = width
+          canvas.height = height
+
+          // 绘制图片
+          ctx.drawImage(img, 0, 0, width, height)
+
+          // 初始质量
+          let quality = 0.8
+          const maxAttempts = 10
+          let attempts = 0
+
+          const tryCompress = () => {
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  reject(new Error('图片压缩失败'))
+                  return
+                }
+
+                const sizeKB = blob.size / 1024
+
+                // 如果大小符合要求或已达到最大尝试次数
+                if (sizeKB <= maxSizeKB || attempts >= maxAttempts) {
+                  const compressedFile = new File([blob], file.name, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                  })
+                  resolve(compressedFile)
+                  return
+                }
+
+                // 继续降低质量压缩
+                attempts++
+                quality -= 0.1
+                if (quality < 0.1) {
+                  quality = 0.1
+                }
+                tryCompress()
+              },
+              'image/jpeg',
+              quality
+            )
+          }
+
+          tryCompress()
+        }
+        img.onerror = () => reject(new Error('图片加载失败'))
+        img.src = e.target?.result as string
+      }
+      reader.onerror = () => reject(new Error('文件读取失败'))
+      reader.readAsDataURL(file)
+    })
+  }
+
+  /**
+   * 处理拍照上传
+   * 选择/拍摄图片后自动上传
+   */
+  const handlePhotoCapture = async (event: Event) => {
+    const item = currentCaptureItem.value
+    if (!item) return
+
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
+    if (!file) {
+      currentCaptureItem.value = null
+      return
+    }
+
+    // 验证文件类型
+    if (!file.type.startsWith('image/')) {
+      message.error('请选择图片文件')
+      currentCaptureItem.value = null
+      input.value = ''
+      return
+    }
+
+    uploadingItemId.value = item.item_id
+    try {
+      // 压缩图片到小于 400KB
+      const compressedFile = await compressImage(file, 400)
+
+      // 上传图片
+      const uploadRes = await fileApi.uploadFile(compressedFile)
+
+      // 更新零件图片 - 需要传递完整参数
+      await inventoryApi.updateItem({
+        item_id: item.item_id,
+        type_id: item.type_id,
+        name: item.name,
+        image_id: uploadRes.relation_id,
+        warnStock: item.warn_stock,
+        remark: item.remark || undefined,
+        is_custom: item.is_custom
+      })
+
+      message.success('图片上传成功')
+      // 刷新列表
+      await loadItems()
+    } catch {
+      // 错误由拦截器处理
+    } finally {
+      uploadingItemId.value = null
+      currentCaptureItem.value = null
+      // 清空 input，允许重复选择同一文件
+      input.value = ''
+    }
+  }
+
   onMounted(() => {
     loadTypes()
     loadItems()
+    // 监听设备类型变化
+    cleanupDeviceChange = onDeviceChange((mobile) => {
+      isMobileDevice.value = mobile
+    })
+  })
+
+  onUnmounted(() => {
+    cleanupDeviceChange?.()
   })
 </script>
 
@@ -548,6 +802,136 @@
 
   .table-card :deep(.ant-pagination) {
     margin: 16px 24px;
+  }
+
+  /* ============ 移动端样式 ============ */
+  .mobile-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .mobile-filter-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .mobile-search {
+    flex: 1;
+  }
+
+  .mobile-type-select {
+    flex: 1;
+  }
+
+  .mobile-search-btn {
+    flex: 1;
+    border-radius: 8px;
+    height: 36px;
+  }
+
+  .mobile-card-list {
+    flex: 1;
+  }
+
+  .mobile-empty {
+    text-align: center;
+    padding: 40px 0;
+    color: #a1a1aa;
+    font-size: 14px;
+  }
+
+  .mobile-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .mobile-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+
+  .mobile-card-image {
+    flex-shrink: 0;
+  }
+
+  .mobile-card-no-image {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    background: #f4f4f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .no-image-icon {
+    font-size: 24px;
+    color: #a1a1aa;
+  }
+
+  .mobile-card-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mobile-card-type {
+    font-size: 12px;
+    color: #71717a;
+    margin-bottom: 2px;
+  }
+
+  .mobile-card-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #18181b;
+    margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-card-code {
+    font-size: 12px;
+    font-family: 'Courier New', Consolas, monospace;
+    color: #52525b;
+    background: #f4f4f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 4px;
+  }
+
+  .mobile-card-stock {
+    font-size: 13px;
+    color: #52525b;
+  }
+
+  .mobile-card-stock .text-danger {
+    color: #dc2626;
+    font-weight: 600;
+  }
+
+  .mobile-card-action {
+    flex-shrink: 0;
+  }
+
+  .mobile-card-action .ant-btn {
+    border-radius: 8px;
+    height: 36px;
+    padding: 0 12px;
+  }
+
+  .mobile-pagination {
+    margin-top: 16px;
+    text-align: center;
   }
 
   @media (max-width: 768px) {

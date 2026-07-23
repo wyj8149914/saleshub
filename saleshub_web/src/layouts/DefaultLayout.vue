@@ -1,6 +1,7 @@
 <template>
-  <div class="app-layout">
-    <aside class="sidebar">
+  <div class="app-layout" :class="{ 'is-mobile': isMobileDevice }">
+    <!-- 移动端隐藏侧边栏 -->
+    <aside v-if="!isMobileDevice" class="sidebar">
       <div class="sidebar-bg">
         <div class="sidebar-grid"></div>
         <div class="sidebar-glow"></div>
@@ -96,7 +97,7 @@
    * 通过 CSS Grid Areas 实现，sidebar / topbar / content 三块独立布局
    * 设计 token 与 Login.vue 共享，确保品牌一致
    */
-  import { computed, reactive, ref, watch } from 'vue'
+  import { computed, reactive, ref, watch, onMounted, onUnmounted } from 'vue'
   import type { Component } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import { Modal, message } from 'ant-design-vue'
@@ -115,6 +116,7 @@
   } from '@ant-design/icons-vue'
   import { useAuthStore } from '@/stores/auth'
   import { APP_VERSION, CHANGELOG_EMBED_URL } from '@/constants/app'
+  import { isMobile, onDeviceChange } from '@/utils/device'
 
   interface MenuItem {
     path?: string
@@ -129,6 +131,20 @@
   const appVersion = APP_VERSION
   const changelogEmbedUrl = CHANGELOG_EMBED_URL
   const changelogVisible = ref(false)
+
+  // 移动端状态追踪
+  const isMobileDevice = ref(isMobile())
+  let cleanupDeviceChange: (() => void) | null = null
+
+  onMounted(() => {
+    cleanupDeviceChange = onDeviceChange((mobile) => {
+      isMobileDevice.value = mobile
+    })
+  })
+
+  onUnmounted(() => {
+    cleanupDeviceChange?.()
+  })
 
   function openChangelog() {
     changelogVisible.value = true
@@ -630,8 +646,41 @@
   }
 
   /* ============ Responsive ============ */
+  /* 移动端：隐藏侧边栏，内容区占满全屏 */
+  .app-layout.is-mobile {
+    grid-template-columns: 1fr;
+    grid-template-rows: 56px 1fr;
+    grid-template-areas:
+      'topbar'
+      'content';
+  }
+
+  .app-layout.is-mobile .topbar {
+    padding: 0 16px;
+  }
+
+  .app-layout.is-mobile .page-title {
+    font-size: 16px;
+  }
+
+  .app-layout.is-mobile .version-badge {
+    display: none;
+  }
+
+  .app-layout.is-mobile .user-meta {
+    display: none;
+  }
+
+  .app-layout.is-mobile .logout-label {
+    display: none;
+  }
+
+  .app-layout.is-mobile .content {
+    padding: 16px;
+  }
+
   @media (max-width: 1024px) {
-    .app-layout {
+    .app-layout:not(.is-mobile) {
       grid-template-columns: 72px 1fr;
     }
 
