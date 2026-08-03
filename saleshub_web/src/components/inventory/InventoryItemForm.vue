@@ -121,12 +121,15 @@
     }
   }
 
+  // 编辑模式下规格项额外携带 spec_id,后端依据 spec_id 判断新增/修改/删除
+  type EditableSpec = SpecPayload & { spec_id?: string }
+
   interface FormData {
     parent_type_id: string | undefined
     child_type_id: string | undefined
     name: string
     code: string
-    specs: SpecPayload[]
+    specs: EditableSpec[]
     warnStock: number | undefined
     image_id?: string
     remark?: string
@@ -178,7 +181,7 @@
       form.code = props.item.code
       form.specs = (props.item.specs || [])
         .filter(s => s.spec !== '')
-        .map(s => ({ spec: s.spec, price: s.price ?? undefined }))
+        .map(s => ({ spec: s.spec, price: s.price ?? undefined, spec_id: s.spec_id }))
       form.warnStock = props.item.warn_stock
       form.image_id = props.item.image_id || undefined
       form.remark = props.item.remark || undefined
@@ -280,7 +283,7 @@
     loading.value = true
     try {
       const validSpecs = form.specs
-        .map(s => ({ spec: s.spec.trim(), price: s.price }))
+        .map(s => ({ spec: s.spec.trim(), price: s.price, spec_id: s.spec_id }))
         .filter(s => s.spec !== '')
 
       let specsPayload: SpecPayload[] | undefined

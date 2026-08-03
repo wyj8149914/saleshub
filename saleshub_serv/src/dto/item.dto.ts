@@ -12,6 +12,9 @@ export class ItemSpecDto {
     @IsNumber({}, { message: '价格必须是数字' })
     @Min(0, { message: '价格不能小于0' })
     price?: number;
+
+    @IsOptional()
+    spec_id: string;
 }
 
 export class CreateInventoryItemDto {

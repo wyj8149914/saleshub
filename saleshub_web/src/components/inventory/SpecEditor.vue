@@ -58,7 +58,8 @@
     const next = [...props.value]
     const current = next[index]
     if (current) {
-      next[index] = { spec: current.spec, price }
+      // 使用展开保留 spec_id 等额外字段,避免编辑价格时丢失已有规格标识
+      next[index] = { ...current, price }
       emit('update:value', next)
     }
   }

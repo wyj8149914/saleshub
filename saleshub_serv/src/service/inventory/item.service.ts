@@ -184,7 +184,10 @@ export class InventoryItemService {
      * 更新零件信息
      * - dto.specs 为 undefined: 规格不变(仅更新其他字段)
      * - dto.specs 为 [](空数组): 清空所有规格,改为默认 SKU(需所有现存规格库存为 0)
-     * - dto.specs 为非空数组: 同步为该列表(新增/保留/删除)
+     * - dto.specs 为非空数组: 按 spec_id 同步规格列表(新增/修改/删除)
+     *   - 传了 spec_id: 修改对应已有规格(支持改名/改价)
+     *   - 未传 spec_id: 新增规格
+     *   - 已有规格中 spec_id 未出现在列表中的: 删除(需库存为 0)
      */
     async update(dto: UpdateInventoryItemDto) {
         try {
@@ -239,19 +242,25 @@ export class InventoryItemService {
                 where: { item_id: dto.item_id, status: 1 },
             });
             const newSpecsData = this.normalizeSpecs(dto.specs);
-            const existingSpecMap = new Map(existingSpecs.map((s) => [s.spec, s]));
-            const newSpecMap = new Map(newSpecsData.map((s) => [s.spec, s]));
+            // 已有规格按 spec_id 索引,用于修改时匹配
+            const existingSpecMap = new Map(existingSpecs.map((s) => [s.spec_id, s]));
 
-            // 找出需要删除的规格（在新规格中不存在的）
-            const toRemove = existingSpecs.filter((s) => !newSpecMap.has(s.spec));
-            // 找出需要添加的规格（在现有规格中不存在的）
-            const toAddData = newSpecsData.filter((s) => !existingSpecMap.has(s.spec));
-            // 找出需要更新的规格（两边都存在，可能需要更新价格）
-            const toUpdateData = newSpecsData.filter((s) => existingSpecMap.has(s.spec));
+            // 按 spec_id 区分新增与修改:传了 spec_id 表示修改已有规格,未传表示新增
+            const toAddData = newSpecsData.filter((s) => !s.spec_id);
+            const toUpdateData = newSpecsData.filter((s) => s.spec_id);
+            const passedSpecIds = new Set(toUpdateData.map((s) => s.spec_id as string));
 
+            // 需要删除的规格:已有规格中 spec_id 未出现在传入列表中
+            const toRemove = existingSpecs.filter((s) => !passedSpecIds.has(s.spec_id));
             for (const s of toRemove) {
                 if (s.current_stock !== 0) {
                     return { result: 1, msg: `规格 "${s.spec}" 库存非零,不能删除` };
+                }
+            }
+            // 修改前校验:传入的 spec_id 必须对应当前零件的已有规格
+            for (const s of toUpdateData) {
+                if (!existingSpecMap.has(s.spec_id as string)) {
+                    return { result: 1, msg: `规格 "${s.spec}" 不存在,不能修改` };
                 }
             }
 
@@ -269,13 +278,19 @@ export class InventoryItemService {
                 return row;
             });
 
-            const toUpdateIds: string[] = [];
-            const toUpdatePrices: Map<string, number> = new Map();
+            // 收集需要修改的字段(仅更新发生变化的字段)
+            const toUpdateEntries: { spec_id: string; fields: { spec?: string; price?: number } }[] = [];
             for (const specData of toUpdateData) {
-                const existing = existingSpecMap.get(specData.spec)!;
+                const existing = existingSpecMap.get(specData.spec_id as string)!;
+                const fields: { spec?: string; price?: number } = {};
+                if (specData.spec !== existing.spec) {
+                    fields.spec = specData.spec;
+                }
                 if (specData.price !== undefined && specData.price !== existing.price) {
-                    toUpdateIds.push(existing.spec_id);
-                    toUpdatePrices.set(existing.spec_id, specData.price);
+                    fields.price = specData.price;
+                }
+                if (Object.keys(fields).length > 0) {
+                    toUpdateEntries.push({ spec_id: specData.spec_id as string, fields });
                 }
             }
 
@@ -291,12 +306,12 @@ export class InventoryItemService {
                 if (addRows.length > 0) {
                     await manager.save(InventoryItemSpec, addRows);
                 }
-                if (toUpdateIds.length > 0) {
-                    for (const specId of toUpdateIds) {
+                if (toUpdateEntries.length > 0) {
+                    for (const entry of toUpdateEntries) {
                         await manager.update(
                             InventoryItemSpec,
-                            { spec_id: specId },
-                            { price: toUpdatePrices.get(specId)!, update_time: now }
+                            { spec_id: entry.spec_id },
+                            { ...entry.fields, update_time: now }
                         );
                     }
                 }
@@ -359,16 +374,26 @@ export class InventoryItemService {
 
     /**
      * 规格标准化:undefined/空数组 → [{spec:''}](默认 SKU);去重
+     * - 传了 spec_id 的按 spec_id 去重(用于修改已有规格)
+     * - 未传 spec_id 的按 spec 名称去重(用于新增规格)
      */
-    private normalizeSpecs(specs?: { spec: string; price?: number }[]): { spec: string; price?: number }[] {
+    private normalizeSpecs(
+        specs?: { spec: string; price?: number; spec_id?: string }[]
+    ): { spec: string; price?: number; spec_id?: string }[] {
         if (!specs || specs.length === 0) {
             return [{ spec: '' }];
         }
-        const seen = new Set<string>();
-        const out: { spec: string; price?: number }[] = [];
+        const seenIds = new Set<string>();
+        const seenSpecs = new Set<string>();
+        const out: { spec: string; price?: number; spec_id?: string }[] = [];
         for (const s of specs) {
-            if (!seen.has(s.spec)) {
-                seen.add(s.spec);
+            if (s.spec_id) {
+                if (!seenIds.has(s.spec_id)) {
+                    seenIds.add(s.spec_id);
+                    out.push(s);
+                }
+            } else if (!seenSpecs.has(s.spec)) {
+                seenSpecs.add(s.spec);
                 out.push(s);
             }
         }
