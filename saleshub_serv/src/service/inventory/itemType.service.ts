@@ -217,7 +217,7 @@ export class ItemTypeService {
      */
     private async isTypeInUse(typeId: string): Promise<boolean> {
         const count = await this.inventoryItemRepo.count({
-            where: { type_id: typeId },
+            where: { type_id: typeId, status: 1 },
         });
         return count > 0;
     }
