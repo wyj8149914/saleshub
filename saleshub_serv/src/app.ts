@@ -31,15 +31,6 @@ export function createApp(): Application {
     app.use(requestLogger);
     app.use(jwtValidator);
 
-    // 健康检查
-    app.get('/health', (req, res) => {
-        res.json({
-            status: 'ok',
-            timestamp: new Date().toISOString(),
-            uptime: process.uptime(),
-        });
-    });
-
     // API路由
     initializeRoutes(app);
 
