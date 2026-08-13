@@ -1,6 +1,5 @@
 <template>
-  <a-modal :open="visible" title="产品详情" :width="1000" :footer="null" :mask-closable="true"
-    wrap-class-name="product-detail-modal" @cancel="handleClose">
+  <a-modal :open="visible" title="产品详情" :width="1000" :footer="null" :mask-closable="true" wrap-class-name="product-detail-modal" @cancel="handleClose">
     <a-spin :spinning="loading">
       <div v-if="detail" class="product-detail">
         <!-- 产品基本信息 -->
@@ -43,8 +42,7 @@
             <tbody>
               <template v-if="detail.mode === 'module' && detail.modules">
                 <template v-for="(module, mIndex) in detail.modules" :key="module.module_id">
-                  <tr v-for="(item, iIndex) in module.items"
-                    :key="`${module.module_id}_${item.item_id}_${item.spec_id}`">
+                  <tr v-for="(item, iIndex) in module.items" :key="`${module.module_id}_${item.item_id}_${item.spec_id}`">
                     <td v-if="mIndex === 0 && iIndex === 0" :rowspan="totalRows" class="cell-product">
                       {{ detail.product.name }}
                     </td>
@@ -91,231 +89,231 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, watch } from 'vue'
-  import { inventoryApi } from '@/api/inventory'
-  import type { ProductDetailResponse } from '@/types/inventory'
+import { ref, computed, watch } from 'vue';
+import { inventoryApi } from '@/api/inventory';
+import type { ProductDetailResponse } from '@/types/inventory';
 
-  interface Props {
-    visible: boolean
-    productId: string | null
+interface Props {
+  visible: boolean;
+  productId: string | null;
+}
+
+const props = defineProps<Props>();
+
+interface Emits {
+  (e: 'update:visible', value: boolean): void;
+}
+
+const emit = defineEmits<Emits>();
+
+const loading = ref(false);
+const detail = ref<ProductDetailResponse | null>(null);
+
+const totalRows = computed(() => {
+  if (!detail.value || detail.value.mode !== 'module' || !detail.value.modules) return 0;
+  return detail.value.modules.reduce((sum, m) => sum + m.items.length, 0);
+});
+
+const loadDetail = async () => {
+  if (!props.productId) return;
+  loading.value = true;
+  try {
+    const res = await inventoryApi.getProductDetail(props.productId);
+    detail.value = res.datas;
+  } catch {
+    // 错误由拦截器处理
+  } finally {
+    loading.value = false;
   }
+};
 
-  const props = defineProps<Props>()
+const handleClose = () => {
+  emit('update:visible', false);
+};
 
-  interface Emits {
-    (e: 'update:visible', value: boolean): void
-  }
-
-  const emit = defineEmits<Emits>()
-
-  const loading = ref(false)
-  const detail = ref<ProductDetailResponse | null>(null)
-
-  const totalRows = computed(() => {
-    if (!detail.value || detail.value.mode !== 'module' || !detail.value.modules) return 0
-    return detail.value.modules.reduce((sum, m) => sum + m.items.length, 0)
-  })
-
-  const loadDetail = async () => {
-    if (!props.productId) return
-    loading.value = true
-    try {
-      const res = await inventoryApi.getProductDetail(props.productId)
-      detail.value = res.datas
-    } catch {
-      // 错误由拦截器处理
-    } finally {
-      loading.value = false
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible && props.productId) {
+      loadDetail();
+    } else {
+      detail.value = null;
     }
-  }
-
-  const handleClose = () => {
-    emit('update:visible', false)
-  }
-
-  watch(
-    () => props.visible,
-    (visible) => {
-      if (visible && props.productId) {
-        loadDetail()
-      } else {
-        detail.value = null
-      }
-    }
-  )
+  },
+);
 </script>
 
 <style scoped>
-  .product-detail {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
+.product-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
 
-  .info-card {
-    background: #fafafa;
-    border-radius: 8px;
-    padding: 16px;
-  }
+.info-card {
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 16px;
+}
 
-  .info-header {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-    margin-bottom: 12px;
-  }
+.info-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 12px;
+}
 
-  .info-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: #18181b;
-  }
+.info-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #18181b;
+}
 
-  .info-code {
-    font-family: 'Courier New', Consolas, monospace;
-    font-size: 13px;
-    color: #52525b;
-    background: #fff;
-    padding: 2px 8px;
-    border-radius: 4px;
-  }
+.info-code {
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 13px;
+  color: #52525b;
+  background: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
 
-  .info-price {
-    color: #dc2626;
-    font-weight: 600;
-  }
+.info-price {
+  color: #dc2626;
+  font-weight: 600;
+}
 
-  .bom-section {
-    background: #fff;
-    border-radius: 8px;
-    border: 1px solid #e4e4e7;
-    overflow: hidden;
-  }
+.bom-section {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e4e4e7;
+  overflow: hidden;
+}
 
-  .section-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #18181b;
-    padding: 12px 16px;
-    background: #fafafa;
-    border-bottom: 1px solid #e4e4e7;
-  }
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #18181b;
+  padding: 12px 16px;
+  background: #fafafa;
+  border-bottom: 1px solid #e4e4e7;
+}
 
-  .bom-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
+.bom-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
 
-  .bom-table th {
-    background: #f4f4f5;
-    color: #52525b;
-    font-weight: 600;
-    padding: 10px 8px;
-    text-align: center;
-    border: 1px solid #000000;
-  }
+.bom-table th {
+  background: #f4f4f5;
+  color: #52525b;
+  font-weight: 600;
+  padding: 10px 8px;
+  text-align: center;
+  border: 1px solid #000000;
+}
 
-  .bom-table td {
-    padding: 10px 8px;
-    border: 1px solid #000000;
-    vertical-align: middle;
-  }
+.bom-table td {
+  padding: 10px 8px;
+  border: 1px solid #000000;
+  vertical-align: middle;
+}
 
-  .bom-table tr:hover td {
-    background: #eff6ff;
-  }
+.bom-table tr:hover td {
+  background: #eff6ff;
+}
 
-  .col-product,
-  .col-module {
-    width: 100px;
-    text-align: center;
-    background: #fafafa;
-    font-weight: 500;
-    color: #18181b;
-  }
+.col-product,
+.col-module {
+  width: 100px;
+  text-align: center;
+  background: #fafafa;
+  font-weight: 500;
+  color: #18181b;
+}
 
-  .col-item {
-    min-width: 120px;
-  }
+.col-item {
+  min-width: 120px;
+}
 
-  .col-code {
-    width: 100px;
-    font-family: 'Courier New', Consolas, monospace;
-    font-size: 12px;
-    color: #52525b;
-  }
+.col-code {
+  width: 100px;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 12px;
+  color: #52525b;
+}
 
-  .col-spec {
-    width: 120px;
-    text-align: center;
-  }
+.col-spec {
+  width: 120px;
+  text-align: center;
+}
 
-  .col-qty {
-    width: 60px;
-    text-align: center;
-  }
+.col-qty {
+  width: 60px;
+  text-align: center;
+}
 
-  .col-price {
-    width: 80px;
-    text-align: right;
-  }
+.col-price {
+  width: 80px;
+  text-align: right;
+}
 
-  .col-stock {
-    width: 60px;
-    text-align: right;
-  }
+.col-stock {
+  width: 60px;
+  text-align: right;
+}
 
-  .col-remark {
-    min-width: 100px;
-  }
+.col-remark {
+  min-width: 100px;
+}
 
-  .cell-product,
-  .cell-module {
-    background: #fafafa;
-    font-weight: 500;
-    color: #18181b;
-    text-align: center;
-    vertical-align: middle;
-    border-right: 1px solid #e4e4e7;
-  }
+.cell-product,
+.cell-module {
+  background: #fafafa;
+  font-weight: 500;
+  color: #18181b;
+  text-align: center;
+  vertical-align: middle;
+  border-right: 1px solid #e4e4e7;
+}
 
-  .cell-item {
-    text-align: center;
-    font-weight: 500;
-    color: #18181b;
-  }
+.cell-item {
+  text-align: center;
+  font-weight: 500;
+  color: #18181b;
+}
 
-  .cell-code {
-    text-align: center;
-    font-family: 'Courier New', Consolas, monospace;
-    font-size: 12px;
-    color: #1f1f21;
-  }
+.cell-code {
+  text-align: center;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 12px;
+  color: #1f1f21;
+}
 
-  .cell-spec {
-    text-align: center;
-    color: #1f1f21;
-    font-style: italic;
-  }
+.cell-spec {
+  text-align: center;
+  color: #1f1f21;
+  font-style: italic;
+}
 
-  .cell-qty {
-    text-align: center;
-    font-variant-numeric: tabular-nums;
-  }
+.cell-qty {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
 
-  .cell-price {
-    text-align: center;
-    color: #dc2626;
-    font-weight: 500;
-  }
+.cell-price {
+  text-align: center;
+  color: #dc2626;
+  font-weight: 500;
+}
 
-  .cell-stock {
-    text-align: center;
-    font-variant-numeric: tabular-nums;
-  }
+.cell-stock {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
 
-  .cell-remark {
-    color: #1f1f21;
-  }
+.cell-remark {
+  color: #1f1f21;
+}
 </style>

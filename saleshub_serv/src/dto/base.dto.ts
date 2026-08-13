@@ -1,5 +1,5 @@
-import { Type } from "class-transformer";
-import { IsNotEmpty, Min } from "class-validator";
+import { Type } from 'class-transformer';
+import { IsNotEmpty, Min } from 'class-validator';
 
 export class PageDto {
     @IsNotEmpty({ message: '分页大小不能为空' })

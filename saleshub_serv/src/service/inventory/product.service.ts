@@ -1,9 +1,24 @@
 import { EntityManager, Not } from 'typeorm';
-import { Product, ProductItem, InventoryItem, InventoryItemSpec, ItemType, ProductModule } from '../../entity/product.entity';
+import {
+    Product,
+    ProductItem,
+    InventoryItem,
+    InventoryItemSpec,
+    ItemType,
+    ProductModule,
+} from '../../entity/product.entity';
 import { MinioFile } from '../../entity/file.entity';
 import {
-    CreateProductDto, ProductIdDto, ListProductDto, UpdateProductDto, SetProductItemsDto,
-    CreateModuleDto, UpdateModuleDto, ListModuleDto, ModuleIdDto, SetModuleItemsDto,
+    CreateProductDto,
+    ProductIdDto,
+    ListProductDto,
+    UpdateProductDto,
+    SetProductItemsDto,
+    CreateModuleDto,
+    UpdateModuleDto,
+    ListModuleDto,
+    ModuleIdDto,
+    SetModuleItemsDto,
 } from '../../dto/product.dto';
 import { AppDataSource } from '../../config/database.config';
 import { getLogger } from '../../utils/logger.util';
@@ -68,7 +83,8 @@ export class ProductService {
      */
     async list(dto: ListProductDto) {
         try {
-            const queryBuilder = this.productRepository.createQueryBuilder('product')
+            const queryBuilder = this.productRepository
+                .createQueryBuilder('product')
                 .leftJoin(MinioFile, 'file', 'file.relation_id = product.image_id')
                 .select([
                     'product.product_id AS product_id',
@@ -207,7 +223,10 @@ export class ProductService {
             }
 
             if (dto.items.length === 0) {
-                await this.productItemRepository.update({ product_id: dto.product_id }, { status: 2, update_time: new Date() });
+                await this.productItemRepository.update(
+                    { product_id: dto.product_id },
+                    { status: 2, update_time: new Date() }
+                );
                 return { result: 0, msg: '设置成功' };
             }
 
@@ -221,7 +240,10 @@ export class ProductService {
             const itemIds = [...new Set(dto.items.map((it) => it.item_id))];
             const items = await this.inventoryItemRepository
                 .createQueryBuilder('item')
-                .where('item.item_id IN (:...ids) AND item.status = :status', { ids: itemIds, status: 1 })
+                .where('item.item_id IN (:...ids) AND item.status = :status', {
+                    ids: itemIds,
+                    status: 1,
+                })
                 .getMany();
             if (items.length !== itemIds.length) {
                 const found = new Set(items.map((i: InventoryItem) => i.item_id));
@@ -251,7 +273,7 @@ export class ProductService {
                 pi.relation_id = v7().replace(/-/g, '');
                 pi.product_id = dto.product_id;
                 pi.item_id = it.item_id;
-                pi.module_id = null as any;  // 确保直接关联时 module_id 为空
+                pi.module_id = null as any; // 确保直接关联时 module_id 为空
                 pi.quantity_per_product = it.quantity_per_product ?? 1;
                 pi.spec_id = it.spec_id;
                 pi.remark = it.remark ?? null;
@@ -262,7 +284,11 @@ export class ProductService {
             });
 
             await this.productItemRepository.manager.transaction(async (manager: EntityManager) => {
-                await manager.update(ProductItem, { product_id: dto.product_id }, { status: 2, update_time: now });
+                await manager.update(
+                    ProductItem,
+                    { product_id: dto.product_id },
+                    { status: 2, update_time: now }
+                );
                 await manager.save(ProductItem, productItems);
             });
 
@@ -347,11 +373,7 @@ export class ProductService {
                 const rows = await this.productItemRepository
                     .createQueryBuilder('pi')
                     .leftJoin(InventoryItem, 'i', 'i.item_id = pi.item_id')
-                    .leftJoin(
-                        InventoryItemSpec,
-                        's',
-                        's.spec_id = pi.spec_id AND s.status = 1'
-                    )
+                    .leftJoin(InventoryItemSpec, 's', 's.spec_id = pi.spec_id AND s.status = 1')
                     .leftJoin(ItemType, 't', 't.type_id = i.type_id')
                     .select([
                         'pi.relation_id AS relation_id',
@@ -587,7 +609,10 @@ export class ProductService {
             }
 
             if (dto.items.length === 0) {
-                await this.productItemRepository.update({ module_id: dto.module_id }, { status: 2, update_time: new Date() });
+                await this.productItemRepository.update(
+                    { module_id: dto.module_id },
+                    { status: 2, update_time: new Date() }
+                );
                 return { result: 0, msg: '设置成功' };
             }
 
@@ -652,16 +677,14 @@ export class ProductService {
                 return pi;
             });
 
-            await this.productItemRepository.manager.transaction(
-                async (manager: EntityManager) => {
-                    await manager.update(
-                        ProductItem,
-                        { module_id: dto.module_id },
-                        { status: 2, update_time: now }
-                    );
-                    await manager.save(ProductItem, productItems);
-                }
-            );
+            await this.productItemRepository.manager.transaction(async (manager: EntityManager) => {
+                await manager.update(
+                    ProductItem,
+                    { module_id: dto.module_id },
+                    { status: 2, update_time: now }
+                );
+                await manager.save(ProductItem, productItems);
+            });
 
             return { result: 0, msg: '设置成功' };
         } catch (error) {
@@ -685,11 +708,7 @@ export class ProductService {
             const rows = await this.productItemRepository
                 .createQueryBuilder('pi')
                 .leftJoin(InventoryItem, 'i', 'i.item_id = pi.item_id')
-                .leftJoin(
-                    InventoryItemSpec,
-                    's',
-                    's.spec_id = pi.spec_id AND s.status = 1'
-                )
+                .leftJoin(InventoryItemSpec, 's', 's.spec_id = pi.spec_id AND s.status = 1')
                 .leftJoin(ItemType, 't', 't.type_id = i.type_id')
                 .select([
                     'pi.relation_id AS relation_id',
@@ -725,7 +744,15 @@ export class ProductService {
         try {
             const product = await this.productRepository.findOne({
                 where: { product_id: dto.product_id, status: 1 },
-                select: ['product_id', 'name', 'code', 'description', 'image_id', 'price', 'remark'],
+                select: [
+                    'product_id',
+                    'name',
+                    'code',
+                    'description',
+                    'image_id',
+                    'price',
+                    'remark',
+                ],
             });
             if (!product) {
                 return { result: 1, msg: '产品不存在' };
@@ -737,7 +764,8 @@ export class ProductService {
                 order: { sort_order: 'ASC' },
             });
 
-            const items = await this.productItemRepository.createQueryBuilder('pi')
+            const items = await this.productItemRepository
+                .createQueryBuilder('pi')
                 .leftJoin(InventoryItem, 'i', 'i.item_id = pi.item_id')
                 .leftJoin(InventoryItemSpec, 's', 's.spec_id = pi.spec_id AND s.status = 1')
                 .select([
@@ -760,7 +788,8 @@ export class ProductService {
                 .getRawMany();
 
             // 关联模式,合并数据
-            let mode = 'none', returnData: Record<string, any> = { product }
+            let mode = 'none',
+                returnData: Record<string, any> = { product };
             if (modules.length > 0) {
                 // 如果是模块,将零件放到对应的模块下
                 mode = 'module';
@@ -787,7 +816,6 @@ export class ProductService {
             }
 
             return { result: 0, msg: 'success', datas: returnData };
-
         } catch (error) {
             this.logger.error('查询产品详情失败:', error);
             return { result: 1, msg: '查询失败' };
@@ -800,8 +828,8 @@ export class ProductService {
     private async generateProductCode() {
         const result = await this.productRepository
             .createQueryBuilder('product')
-            .select("MAX(SUBSTRING(product.code, 3)::INTEGER)", 'maxNum')
-            .where("product.code ~ :pattern", { pattern: '^PR[0-9]{6}$' })
+            .select('MAX(SUBSTRING(product.code, 3)::INTEGER)', 'maxNum')
+            .where('product.code ~ :pattern', { pattern: '^PR[0-9]{6}$' })
             .getRawOne();
 
         const nextNum = (Number(result?.maxNum) || 0) + 1;

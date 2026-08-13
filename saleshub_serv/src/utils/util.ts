@@ -23,7 +23,7 @@ function paddZero(data: string, len: number): string {
     const length = Buffer.byteLength(data);
     const add = length % len;
     if (add != 0) {
-        data += new Array(16 - add + 1).join('\0')
+        data += new Array(16 - add + 1).join('\0');
     }
     return data;
 }
@@ -45,7 +45,7 @@ export function encryption(data: string, key: string): any {
 }
 
 /**
- * @description: aes-128-ecb解密 zeropadding  utf8  
+ * @description: aes-128-ecb解密 zeropadding  utf8
  * @param {*} data:为待解密数据
  * @param {*} key:解密的密钥,必须为16字节
  * @return {*} buff:解密后的数据
@@ -64,7 +64,7 @@ export function decrypt(data: string, key: string): any {
  * @description: 账户,密码加盐处理
  * @param {*} username: 账户
  * @param {*} password: 密码
- * @param {*} value: 
+ * @param {*} value:
  * @return {*}
  */
 export function md5WithSalt(username: string, password: string, value = 0x00): string {
@@ -82,21 +82,30 @@ export function md5WithSalt(username: string, password: string, value = 0x00): s
     valueB = valueB % password.length;
 
     const md5Password = crypto.createHash('md5').update(password).digest('hex');
-    const md5Result = crypto.createHash('md5').update(valueA + md5Password + valueB).digest('hex');
+    const md5Result = crypto
+        .createHash('md5')
+        .update(valueA + md5Password + valueB)
+        .digest('hex');
     return md5Result;
 }
 
 /**
  * 使用 bcrypt 生成密码哈希（默认 12 轮，与 FastAPI 后端一致）
  */
-export async function hashPassword(plainPassword: string, rounds: number = BCRYPT_ROUNDS): Promise<string> {
+export async function hashPassword(
+    plainPassword: string,
+    rounds: number = BCRYPT_ROUNDS
+): Promise<string> {
     return bcrypt.hash(plainPassword, rounds);
 }
 
 /**
  * 校验明文密码与 bcrypt 哈希是否匹配
  */
-export async function verifyPassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
+export async function verifyPassword(
+    plainPassword: string,
+    hashedPassword: string
+): Promise<boolean> {
     if (!plainPassword || !hashedPassword) {
         return false;
     }
@@ -116,7 +125,9 @@ const RE_SPECIAL = /[^A-Za-z0-9]/;
 /**
  * 密码强度：大写、小写、数字、特殊符号中至少满足三种；长度至少 8
  */
-export function validatePasswordStrength(password: string): { ok: true } | { ok: false; msg: string } {
+export function validatePasswordStrength(
+    password: string
+): { ok: true } | { ok: false; msg: string } {
     if (!password || typeof password !== 'string') {
         return { ok: false, msg: '密码不能为空' };
     }
@@ -168,7 +179,9 @@ export function shuffle(array: ArrayItem[]): ArrayItem {
         return { result: 1, msg: '输入参数必须为数组' };
     }
 
-    let len = array.length, t, i;
+    let len = array.length,
+        t,
+        i;
     while (len > 0) {
         i = Math.floor(Math.random() * len--);
         t = array[len];
@@ -220,19 +233,20 @@ export function arrayToTree(array: any[], id: string, parentKey: string, childre
     const obj: Record<string, any> = {}; // 临时对象
     const result: any[] = []; // 返回数组
 
-    array.forEach(item => {
+    array.forEach((item) => {
         obj[item[id]] = item;
     });
 
-    array.forEach(item => {
+    array.forEach((item) => {
         const pid = item[parentKey];
         const parent = obj[pid]; // 通过临时对象查询数组每一项的父节点
-        if (parent) { // 父节点存在,放入父节点的children中
+        if (parent) {
+            // 父节点存在,放入父节点的children中
             (parent[children] || (parent[children] = [])).push(item);
         } else {
             result.push(item); // 父节点不存在,最高一级,直接放入数组中
         }
-    })
+    });
 
     return result;
 }
@@ -245,12 +259,22 @@ export function arrayToTree(array: any[], id: string, parentKey: string, childre
  * @param {string} algorithm 加密算法和模式，默认aes-256-cbc
  * @return {string} 加密后的base64字符串
  */
-export function aesEncrypt(data: string, key: string, algorithm = 'aes-256-cbc', salt = 'salt', iv = '') {
+export function aesEncrypt(
+    data: string,
+    key: string,
+    algorithm = 'aes-256-cbc',
+    salt = 'salt',
+    iv = ''
+) {
     // 为AES-256生成32字节密钥，为AES-128生成16字节密钥
-    const keyBuffer = algorithm.includes('256') ? crypto.scryptSync(key, salt, 32) : crypto.scryptSync(key, salt, 16);
+    const keyBuffer = algorithm.includes('256')
+        ? crypto.scryptSync(key, salt, 32)
+        : crypto.scryptSync(key, salt, 16);
 
     // 确保IV是16字节缓冲区
-    const ivBuffer = algorithm.includes('ecb') ? Buffer.alloc(0) : Buffer.from(iv || '0000000000000000', 'utf8');
+    const ivBuffer = algorithm.includes('ecb')
+        ? Buffer.alloc(0)
+        : Buffer.from(iv || '0000000000000000', 'utf8');
 
     const cipher = crypto.createCipheriv(algorithm, keyBuffer, ivBuffer);
     let encrypted = cipher.update(data, 'utf8', 'base64');
@@ -266,12 +290,22 @@ export function aesEncrypt(data: string, key: string, algorithm = 'aes-256-cbc',
  * @param {string} algorithm 解密算法和模式，默认aes-256-cbc
  * @return {string} 解密后的明文
  */
-export function aesDecrypt(encryptedData: string, key: string, algorithm = 'aes-256-cbc', salt = 'salt', iv = '') {
+export function aesDecrypt(
+    encryptedData: string,
+    key: string,
+    algorithm = 'aes-256-cbc',
+    salt = 'salt',
+    iv = ''
+) {
     // 为AES-256生成32字节密钥，为AES-128生成16字节密钥
-    const keyBuffer = algorithm.includes('256') ? crypto.scryptSync(key, salt, 32) : crypto.scryptSync(key, salt, 16);
+    const keyBuffer = algorithm.includes('256')
+        ? crypto.scryptSync(key, salt, 32)
+        : crypto.scryptSync(key, salt, 16);
 
     // 确保IV是16字节缓冲区
-    const ivBuffer = algorithm.includes('ecb') ? Buffer.alloc(0) : Buffer.from(iv || '0000000000000000', 'utf8');
+    const ivBuffer = algorithm.includes('ecb')
+        ? Buffer.alloc(0)
+        : Buffer.from(iv || '0000000000000000', 'utf8');
 
     const decipher = crypto.createDecipheriv(algorithm, keyBuffer, ivBuffer);
     let decrypted = decipher.update(encryptedData, 'base64', 'utf8');
@@ -293,12 +327,11 @@ if (require.main === module) {
     // console.log(decrypted);
 
     const dataString = {
-        "community_id": "16bda66dd3e211ef9da50242c0a8c002",
-        "user_name": "临时用户1",
-        "phone": "17775026499",
-        "expire_date": "2025-05-31"
+        community_id: '16bda66dd3e211ef9da50242c0a8c002',
+        user_name: '临时用户1',
+        phone: '17775026499',
+        expire_date: '2025-05-31',
     };
     // const encrypted = encryption(JSON.stringify(dataString), 'CNWxaExyaliEQsAP');
     // console.log(encrypted);
-
 }

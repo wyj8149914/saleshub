@@ -1,421 +1,421 @@
 // ============ 零件类型 ============
 export interface ItemTypeNode {
-    type_id: string
-    type_name: string
-    parent_id: string | null
-    sort_order: number
-    remark: string | null
-    parent_type_id?: string | null
-    parent_type_name?: string | null
-    children?: ItemTypeNode[]
+  type_id: string;
+  type_name: string;
+  parent_id: string | null;
+  sort_order: number;
+  remark: string | null;
+  parent_type_id?: string | null;
+  parent_type_name?: string | null;
+  children?: ItemTypeNode[];
 }
 
 export interface ItemTypeListQuery {
-    parent_id?: string
+  parent_id?: string;
 }
 
 export interface ItemTypeCreatePayload {
-    parent_id?: string
-    type_name: string
-    sort_order?: number
-    remark?: string
+  parent_id?: string;
+  type_name: string;
+  sort_order?: number;
+  remark?: string;
 }
 
 export interface ItemTypeUpdatePayload {
-    type_id: string
-    type_name: string
-    sort_order?: number
-    remark?: string
-    parent_id?: string
+  type_id: string;
+  type_name: string;
+  sort_order?: number;
+  remark?: string;
+  parent_id?: string;
 }
 
 // ============ 通用类型 ============
-export type ItemType = 'device' | 'common'
+export type ItemType = 'device' | 'common';
 export interface PaginatedData<T> {
-    total: number
-    items: T[]
+  total: number;
+  items: T[];
 }
 
 // ============ 文件上传 ============
 export interface FileUploadResponse {
-    relation_id: string
-    url: string
-    hash: string
-    is_duplicate: boolean
+  relation_id: string;
+  url: string;
+  hash: string;
+  is_duplicate: boolean;
 }
 
 // ============ 零件规格 ============
 export interface ItemSpec {
-    spec_id: string
-    spec: string
-    current_stock: number
-    price: number
+  spec_id: string;
+  spec: string;
+  current_stock: number;
+  price: number;
 }
 
 /** 创建/更新零件时使用的规格项 */
 export interface SpecPayload {
-    spec: string
-    price?: number
+  spec: string;
+  price?: number;
 }
 
 // ============ 产品 ============
 export interface Product {
-    product_id: string
-    name: string
-    code: string
-    description: string
-    image_id: string | null
-    image_url: string | null,
-    price: number | null,
-    remark: string | null,
+  product_id: string;
+  name: string;
+  code: string;
+  description: string;
+  image_id: string | null;
+  image_url: string | null;
+  price: number | null;
+  remark: string | null;
 }
 
 export interface ProductListQuery {
-    pageIndex: number
-    pageSize: number
-    name?: string
-    code?: string
+  pageIndex: number;
+  pageSize: number;
+  name?: string;
+  code?: string;
 }
 
 export interface ProductCreatePayload {
-    name: string
-    description?: string
-    image_id?: string
-    price?: number
-    remark?: string
+  name: string;
+  description?: string;
+  image_id?: string;
+  price?: number;
+  remark?: string;
 }
 
 export interface ProductUpdatePayload {
-    product_id: string
-    name: string
-    description?: string
-    image_id?: string
-    price?: number
-    remark?: string
+  product_id: string;
+  name: string;
+  description?: string;
+  image_id?: string;
+  price?: number;
+  remark?: string;
 }
 
 // ============ 零件 ============
 export interface InventoryItem {
-    item_id: string
-    type_id: string
-    type_name?: string
-    type_full_name?: string
-    name: string
-    code: string
-    specs: ItemSpec[]
-    image_id: string | null
-    image_url: string | null
-    warn_stock: number,
-    is_custom: 1 | 2
-    remark: string | null
+  item_id: string;
+  type_id: string;
+  type_name?: string;
+  type_full_name?: string;
+  name: string;
+  code: string;
+  specs: ItemSpec[];
+  image_id: string | null;
+  image_url: string | null;
+  warn_stock: number;
+  is_custom: 1 | 2;
+  remark: string | null;
 }
 
 export interface ItemListQuery {
-    pageIndex: number
-    pageSize: number
-    type_id?: string
-    name?: string
-    code?: string
-    isWarning?: 1 | 2
-    is_custom?: 1 | 2
+  pageIndex: number;
+  pageSize: number;
+  type_id?: string;
+  name?: string;
+  code?: string;
+  isWarning?: 1 | 2;
+  is_custom?: 1 | 2;
 }
 
 export interface ItemCreatePayload {
-    type_id: string
-    name: string
-    specs?: SpecPayload[]
-    warnStock?: number
-    image_id?: string
-    remark?: string
-    is_custom?: 1 | 2
+  type_id: string;
+  name: string;
+  specs?: SpecPayload[];
+  warnStock?: number;
+  image_id?: string;
+  remark?: string;
+  is_custom?: 1 | 2;
 }
 
 export interface ItemUpdatePayload {
-    item_id: string
-    type_id: string
-    name: string
-    specs?: SpecPayload[]
-    warnStock?: number
-    image_id?: string,
-    remark?: string
-    is_custom?: 1 | 2
+  item_id: string;
+  type_id: string;
+  name: string;
+  specs?: SpecPayload[];
+  warnStock?: number;
+  image_id?: string;
+  remark?: string;
+  is_custom?: 1 | 2;
 }
 
 // ============ 模块 ============
 export interface ProductModule {
-    module_id: string
-    product_id: string
-    name: string
-    code: string | null
-    sort_order: number
-    remark: string | null
-    status: number
-    create_time: string
-    update_time: string
+  module_id: string;
+  product_id: string;
+  name: string;
+  code: string | null;
+  sort_order: number;
+  remark: string | null;
+  status: number;
+  create_time: string;
+  update_time: string;
 }
 
 export interface ModuleCreatePayload {
-    product_id: string
-    name: string
-    code?: string
-    sort_order?: number
-    remark?: string
+  product_id: string;
+  name: string;
+  code?: string;
+  sort_order?: number;
+  remark?: string;
 }
 
 export interface ModuleUpdatePayload {
-    module_id: string
-    name?: string
-    code?: string
-    sort_order?: number
-    remark?: string
+  module_id: string;
+  name?: string;
+  code?: string;
+  sort_order?: number;
+  remark?: string;
 }
 
 // ============ 产品-零件关联 ============
 export interface ProductItemRelation {
-    relation_id: string
-    product_id: string
-    module_id: string | null
-    item_id: string
-    spec_id: string
-    spec: string
-    quantity_per_product: number
-    remark: string | null
-    item_name: string
-    item_code: string
-    type_id: string
-    type_name: string
-    current_stock: number
-    warn_stock: number
+  relation_id: string;
+  product_id: string;
+  module_id: string | null;
+  item_id: string;
+  spec_id: string;
+  spec: string;
+  quantity_per_product: number;
+  remark: string | null;
+  item_name: string;
+  item_code: string;
+  type_id: string;
+  type_name: string;
+  current_stock: number;
+  warn_stock: number;
 }
 
 export interface ModuleWithItems {
-    module_id: string
-    name: string
-    code: string | null
-    sort_order: number
-    remark: string | null
-    items: ProductItemRelation[]
+  module_id: string;
+  name: string;
+  code: string | null;
+  sort_order: number;
+  remark: string | null;
+  items: ProductItemRelation[];
 }
 
 export interface ProductItemsResponse {
-    use_module: boolean
-    items?: ProductItemRelation[]
-    modules?: ModuleWithItems[]
+  use_module: boolean;
+  items?: ProductItemRelation[];
+  modules?: ModuleWithItems[];
 }
 
 export interface ProductItemPayload {
-    item_id: string
-    spec_id: string
-    quantity_per_product?: number
-    remark?: string
+  item_id: string;
+  spec_id: string;
+  quantity_per_product?: number;
+  remark?: string;
 }
 
 // ============ 产品详情 ============
 export interface ProductDetailItem {
-    item_id: string
-    spec_id: string
-    spec: string
-    price: number | null
-    current_stock: number | null
-    module_id: string | null
-    item_name: string
-    item_code: string
-    quantity_per_product: number
-    remark: string | null
+  item_id: string;
+  spec_id: string;
+  spec: string;
+  price: number | null;
+  current_stock: number | null;
+  module_id: string | null;
+  item_name: string;
+  item_code: string;
+  quantity_per_product: number;
+  remark: string | null;
 }
 
 export interface ProductDetailModule {
-    module_id: string
-    name: string
-    sort_order: number
-    remark: string | null
-    items: ProductDetailItem[]
+  module_id: string;
+  name: string;
+  sort_order: number;
+  remark: string | null;
+  items: ProductDetailItem[];
 }
 
 export interface ProductDetailProduct {
-    product_id: string
-    name: string
-    code: string
-    description: string | null
-    image_id: string | null
-    price: number | null
-    remark: string | null
+  product_id: string;
+  name: string;
+  code: string;
+  description: string | null;
+  image_id: string | null;
+  price: number | null;
+  remark: string | null;
 }
 
 export interface ProductDetailResponse {
-    product: ProductDetailProduct
-    mode: 'none' | 'direct' | 'module'
-    items?: ProductDetailItem[]
-    modules?: ProductDetailModule[]
+  product: ProductDetailProduct;
+  mode: 'none' | 'direct' | 'module';
+  items?: ProductDetailItem[];
+  modules?: ProductDetailModule[];
 }
 
 export interface StockRecord {
-    record_id: string
-    item_id: string
-    spec_id?: string
-    quantity: number
-    before_stock?: number
-    after_stock?: number
-    type: 'in' | 'out' | 'check'
-    date?: string
-    remark?: string
-    create_time: string
-    record_no?: string
+  record_id: string;
+  item_id: string;
+  spec_id?: string;
+  quantity: number;
+  before_stock?: number;
+  after_stock?: number;
+  type: 'in' | 'out' | 'check';
+  date?: string;
+  remark?: string;
+  create_time: string;
+  record_no?: string;
 }
 
 export interface StockHistoryQuery {
-    item_id: string
-    pageIndex: number
-    pageSize: number
-    spec_id?: string
-    start_date?: string
-    end_date?: string
+  item_id: string;
+  pageIndex: number;
+  pageSize: number;
+  spec_id?: string;
+  start_date?: string;
+  end_date?: string;
 }
 
 export interface StockHistoryRecord {
-    id: string
-    type: 'in' | 'out' | 'check'
-    item_name: string | null
-    spec: string | null
-    quantity: number | null
-    before_stock: number
-    after_stock: number
-    date: string
-    remark: string | null
-    create_time: string
+  id: string;
+  type: 'in' | 'out' | 'check';
+  item_name: string | null;
+  spec: string | null;
+  quantity: number | null;
+  before_stock: number;
+  after_stock: number;
+  date: string;
+  remark: string | null;
+  create_time: string;
 }
 
 // ============ 入库记录 ============
 export interface StockInRecord {
-    record_id: string
-    record_no: string
-    warehouse_id: string
-    warehouse_name: string
-    date: string
-    quantity: number
-    remark: string | null
-    photo_id: string | null
-    photo_url: string | null
-    before_stock: number
-    after_stock: number
-    item_name: string | null
-    spec: string | null
-    create_time: string
+  record_id: string;
+  record_no: string;
+  warehouse_id: string;
+  warehouse_name: string;
+  date: string;
+  quantity: number;
+  remark: string | null;
+  photo_id: string | null;
+  photo_url: string | null;
+  before_stock: number;
+  after_stock: number;
+  item_name: string | null;
+  spec: string | null;
+  create_time: string;
 }
 
 // ============ 出库记录 ============
 export interface StockOutRecord {
-    record_id: string
-    record_no: string
-    warehouse_id: string
-    warehouse_name: string
-    date: string
-    quantity: number
-    remark: string | null
-    before_stock: number
-    after_stock: number
-    item_name: string | null
-    spec: string | null
-    create_time: string
+  record_id: string;
+  record_no: string;
+  warehouse_id: string;
+  warehouse_name: string;
+  date: string;
+  quantity: number;
+  remark: string | null;
+  before_stock: number;
+  after_stock: number;
+  item_name: string | null;
+  spec: string | null;
+  create_time: string;
 }
 
 export interface StockRecordListQuery {
-    pageIndex: number
-    pageSize: number
-    start_date?: string
-    end_date?: string
-    item_id?: string
-    spec_id?: string
-    record_no?: string
+  pageIndex: number;
+  pageSize: number;
+  start_date?: string;
+  end_date?: string;
+  item_id?: string;
+  spec_id?: string;
+  record_no?: string;
 }
 
 // ============ 出入库 Payload ============
 export interface StockInPayload {
-    warehouse_id?: string
-    item_id: string
-    spec_id: string
-    quantity: number
-    date: string
-    photo_id?: string
-    remark?: string
+  warehouse_id?: string;
+  item_id: string;
+  spec_id: string;
+  quantity: number;
+  date: string;
+  photo_id?: string;
+  remark?: string;
 }
 
 export interface StockInBatchItem {
-    item_id: string
-    spec_id: string
-    quantity: number
+  item_id: string;
+  spec_id: string;
+  quantity: number;
 }
 
 export interface StockInBatchPayload {
-    warehouse_id?: string
-    items: StockInBatchItem[]
-    date: string
-    photo_id?: string
-    remark?: string
+  warehouse_id?: string;
+  items: StockInBatchItem[];
+  date: string;
+  photo_id?: string;
+  remark?: string;
 }
 
 export interface StockOutPayload {
-    warehouse_id: string
-    item_id: string
-    spec_id: string
-    quantity: number
-    date: string
-    remark?: string
+  warehouse_id: string;
+  item_id: string;
+  spec_id: string;
+  quantity: number;
+  date: string;
+  remark?: string;
 }
 
 export interface StockOutBatchItem {
-    warehouse_id: string
-    item_id: string
-    spec_id: string
-    quantity: number
+  warehouse_id: string;
+  item_id: string;
+  spec_id: string;
+  quantity: number;
 }
 
 export interface StockOutBatchPayload {
-    warehouse_id?: string
-    items: StockOutBatchItem[]
-    date: string
-    remark?: string
+  warehouse_id?: string;
+  items: StockOutBatchItem[];
+  date: string;
+  remark?: string;
 }
 
 export interface StockOutByProductPayload {
-    warehouse_id: string
-    product_id: string
-    quantity: number
-    date: string
-    remark?: string
+  warehouse_id: string;
+  product_id: string;
+  quantity: number;
+  date: string;
+  remark?: string;
 }
 
 // ============ 盘点记录 ============
 export interface StockCheckRecord {
-    check_id: string
-    record_no: string
-    date: string
-    remark: string | null
-    before_stock: number
-    after_stock: number
-    item_name: string | null
-    spec: string | null
-    create_time: string
+  check_id: string;
+  record_no: string;
+  date: string;
+  remark: string | null;
+  before_stock: number;
+  after_stock: number;
+  item_name: string | null;
+  spec: string | null;
+  create_time: string;
 }
 
 export interface StockCheckPayload {
-    warehouse_id: string
-    item_id: string
-    spec_id: string
-    after_stock: number
-    date: string
-    remark?: string
+  warehouse_id: string;
+  item_id: string;
+  spec_id: string;
+  after_stock: number;
+  date: string;
+  remark?: string;
 }
 
 export interface StockCheckBatchItem {
-    item_id: string
-    spec_id: string
-    after_stock: number
+  item_id: string;
+  spec_id: string;
+  after_stock: number;
 }
 
 export interface StockCheckBatchPayload {
-    warehouse_id: string
-    items: StockCheckBatchItem[]
-    date: string
-    remark?: string
+  warehouse_id: string;
+  items: StockCheckBatchItem[];
+  date: string;
+  remark?: string;
 }

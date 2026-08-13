@@ -4,8 +4,12 @@ import { AppDataSource } from '../../config/database.config';
 import { getLogger } from '../../utils/logger.util';
 import { v7 } from 'uuid';
 import {
-    CreateWarehouseDto, UpdateWarehouseDto, DeleteWarehouseDto,
-    ListWarehouseDto, AssignSpecWarehouseDto, ListSpecWarehouseStockDto,
+    CreateWarehouseDto,
+    UpdateWarehouseDto,
+    DeleteWarehouseDto,
+    ListWarehouseDto,
+    AssignSpecWarehouseDto,
+    ListSpecWarehouseStockDto,
 } from '../../dto/warehouse.dto';
 
 export class WarehouseService {
@@ -100,7 +104,8 @@ export class WarehouseService {
      */
     async list(dto: ListWarehouseDto) {
         try {
-            const queryBuilder = this.warehouseRepository.createQueryBuilder('w')
+            const queryBuilder = this.warehouseRepository
+                .createQueryBuilder('w')
                 .select([
                     'w.warehouse_id AS warehouse_id',
                     'w.name AS name',
@@ -222,7 +227,10 @@ export class WarehouseService {
                 .getRawMany();
 
             // 计算已分配的库存总和
-            const assignedTotal = items.reduce((sum: number, item: any) => sum + (item.current_stock || 0), 0);
+            const assignedTotal = items.reduce(
+                (sum: number, item: any) => sum + (item.current_stock || 0),
+                0
+            );
 
             // 计算未分配库存
             const unassignedStock = spec.current_stock - assignedTotal;

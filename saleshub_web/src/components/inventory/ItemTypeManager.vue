@@ -1,6 +1,13 @@
 <template>
-  <a-modal :open="visible" title="零件类型管理" :width="800" :footer="null" :mask-closable="false"
-    wrap-class-name="item-type-manager-modal" @cancel="handleClose">
+  <a-modal
+    :open="visible"
+    title="零件类型管理"
+    :width="800"
+    :footer="null"
+    :mask-closable="false"
+    wrap-class-name="item-type-manager-modal"
+    @cancel="handleClose"
+  >
     <div class="type-manager">
       <!-- 操作栏 -->
       <div class="action-bar">
@@ -13,8 +20,17 @@
       </div>
 
       <!-- 类型列表 -->
-      <a-table :columns="columns" :data-source="typeList" :loading="loading" :pagination="false" bordered
-        row-key="type_id" size="middle" :indent-size="20" expand-row-by-click>
+      <a-table
+        :columns="columns"
+        :data-source="typeList"
+        :loading="loading"
+        :pagination="false"
+        bordered
+        row-key="type_id"
+        size="middle"
+        :indent-size="20"
+        expand-row-by-click
+      >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'type_name'">
             <span :class="record.parent_type_id ? 'child-name' : 'parent-name'">{{ record.type_name }}</span>
@@ -22,9 +38,7 @@
 
           <template v-else-if="column.key === 'actions'">
             <a-space :size="4" @click.stop>
-              <a-button v-if="!record.parent_type_id" type="link" size="small" @click="handleAddChild(record)">
-                新增子类型
-              </a-button>
+              <a-button v-if="!record.parent_type_id" type="link" size="small" @click="handleAddChild(record)"> 新增子类型 </a-button>
               <a-button type="link" size="small" @click="handleEdit(record)">编辑</a-button>
               <a-popconfirm title="确定要删除此类型吗？" ok-text="删除" cancel-text="取消" @confirm="handleDelete(record)">
                 <a-button type="link" size="small" danger>删除</a-button>
@@ -36,8 +50,15 @@
     </div>
 
     <!-- 新增/编辑弹窗 -->
-    <a-modal :open="formVisible" :title="formTitle" :confirm-loading="formLoading" :width="440" :mask-closable="false"
-      @ok="handleFormSubmit" @cancel="formVisible = false">
+    <a-modal
+      :open="formVisible"
+      :title="formTitle"
+      :confirm-loading="formLoading"
+      :width="440"
+      :mask-closable="false"
+      @ok="handleFormSubmit"
+      @cancel="formVisible = false"
+    >
       <a-form ref="formRef" :model="form" :rules="formRules" layout="vertical">
         <a-form-item label="父类型" name="parent_id">
           <a-select v-model:value="form.parent_id" placeholder="请选择父类型" :options="parentTypeOptions" allow-clear />
@@ -60,124 +81,130 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
-import { message } from 'ant-design-vue'
-import { PlusOutlined } from '@ant-design/icons-vue'
-import { inventoryApi } from '@/api/inventory'
-import type { ItemTypeNode } from '@/types/inventory'
+import { ref, reactive, computed, watch } from 'vue';
+import { message } from 'ant-design-vue';
+import { PlusOutlined } from '@ant-design/icons-vue';
+import { inventoryApi } from '@/api/inventory';
+import type { ItemTypeNode } from '@/types/inventory';
 
 interface Props {
-  visible: boolean
+  visible: boolean;
 }
 
-const props = defineProps<Props>()
+const props = defineProps<Props>();
 
 interface Emits {
-  (e: 'update:visible', value: boolean): void
-  (e: 'success'): void
+  (e: 'update:visible', value: boolean): void;
+  (e: 'success'): void;
 }
 
-const emit = defineEmits<Emits>()
+const emit = defineEmits<Emits>();
 
-const loading = ref(false)
-const typeList = ref<ItemTypeNode[]>([])
+const loading = ref(false);
+const typeList = ref<ItemTypeNode[]>([]);
 
 const columns = [
   { title: '类型名称', key: 'type_name', dataIndex: 'type_name', width: 200 },
-  { title: '排序', key: 'sort_order', dataIndex: 'sort_order', width: 80, align: 'center' as const },
+  {
+    title: '排序',
+    key: 'sort_order',
+    dataIndex: 'sort_order',
+    width: 80,
+    align: 'center' as const,
+  },
   { title: '备注', key: 'remark', dataIndex: 'remark', width: 200, ellipsis: true },
-  { title: '操作', key: 'actions', width: 220, align: 'center' as const }
-]
+  { title: '操作', key: 'actions', width: 220, align: 'center' as const },
+];
 
 const loadTypes = async () => {
-  loading.value = true
+  loading.value = true;
   try {
-    const res = await inventoryApi.listItemTypes()
-    typeList.value = (res.datas || res) as ItemTypeNode[]
+    const res = await inventoryApi.listItemTypes();
+    typeList.value = (res.datas || res) as ItemTypeNode[];
   } catch {
     // 错误由拦截器处理
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // ---- 表单 ----
-const formVisible = ref(false)
-const formLoading = ref(false)
-const formRef = ref()
-const isEditMode = ref(false)
-const editingTypeId = ref<string>('')
+const formVisible = ref(false);
+const formLoading = ref(false);
+const formRef = ref();
+const isEditMode = ref(false);
+const editingTypeId = ref<string>('');
 
 const form = reactive({
   parent_id: '' as string | undefined,
   type_name: '',
   sort_order: 0,
-  remark: ''
-})
+  remark: '',
+});
 
 const formRules = {
   type_name: [
     { required: true, message: '请输入类型名称', trigger: 'blur' },
-    { max: 100, message: '名称最多 100 个字符', trigger: 'blur' }
-  ]
-}
+    { max: 100, message: '名称最多 100 个字符', trigger: 'blur' },
+  ],
+};
 
 const formTitle = computed(() => {
-  if (isEditMode.value) return '编辑类型'
-  return form.parent_id ? '新增子类型' : '新增一级类型'
-})
+  if (isEditMode.value) return '编辑类型';
+  return form.parent_id ? '新增子类型' : '新增一级类型';
+});
 
 // 可选的父类型列表（一级类型）
 const parentTypeOptions = computed(() => {
   return typeList.value
-    .filter(type => !type.parent_type_id) // 只显示一级类型
-    .filter(type => type.type_id !== editingTypeId.value) // 编辑时排除自身
-    .map(type => ({
+    .filter((type) => !type.parent_type_id) // 只显示一级类型
+    .filter((type) => type.type_id !== editingTypeId.value) // 编辑时排除自身
+    .map((type) => ({
       label: type.type_name,
-      value: type.type_id
-    }))
-})
+      value: type.type_id,
+    }));
+});
 
 const resetForm = () => {
-  form.parent_id = undefined
-  form.type_name = ''
-  form.sort_order = 0
-  form.remark = ''
-  editingTypeId.value = ''
-  isEditMode.value = false
-  formRef.value?.clearValidate()
-}
+  form.parent_id = undefined;
+  form.type_name = '';
+  form.sort_order = 0;
+  form.remark = '';
+  editingTypeId.value = '';
+  isEditMode.value = false;
+  formRef.value?.clearValidate();
+};
 
 const handleAddParent = () => {
-  resetForm()
-  formVisible.value = true
-}
+  resetForm();
+  formVisible.value = true;
+};
 
 const handleAddChild = (parent: ItemTypeNode) => {
-  resetForm()
-  form.parent_id = parent.type_id
-  formVisible.value = true
-}
+  resetForm();
+  form.parent_id = parent.type_id;
+  formVisible.value = true;
+};
 
 const handleEdit = (record: ItemTypeNode) => {
-  resetForm()
-  isEditMode.value = true
-  editingTypeId.value = record.type_id
-  form.type_name = record.type_name
-  form.sort_order = record.sort_order
-  form.remark = record.remark || ''
-  form.parent_id = record.parent_type_id || undefined
-  formVisible.value = true
-}
+  resetForm();
+  isEditMode.value = true;
+  editingTypeId.value = record.type_id;
+  form.type_name = record.type_name;
+  form.sort_order = record.sort_order;
+  form.remark = record.remark || '';
+  form.parent_id = record.parent_type_id || undefined;
+  formVisible.value = true;
+};
 
 const handleFormSubmit = async () => {
   try {
-    await formRef.value?.validate()
+    await formRef.value?.validate();
   } catch {
-    return
+    return;
   }
 
-  formLoading.value = true
+  formLoading.value = true;
   try {
     if (isEditMode.value) {
       await inventoryApi.updateItemType({
@@ -185,53 +212,53 @@ const handleFormSubmit = async () => {
         parent_id: form.parent_id || undefined,
         type_name: form.type_name,
         sort_order: form.sort_order,
-        remark: form.remark || undefined
-      })
-      message.success('类型更新成功')
+        remark: form.remark || undefined,
+      });
+      message.success('类型更新成功');
     } else {
       await inventoryApi.createItemType({
         parent_id: form.parent_id,
         type_name: form.type_name,
         sort_order: form.sort_order,
-        remark: form.remark || undefined
-      })
-      message.success('类型创建成功')
+        remark: form.remark || undefined,
+      });
+      message.success('类型创建成功');
     }
-    formVisible.value = false
-    await loadTypes()
-    emit('success')
+    formVisible.value = false;
+    await loadTypes();
+    emit('success');
   } catch {
     // 错误由拦截器处理
   } finally {
-    formLoading.value = false
+    formLoading.value = false;
   }
-}
+};
 
 const handleDelete = async (record: ItemTypeNode) => {
   try {
-    await inventoryApi.deleteItemType(record.type_id)
-    message.success('类型删除成功')
-    await loadTypes()
-    emit('success')
+    await inventoryApi.deleteItemType(record.type_id);
+    message.success('类型删除成功');
+    await loadTypes();
+    emit('success');
   } catch {
     // 错误由拦截器处理
   }
-}
+};
 
 const handleClose = () => {
-  emit('update:visible', false)
-}
+  emit('update:visible', false);
+};
 
 watch(
   () => props.visible,
   (visible) => {
     if (visible) {
-      loadTypes()
+      loadTypes();
     } else {
-      typeList.value = []
+      typeList.value = [];
     }
-  }
-)
+  },
+);
 </script>
 
 <style scoped>

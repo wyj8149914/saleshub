@@ -15,7 +15,8 @@ import { userService } from '../service/auth';
 const router = Router();
 
 // 用户登录
-router.post('/login',
+router.post(
+    '/login',
     validationMiddleware(LoginDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(LoginDto, req.body);
@@ -26,7 +27,8 @@ router.post('/login',
 );
 
 // 查询用户列表
-router.get('/listUsers',
+router.get(
+    '/listUsers',
     validationMiddleware(ListUserDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ListUserDto, req.query);
@@ -37,7 +39,8 @@ router.get('/listUsers',
 );
 
 // 创建用户
-router.post('/createUser',
+router.post(
+    '/createUser',
     validationMiddleware(CreateUserDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(CreateUserDto, req.body);
@@ -48,7 +51,8 @@ router.post('/createUser',
 );
 
 // 更新用户信息
-router.post('/updateUser',
+router.post(
+    '/updateUser',
     validationMiddleware(UpdateUserDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(UpdateUserDto, req.body);
@@ -59,7 +63,8 @@ router.post('/updateUser',
 );
 
 // 设置用户状态
-router.post('/updateUserStatus',
+router.post(
+    '/updateUserStatus',
     validationMiddleware(UpdateUserStatusDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(UpdateUserStatusDto, req.body);
@@ -70,7 +75,8 @@ router.post('/updateUserStatus',
 );
 
 // 修改用户密码
-router.post('/updateUserPassword',
+router.post(
+    '/updateUserPassword',
     validationMiddleware(UpdateUserPasswordDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(UpdateUserPasswordDto, req.body);

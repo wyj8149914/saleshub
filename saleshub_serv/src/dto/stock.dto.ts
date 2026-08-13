@@ -1,6 +1,13 @@
 import { Type } from 'class-transformer';
 import {
-    IsNotEmpty, IsOptional, IsInt, Min, MaxLength, IsArray, ValidateNested, Matches,
+    IsNotEmpty,
+    IsOptional,
+    IsInt,
+    Min,
+    MaxLength,
+    IsArray,
+    ValidateNested,
+    Matches,
 } from 'class-validator';
 import { PageDto } from './base.dto';
 

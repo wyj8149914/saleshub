@@ -12,7 +12,7 @@ export const corsMiddleware = cors({
             'http://127.0.0.1:5173',
             'http://127.0.0.1:5174',
             'http://127.0.0.1:8016',
-            'http://120.24.45.111'
+            'http://120.24.45.111',
         ];
 
         // 允许没有origin的请求（如移动应用、Postman等）
@@ -44,4 +44,3 @@ export function handlePreflight(req: Request, res: Response, next: NextFunction)
         next();
     }
 }
-

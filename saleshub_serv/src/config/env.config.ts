@@ -9,13 +9,29 @@ dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 
 function getAppConfig() {
     const requiredEnvVars = [
-        'SERVER_PORT', 'DEBUG',
-        'DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'DB_DATABASE',
-        'REDIS_HOST', 'REDIS_PORT', 'REDIS_PASSWORD',
-        'MINIO_ENDPOINT', 'MINIO_PORT', 'MINIO_ACCESS_KEY', 'MINIO_SECRET_KEY', 'MINIO_PUBLIC_BUCKET', 'MINIO_URL',
-        'JWT_SECRET', 'JWT_EXPIRES_IN', 'REFRESH_TOKEN_EXPIRES_IN',
-        'DB_AES_KEY', 'DB_AES_SALT', 'DB_ALGORITHM',
-        'API_PREFIX'
+        'SERVER_PORT',
+        'DEBUG',
+        'DB_HOST',
+        'DB_PORT',
+        'DB_USERNAME',
+        'DB_PASSWORD',
+        'DB_DATABASE',
+        'REDIS_HOST',
+        'REDIS_PORT',
+        'REDIS_PASSWORD',
+        'MINIO_ENDPOINT',
+        'MINIO_PORT',
+        'MINIO_ACCESS_KEY',
+        'MINIO_SECRET_KEY',
+        'MINIO_PUBLIC_BUCKET',
+        'MINIO_URL',
+        'JWT_SECRET',
+        'JWT_EXPIRES_IN',
+        'REFRESH_TOKEN_EXPIRES_IN',
+        'DB_AES_KEY',
+        'DB_AES_SALT',
+        'DB_ALGORITHM',
+        'API_PREFIX',
     ];
 
     for (const envVar of requiredEnvVars) {
@@ -63,13 +79,17 @@ function getAppConfig() {
         },
         wx: {
             // 小程序登录凭证校验URL,accessToken更新,小程序
-            accesstokenXcx: 'https://api.weixin.qq.com/sns/jscode2session?appid=APPID&secret=SECRET&js_code=JSCODE&grant_type=authorization_code',
+            accesstokenXcx:
+                'https://api.weixin.qq.com/sns/jscode2session?appid=APPID&secret=SECRET&js_code=JSCODE&grant_type=authorization_code',
             // 公众号网页授权URL,通过code换取网页授权access_token
-            accesstokenGzh: 'https://api.weixin.qq.com/sns/oauth2/access_token?appid=APPID&secret=SECRET&code=CODE&grant_type=authorization_code',
+            accesstokenGzh:
+                'https://api.weixin.qq.com/sns/oauth2/access_token?appid=APPID&secret=SECRET&code=CODE&grant_type=authorization_code',
             // 通过access_token换取用户信息URL
-            userinfo: "https://api.weixin.qq.com/sns/userinfo?access_token=ACCESS_TOKEN&openid=OPENID&lang=zh_CN",
+            userinfo:
+                'https://api.weixin.qq.com/sns/userinfo?access_token=ACCESS_TOKEN&openid=OPENID&lang=zh_CN',
             // jsapi_ticket获取URL
-            ticketUrl: 'https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token=ACCESS_TOKEN&type=jsapi',
+            ticketUrl:
+                'https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token=ACCESS_TOKEN&type=jsapi',
             // 微信支付回调地址
             wxPayNotifyUrl: process.env.WX_PAY_NOTIFY_URL!,
             // 微信退款回调地址
@@ -77,7 +97,8 @@ function getAppConfig() {
             // 微信支付地址,直连,jsapi或小程序支付
             wxJsapiPayUrlZl: 'https://api.mch.weixin.qq.com/v3/pay/transactions/jsapi',
             // 获取手机号URL
-            getPhoneNumberUrl: 'https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=ACCESS_TOKEN',
+            getPhoneNumberUrl:
+                'https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=ACCESS_TOKEN',
         },
         logLevel: process.env.LOG_LEVEL,
         fdfsUrl: process.env.FDFS_URL,
@@ -105,7 +126,7 @@ function getAppConfig() {
             maxCompanyMembers: parseInt(process.env.MAX_COMPANY_MEMBERS!, 10),
             inviteExpireDays: parseInt(process.env.INVITE_EXPIRE_DAYS!, 10),
         },
-        publicPath: ['/saleshub/user/login', '/saleshub/user/refresh']
+        publicPath: ['/saleshub/user/login', '/saleshub/user/refresh'],
     };
 }
 
