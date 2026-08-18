@@ -34,6 +34,8 @@ import type {
   ModuleUpdatePayload,
   ProductItemsResponse,
   ProductDetailResponse,
+  SpecAllocation,
+  SpecAllocationQuery,
 } from '@/types/inventory';
 import type {
   Warehouse,
@@ -42,6 +44,7 @@ import type {
   WarehouseUpdatePayload,
   SpecWarehouseStock,
   WarehouseStockItem,
+  AssignSpecWarehousePayload,
 } from '@/types/warehouse';
 
 // ============ 文件上传 API ============
@@ -96,6 +99,16 @@ export const inventoryApi = {
   },
   deleteItem(item_id: string) {
     return http.post('/saleshub/inventory/deleteItem', { item_id });
+  },
+
+  /**
+   * 查询零件各规格的分配库存信息（懒加载）
+   * 返回每个规格的已分配库存和未分配库存
+   */
+  listItemSpecAllocations(query: SpecAllocationQuery) {
+    return http.get<SpecAllocation[]>('/saleshub/inventory/listItemSpecAllocations', {
+      params: query,
+    });
   },
 
   // ---- 产品-零件关联（全量覆盖语义）----
@@ -242,6 +255,11 @@ export const inventoryApi = {
     return http.get<WarehouseStockItem[]>('/saleshub/inventory/listWarehouseStock', {
       params: { warehouse_id },
     });
+  },
+
+  // 分配规格到仓库
+  assignSpecWarehouse(payload: AssignSpecWarehousePayload) {
+    return http.post('/saleshub/inventory/assignSpecWarehouse', payload);
   },
 };
 

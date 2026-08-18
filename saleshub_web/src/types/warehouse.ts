@@ -44,3 +44,13 @@ export interface WarehouseStockItem {
   current_stock: number;
   warn_stock: number;
 }
+
+// ============ 规格分配仓库 ============
+/**
+ * 分配规格到仓库的请求参数
+ */
+export interface AssignSpecWarehousePayload {
+  spec_id: string;
+  warehouse_id: string;
+  quantity: number;
+}

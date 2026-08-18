@@ -419,3 +419,25 @@ export interface StockCheckBatchPayload {
   date: string;
   remark?: string;
 }
+
+// ============ 零件规格分配库存 ============
+/**
+ * 零件规格的分配库存信息
+ * 用于懒加载展示零件各规格的已分配/未分配库存
+ */
+export interface SpecAllocation {
+  spec_id: string;
+  item_id: string;
+  spec: string;
+  price: number | null;
+  current_stock: number;
+  allocated_stock: number;
+  unallocated_stock: number;
+}
+
+/**
+ * 查询零件规格分配库存的请求参数
+ */
+export interface SpecAllocationQuery {
+  item_id: string;
+}

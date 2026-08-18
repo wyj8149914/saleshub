@@ -151,6 +151,7 @@
         expand-row-by-click
         :row-expandable="isRowExpandable"
         @change="handleTableChange"
+        @expand="handleTableExpand"
       >
         <template #expandedRowRender="{ record: item }">
           <a-table
@@ -177,10 +178,42 @@
                   {{ spec.current_stock }}
                 </span>
               </template>
+              <template v-else-if="column.key === 'allocatedStock'">
+                <a-spin :spinning="isLoadingAllocation(item.item_id)" size="small">
+                  <span class="stock-num text-muted">{{
+                    getSpecAllocation(item.item_id, spec.spec_id)?.allocated_stock ?? '-'
+                  }}</span>
+                </a-spin>
+              </template>
+              <template v-else-if="column.key === 'unallocatedStock'">
+                <a-spin :spinning="isLoadingAllocation(item.item_id)" size="small">
+                  <span
+                    class="stock-num"
+                    :class="{
+                      'text-success': getSpecAllocation(item.item_id, spec.spec_id)?.unallocated_stock ?? 0 > 0,
+                    }"
+                  >
+                    {{ getSpecAllocation(item.item_id, spec.spec_id)?.unallocated_stock ?? '-' }}
+                  </span>
+                </a-spin>
+              </template>
               <template v-else-if="column.key === 'warningStatus'">
                 <a-tag :class="isSpecWarning(item, spec) ? 'tag-warning' : 'tag-normal'">
                   {{ isSpecWarning(item, spec) ? '库存不足' : '正常' }}
                 </a-tag>
+              </template>
+              <template v-else-if="column.key === 'actions'">
+                <a-button
+                  type="link"
+                  size="small"
+                  :disabled="
+                    !getSpecAllocation(item.item_id, spec.spec_id) ||
+                    getSpecAllocation(item.item_id, spec.spec_id)!.unallocated_stock <= 0
+                  "
+                  @click="handleAllocate(item, spec)"
+                >
+                  分配仓库
+                </a-button>
               </template>
             </template>
           </a-table>
@@ -322,6 +355,37 @@
     <InventoryItemForm v-model:visible="formVisible" :item="currentItem" @success="handleFormSuccess" />
     <InventoryItemDetail v-model:visible="detailVisible" :item="detailItem" />
     <ItemTypeManager v-model:visible="typeManagerVisible" @success="loadTypes" />
+
+    <!-- 分配仓库弹窗 -->
+    <a-modal
+      v-model:open="allocateModalVisible"
+      title="分配仓库"
+      :confirm-loading="allocateLoading"
+      @ok="handleAllocateSubmit"
+      @cancel="handleAllocateCancel"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="规格名称">
+          <a-input v-model:value="allocateForm.spec_name" disabled />
+        </a-form-item>
+        <a-form-item label="仓库" required>
+          <a-select v-model:value="allocateForm.warehouse_id" placeholder="请选择仓库" allow-clear>
+            <a-select-option v-for="wh in warehouses" :key="wh.warehouse_id" :value="wh.warehouse_id">
+              {{ wh.name }}{{ wh.location ? ` (${wh.location})` : '' }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="分配数量" required>
+          <a-input-number
+            v-model:value="allocateForm.quantity"
+            placeholder="请输入分配数量"
+            :min="1"
+            :precision="0"
+            style="width: 100%"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
@@ -332,7 +396,8 @@ import type { ChangeEvent } from 'ant-design-vue/es/_util/EventInterface';
 import type { TablePaginationConfig } from 'ant-design-vue/es/table';
 import { PlusOutlined, SearchOutlined, TagOutlined, AppstoreOutlined, CameraOutlined } from '@ant-design/icons-vue';
 import { inventoryApi, fileApi } from '@/api/inventory';
-import type { InventoryItem, ItemSpec, ItemTypeNode } from '@/types/inventory';
+import type { InventoryItem, ItemSpec, ItemTypeNode, SpecAllocation } from '@/types/inventory';
+import type { Warehouse } from '@/types/warehouse';
 import InventoryItemForm from '@/components/inventory/InventoryItemForm.vue';
 import InventoryItemDetail from '@/components/inventory/InventoryItemDetail.vue';
 import ItemTypeManager from '@/components/inventory/ItemTypeManager.vue';
@@ -356,7 +421,10 @@ const specColumns = [
   { title: '规格名称', dataIndex: 'spec', key: 'spec', width: 120, align: 'center' },
   { title: '价格', dataIndex: 'price', key: 'price', width: 100, align: 'center' },
   { title: '当前库存', dataIndex: 'current_stock', key: 'current_stock', width: 100, align: 'center' },
+  { title: '已分配库存', key: 'allocatedStock', width: 110, align: 'center' },
+  { title: '未分配库存', key: 'unallocatedStock', width: 110, align: 'center' },
   { title: '预警状态', key: 'warningStatus', width: 100, align: 'center' },
+  { title: '操作', key: 'actions', width: 90, align: 'center' },
 ];
 
 const loading = ref(false);
@@ -386,6 +454,22 @@ const parentTypes = ref<ItemTypeNode[]>([]);
 
 // 根据选中的一级类型，过滤出二级类型选项
 const filterChildTypes = ref<ItemTypeNode[]>([]);
+
+// 规格分配库存数据缓存（key: item_id, value: Map<spec_id, SpecAllocation>）
+const specAllocationMap = ref<Map<string, Map<string, SpecAllocation>>>(new Map());
+// 正在加载分配数据的零件ID集合
+const loadingAllocationItems = ref<Set<string>>(new Set());
+
+// 分配仓库弹窗相关
+const allocateModalVisible = ref(false);
+const allocateForm = reactive({
+  spec_id: '',
+  spec_name: '',
+  warehouse_id: undefined as string | undefined,
+  quantity: undefined as number | undefined,
+});
+const allocateLoading = ref(false);
+const warehouses = ref<Warehouse[]>([]);
 
 const loadTypes = async () => {
   typesLoading.value = true;
@@ -421,6 +505,133 @@ const isItemWarning = (item: InventoryItem): boolean => {
 
 const isSpecWarning = (item: InventoryItem, spec: ItemSpec): boolean => {
   return spec.current_stock <= item.warn_stock;
+};
+
+/**
+ * 加载零件的规格分配库存数据
+ * @param itemId 零件ID
+ */
+const loadSpecAllocations = async (itemId: string) => {
+  // 如果已经加载过，直接返回
+  if (specAllocationMap.value.has(itemId)) {
+    return;
+  }
+
+  // 标记为正在加载
+  loadingAllocationItems.value.add(itemId);
+
+  try {
+    const res = await inventoryApi.listItemSpecAllocations({ item_id: itemId });
+    const allocationMap = new Map<string, SpecAllocation>();
+    for (const allocation of res.datas || []) {
+      allocationMap.set(allocation.spec_id, allocation);
+    }
+    specAllocationMap.value.set(itemId, allocationMap);
+  } catch {
+    // 错误由拦截器处理
+  } finally {
+    // 移除加载标记
+    loadingAllocationItems.value.delete(itemId);
+  }
+};
+
+/**
+ * 获取规格的分配库存数据
+ * @param itemId 零件ID
+ * @param specId 规格ID
+ */
+const getSpecAllocation = (itemId: string, specId: string): SpecAllocation | undefined => {
+  return specAllocationMap.value.get(itemId)?.get(specId);
+};
+
+/**
+ * 判断零件的规格分配数据是否正在加载
+ */
+const isLoadingAllocation = (itemId: string): boolean => {
+  return loadingAllocationItems.value.has(itemId);
+};
+
+/**
+ * 打开分配仓库弹窗
+ */
+const handleAllocate = (item: InventoryItem, spec: ItemSpec) => {
+  const allocation = getSpecAllocation(item.item_id, spec.spec_id);
+  if (!allocation) {
+    message.warning('请等待库存数据加载完成');
+    return;
+  }
+
+  allocateForm.spec_id = spec.spec_id;
+  allocateForm.spec_name = spec.spec || '(默认规格)';
+  allocateForm.warehouse_id = undefined;
+  allocateForm.quantity = undefined;
+  allocateModalVisible.value = true;
+
+  // 加载仓库列表
+  loadWarehouses();
+};
+
+/**
+ * 加载仓库列表
+ */
+const loadWarehouses = async () => {
+  try {
+    const res = await inventoryApi.listWarehouses();
+    warehouses.value = res.datas || [];
+  } catch {
+    // 错误由拦截器处理
+  }
+};
+
+/**
+ * 提交分配
+ */
+const handleAllocateSubmit = async () => {
+  if (!allocateForm.warehouse_id) {
+    message.warning('请选择仓库');
+    return;
+  }
+  if (!allocateForm.quantity || allocateForm.quantity <= 0) {
+    message.warning('请输入有效的分配数量');
+    return;
+  }
+
+  allocateLoading.value = true;
+  try {
+    await inventoryApi.assignSpecWarehouse({
+      spec_id: allocateForm.spec_id,
+      warehouse_id: allocateForm.warehouse_id,
+      quantity: allocateForm.quantity,
+    });
+
+    message.success('分配成功');
+    allocateModalVisible.value = false;
+
+    // 清除缓存，重新加载分配数据
+    // 需要从 spec_id 找到对应的 item_id
+    for (const [itemId, allocationMap] of specAllocationMap.value) {
+      if (allocationMap.has(allocateForm.spec_id)) {
+        specAllocationMap.value.delete(itemId);
+        // 重新加载该零件的分配数据
+        await loadSpecAllocations(itemId);
+        break;
+      }
+    }
+
+    // 刷新列表以更新库存
+    await loadItems();
+  } catch {
+    // 错误由拦截器处理
+  } finally {
+    allocateLoading.value = false;
+  }
+};
+
+/**
+ * 取消分配
+ */
+const handleAllocateCancel = () => {
+  allocateModalVisible.value = false;
 };
 
 const filters = reactive<{
@@ -501,6 +712,16 @@ const handleTableChange = (pag: TablePaginationConfig) => {
   pagination.current = pag.current ?? 1;
   pagination.pageSize = pag.pageSize ?? 10;
   loadItems();
+};
+
+/**
+ * 表格行展开事件处理
+ * 展开时懒加载该零件的规格分配库存数据
+ */
+const handleTableExpand = (expanded: boolean, record: InventoryItem) => {
+  if (expanded) {
+    loadSpecAllocations(record.item_id);
+  }
 };
 
 const handleCreate = () => {
@@ -854,6 +1075,10 @@ onUnmounted(() => {
 
 .stock-num.text-danger {
   color: #dc2626;
+}
+
+.stock-num.text-success {
+  color: #059669;
 }
 
 .tag-normal {
