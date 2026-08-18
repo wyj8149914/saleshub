@@ -49,7 +49,6 @@ import {
     ListWarehouseDto,
     AssignSpecWarehouseDto,
     ListSpecWarehouseStockDto,
-    WarehouseIdDto,
 } from '../dto/warehouse.dto';
 import {
     productService,
@@ -104,6 +103,18 @@ router.post(
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ItemIdDto, req.body);
         const result = await inventoryItemService.delete(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+// 查询零件规格分配库存（懒加载）
+router.get(
+    '/listItemSpecAllocations',
+    validationMiddleware(ItemIdDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(ItemIdDto, req.query);
+        const result = await inventoryItemService.listSpecAllocations(dtoObj);
         res.locals.datas = result;
         next();
     })
