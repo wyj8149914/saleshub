@@ -82,7 +82,9 @@
         </template>
 
         <template v-else-if="column.key === 'stockChange'">
-          <span v-if="record.before_stock != null && record.after_stock != null"> {{ record.before_stock }} → {{ record.after_stock }} </span>
+          <span v-if="record.before_stock != null && record.after_stock != null">
+            {{ record.before_stock }} → {{ record.after_stock }}
+          </span>
           <span v-else>-</span>
         </template>
 
@@ -348,7 +350,8 @@ const handleReset = () => {
   total.value = 0;
 };
 
-const filterOption = (input: string, option: { label: string }) => option.label.toLowerCase().includes(input.toLowerCase());
+const filterOption = (input: string, option: { label: string }) =>
+  option.label.toLowerCase().includes(input.toLowerCase());
 
 onMounted(() => {
   loadTypes();

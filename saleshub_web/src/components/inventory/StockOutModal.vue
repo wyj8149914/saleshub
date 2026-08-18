@@ -19,7 +19,12 @@
       </a-form-item>
 
       <!-- 仓库选择（仅产品出库模式） -->
-      <a-form-item v-if="mode === 'product'" label="仓库" name="warehouse_id" :rules="[{ required: true, message: '请选择仓库' }]">
+      <a-form-item
+        v-if="mode === 'product'"
+        label="仓库"
+        name="warehouse_id"
+        :rules="[{ required: true, message: '请选择仓库' }]"
+      >
         <WarehouseSelect v-model="form.warehouse_id" @change="handleWarehouseChange" />
       </a-form-item>
 
@@ -136,8 +141,12 @@
                 </tfoot>
               </table>
             </a-spin>
-            <div v-if="row.totalAvailable < row.totalQuantity" class="stock-warning">库存不足，缺少 {{ row.totalQuantity - row.totalAvailable }} 件</div>
-            <div v-else-if="getAllocationTotal(row) !== row.totalQuantity" class="stock-warning">出库数量与分配合计不一致</div>
+            <div v-if="row.totalAvailable < row.totalQuantity" class="stock-warning">
+              库存不足，缺少 {{ row.totalQuantity - row.totalAvailable }} 件
+            </div>
+            <div v-else-if="getAllocationTotal(row) !== row.totalQuantity" class="stock-warning">
+              出库数量与分配合计不一致
+            </div>
           </div>
         </div>
       </template>
@@ -168,7 +177,13 @@
                 { type: 'number', min: 1, message: '台数必须大于0' },
               ]"
             >
-              <a-input-number v-model:value="form.quantity" placeholder="台数" :min="1" :precision="0" style="width: 100%" />
+              <a-input-number
+                v-model:value="form.quantity"
+                placeholder="台数"
+                :min="1"
+                :precision="0"
+                style="width: 100%"
+              />
             </a-form-item>
           </a-col>
         </a-row>
@@ -176,7 +191,14 @@
         <!-- BOM 预览 -->
         <div v-if="bomItems.length" class="bom-block">
           <div class="bom-title">产品零件清单（按 {{ form.quantity || 0 }} 台计算）</div>
-          <a-table :columns="bomColumns" :data-source="bomView" :pagination="false" size="small" bordered row-key="relation_id">
+          <a-table
+            :columns="bomColumns"
+            :data-source="bomView"
+            :pagination="false"
+            size="small"
+            bordered
+            row-key="relation_id"
+          >
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'item'">
                 <div class="cell-item">
@@ -197,7 +219,9 @@
               </template>
 
               <template v-else-if="column.key === 'stock'">
-                <span :class="{ 'text-warn': record.needed > record.warehouseStock }">{{ record.warehouseStock ?? '-' }}</span>
+                <span :class="{ 'text-warn': record.needed > record.warehouseStock }">{{
+                  record.warehouseStock ?? '-'
+                }}</span>
               </template>
             </template>
           </a-table>
@@ -207,13 +231,24 @@
       <a-row :gutter="12">
         <a-col :span="12">
           <a-form-item label="出库日期" name="date" :rules="[{ required: true, message: '请选择出库日期' }]">
-            <a-date-picker v-model:value="form.date" placeholder="请选择日期" style="width: 100%" :format="'YYYY-MM-DD'" />
+            <a-date-picker
+              v-model:value="form.date"
+              placeholder="请选择日期"
+              style="width: 100%"
+              :format="'YYYY-MM-DD'"
+            />
           </a-form-item>
         </a-col>
       </a-row>
 
       <a-form-item label="备注" name="remark">
-        <a-textarea v-model:value="form.remark" placeholder="请输入备注（可选，本批次共用）" :rows="3" :maxlength="500" show-count />
+        <a-textarea
+          v-model:value="form.remark"
+          placeholder="请输入备注（可选，本批次共用）"
+          :rows="3"
+          :maxlength="500"
+          show-count
+        />
       </a-form-item>
     </a-form>
   </a-modal>
@@ -516,7 +551,8 @@ const removeRow = (idx: number) => {
 };
 
 // 下拉框搜索过滤
-const filterOption = (input: string, option: { label: string }) => option.label.toLowerCase().includes(input.toLowerCase());
+const filterOption = (input: string, option: { label: string }) =>
+  option.label.toLowerCase().includes(input.toLowerCase());
 
 // 判断是否需要显示规格选择（多规格或非默认规格时显示）
 function needsSpec(row: BatchRow) {
@@ -539,7 +575,9 @@ function specOptionsFor(row: BatchRow) {
 
 // ==================== 按产品出库 ====================
 
-const productOptions = computed(() => products.value.map((p) => ({ label: `${p.name} (${p.code})`, value: p.product_id })));
+const productOptions = computed(() =>
+  products.value.map((p) => ({ label: `${p.name} (${p.code})`, value: p.product_id })),
+);
 
 // 产品变更：加载 BOM
 const handleProductChange = async (productId: string) => {

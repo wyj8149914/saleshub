@@ -28,7 +28,12 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="入库日期" name="date" :rules="[{ required: true, message: '请选择入库日期' }]">
-              <a-date-picker v-model:value="form.date" placeholder="请选择日期" style="width: 100%" :format="'YYYY-MM-DD'" />
+              <a-date-picker
+                v-model:value="form.date"
+                placeholder="请选择日期"
+                style="width: 100%"
+                :format="'YYYY-MM-DD'"
+              />
             </a-form-item>
           </a-col>
         </a-row>
@@ -52,7 +57,13 @@
 
           <a-col :span="5">
             <a-form-item label="二级类型">
-              <a-select v-model:value="singleChildTypeId" placeholder="选择二级类型" allow-clear :loading="typesLoading" @change="handleSingleChildTypeChange">
+              <a-select
+                v-model:value="singleChildTypeId"
+                placeholder="选择二级类型"
+                allow-clear
+                :loading="typesLoading"
+                @change="handleSingleChildTypeChange"
+              >
                 <a-select-option v-for="t in singleChildTypes" :key="t.type_id" :value="t.type_id">
                   {{ t.type_name }}
                 </a-select-option>
@@ -89,7 +100,13 @@
                 { type: 'number', min: 1, message: '数量必须大于0' },
               ]"
             >
-              <a-input-number v-model:value="form.quantity" placeholder="数量" :min="1" :precision="0" style="width: 100%" />
+              <a-input-number
+                v-model:value="form.quantity"
+                placeholder="数量"
+                :min="1"
+                :precision="0"
+                style="width: 100%"
+              />
             </a-form-item>
           </a-col>
         </a-row>
@@ -111,7 +128,13 @@
         </a-form-item>
 
         <a-form-item label="备注" name="remark">
-          <a-textarea v-model:value="form.remark" placeholder="请输入备注（可选）" :rows="3" :maxlength="500" show-count />
+          <a-textarea
+            v-model:value="form.remark"
+            placeholder="请输入备注（可选）"
+            :rows="3"
+            :maxlength="500"
+            show-count
+          />
         </a-form-item>
       </template>
 
@@ -125,7 +148,12 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="入库日期" name="date" :rules="[{ required: true, message: '请选择入库日期' }]">
-              <a-date-picker v-model:value="form.date" placeholder="请选择日期" style="width: 100%" :format="'YYYY-MM-DD'" />
+              <a-date-picker
+                v-model:value="form.date"
+                placeholder="请选择日期"
+                style="width: 100%"
+                :format="'YYYY-MM-DD'"
+              />
             </a-form-item>
           </a-col>
         </a-row>
@@ -216,7 +244,13 @@
         </a-form-item>
 
         <a-form-item label="备注" name="remark">
-          <a-textarea v-model:value="form.remark" placeholder="请输入备注（可选，本批次共用）" :rows="3" :maxlength="500" show-count />
+          <a-textarea
+            v-model:value="form.remark"
+            placeholder="请输入备注（可选，本批次共用）"
+            :rows="3"
+            :maxlength="500"
+            show-count
+          />
         </a-form-item>
       </template>
     </a-form>
@@ -288,7 +322,9 @@ const singleItemsLoading = ref(false);
 const allSingleItems = ref<InventoryItem[]>([]); // 所有零件（未筛选）
 const singleItems = ref<InventoryItem[]>([]); // 筛选后的零件
 
-const singleItemOptions = computed(() => singleItems.value.map((i) => ({ label: `${i.name} (${i.code})`, value: i.item_id })));
+const singleItemOptions = computed(() =>
+  singleItems.value.map((i) => ({ label: `${i.name} (${i.code})`, value: i.item_id })),
+);
 
 // 加载所有零件
 const loadAllSingleItems = async () => {
@@ -467,7 +503,8 @@ const removeRow = (idx: number) => {
   batchRows.value.splice(idx, 1);
 };
 
-const filterOption = (input: string, option: { label: string }) => option.label.toLowerCase().includes(input.toLowerCase());
+const filterOption = (input: string, option: { label: string }) =>
+  option.label.toLowerCase().includes(input.toLowerCase());
 
 function needsSpec(row: BatchRow) {
   const items = getRowItems(row);

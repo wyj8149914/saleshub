@@ -74,9 +74,21 @@
           @change="handleItemChange"
         />
 
-        <a-select v-if="showSpecSelect" v-model:value="addForm.selectedSpecId" placeholder="选择规格" :options="specOptions" class="add-spec" />
+        <a-select
+          v-if="showSpecSelect"
+          v-model:value="addForm.selectedSpecId"
+          placeholder="选择规格"
+          :options="specOptions"
+          class="add-spec"
+        />
 
-        <a-input-number v-model:value="addForm.quantity_per_product" :min="1" :precision="0" :max="9999" class="add-quantity">
+        <a-input-number
+          v-model:value="addForm.quantity_per_product"
+          :min="1"
+          :precision="0"
+          :max="9999"
+          class="add-quantity"
+        >
           <template #addonBefore>单台数量</template>
         </a-input-number>
 
@@ -115,10 +127,23 @@
             </span>
           </template>
           <template v-else-if="column.key === 'quantity_per_product'">
-            <a-input-number v-model:value="record.quantity_per_product" :min="1" :precision="0" :max="9999" size="small" class="qty-input" />
+            <a-input-number
+              v-model:value="record.quantity_per_product"
+              :min="1"
+              :precision="0"
+              :max="9999"
+              size="small"
+              class="qty-input"
+            />
           </template>
           <template v-else-if="column.key === 'remark'">
-            <a-input v-model:value="record.remark" placeholder="可选备注" :maxlength="100" size="small" class="remark-input" />
+            <a-input
+              v-model:value="record.remark"
+              placeholder="可选备注"
+              :maxlength="100"
+              size="small"
+              class="remark-input"
+            />
           </template>
           <template v-else-if="column.key === 'actions'">
             <a-button type="link" size="small" danger @click="handleRemoveDirect(record)"> 移除 </a-button>
@@ -154,7 +179,11 @@
             <template #extra>
               <a-space @click.stop>
                 <a-button type="link" size="small" @click="showEditModule(module)">编辑</a-button>
-                <a-popconfirm title="确定删除该模块吗？" :disabled="!!module.items?.length" @confirm="handleDeleteModule(module.module_id)">
+                <a-popconfirm
+                  title="确定删除该模块吗？"
+                  :disabled="!!module.items?.length"
+                  @confirm="handleDeleteModule(module.module_id)"
+                >
                   <a-button type="link" size="small" danger :disabled="!!module.items?.length"> 删除 </a-button>
                   <template v-if="module.items?.length" #title>
                     <span class="delete-hint">模块下存在零件，请先移除零件后再删除</span>
@@ -165,7 +194,12 @@
 
             <!-- 模块内零件管理 -->
             <div class="module-items-panel">
-              <ModuleItemsEditor :module-id="module.module_id" :initial-items="module.items || []" :available-items="availableItems" :all-types="allTypes" />
+              <ModuleItemsEditor
+                :module-id="module.module_id"
+                :initial-items="module.items || []"
+                :available-items="availableItems"
+                :all-types="allTypes"
+              />
             </div>
           </a-collapse-panel>
         </a-collapse>
@@ -323,7 +357,10 @@ const filteredItems = computed(() => {
 const itemOptions = computed(() => {
   const selectedKeys = new Set(directItems.value.map((i) => i.item_id));
   return filteredItems.value
-    .filter((item) => !selectedKeys.has(item.item_id) || item.specs.some((s) => !selectedKeys.has(`${item.item_id}_${s.spec_id}`)))
+    .filter(
+      (item) =>
+        !selectedKeys.has(item.item_id) || item.specs.some((s) => !selectedKeys.has(`${item.item_id}_${s.spec_id}`)),
+    )
     .map((item) => ({
       label: `${item.name} (${item.code})`,
       value: item.item_id,
@@ -342,7 +379,9 @@ const specOptions = computed(() => {
   const item = selectedItem.value;
   if (!item?.specs) return [];
 
-  const selectedKeys = new Set(directItems.value.filter((i) => i.item_id === addForm.selectedItemKey).map((i) => i.spec_id));
+  const selectedKeys = new Set(
+    directItems.value.filter((i) => i.item_id === addForm.selectedItemKey).map((i) => i.spec_id),
+  );
 
   return item.specs
     .filter((s) => !selectedKeys.has(s.spec_id))
@@ -360,7 +399,8 @@ const canAdd = computed(() => {
 
 const totalModuleItems = computed(() => modules.value.reduce((sum, m) => sum + (m.items?.length || 0), 0));
 
-const filterOption = (input: string, option: { label: string }) => option.label.toLowerCase().includes(input.toLowerCase());
+const filterOption = (input: string, option: { label: string }) =>
+  option.label.toLowerCase().includes(input.toLowerCase());
 
 // ============ 数据加载 ============
 const loadTypes = async () => {

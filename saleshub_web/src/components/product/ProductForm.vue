@@ -10,21 +10,47 @@
     @ok="handleSubmit"
     @cancel="handleCancel"
   >
-    <a-form ref="formRef" :model="form" :rules="rules" layout="horizontal" class="product-form" :label-col="{ span: 4 }" :wrapper-col="{ span: 18 }">
+    <a-form
+      ref="formRef"
+      :model="form"
+      :rules="rules"
+      layout="horizontal"
+      class="product-form"
+      :label-col="{ span: 4 }"
+      :wrapper-col="{ span: 18 }"
+    >
       <a-form-item label="产品名称" name="name">
         <a-input v-model:value="form.name" placeholder="请输入产品名称" :maxlength="50" show-count />
       </a-form-item>
 
       <a-form-item label="产品价格" name="price">
-        <a-input-number v-model:value="form.price" placeholder="请输入产品价格（可选）" :min="0" :precision="2" style="width: 50%" />
+        <a-input-number
+          v-model:value="form.price"
+          placeholder="请输入产品价格（可选）"
+          :min="0"
+          :precision="2"
+          style="width: 50%"
+        />
       </a-form-item>
 
       <a-form-item label="产品描述" name="description">
-        <a-textarea v-model:value="form.description" placeholder="请输入产品描述（可选）" :rows="3" :maxlength="500" show-count />
+        <a-textarea
+          v-model:value="form.description"
+          placeholder="请输入产品描述（可选）"
+          :rows="3"
+          :maxlength="500"
+          show-count
+        />
       </a-form-item>
 
       <a-form-item label="备注" name="remark">
-        <a-textarea v-model:value="form.remark" placeholder="请输入备注（可选）" :rows="2" :maxlength="500" show-count />
+        <a-textarea
+          v-model:value="form.remark"
+          placeholder="请输入备注（可选）"
+          :rows="2"
+          :maxlength="500"
+          show-count
+        />
       </a-form-item>
 
       <!-- 单图上传：校验类型与大小后走自定义上传，image_id 提交给后端 -->

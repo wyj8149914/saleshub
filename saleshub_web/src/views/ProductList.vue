@@ -44,11 +44,26 @@
 
     <!-- 产品数据表格，分页变更由 handleTableChange 处理 -->
     <a-card :bordered="false" class="table-card">
-      <a-table :columns="columns" :data-source="products" :loading="loading" :pagination="pagination" bordered row-key="product_id" @change="handleTableChange">
+      <a-table
+        :columns="columns"
+        :data-source="products"
+        :loading="loading"
+        :pagination="pagination"
+        bordered
+        row-key="product_id"
+        @change="handleTableChange"
+      >
         <template #bodyCell="{ column, record }">
           <!-- 产品缩略图，无图显示占位 -->
           <template v-if="column.key === 'image'">
-            <a-image v-if="record.image_url" :src="record.image_url" :width="50" :height="50" :preview="true" style="border-radius: 4px; object-fit: cover" />
+            <a-image
+              v-if="record.image_url"
+              :src="record.image_url"
+              :width="50"
+              :height="50"
+              :preview="true"
+              style="border-radius: 4px; object-fit: cover"
+            />
             <span v-else class="cell-muted">-</span>
           </template>
 
@@ -63,7 +78,9 @@
           </template>
 
           <template v-else-if="column.key === 'price'">
-            <span v-if="record.price !== null && record.price !== undefined" class="cell-price"> ¥{{ record.price }} </span>
+            <span v-if="record.price !== null && record.price !== undefined" class="cell-price">
+              ¥{{ record.price }}
+            </span>
             <span v-else class="cell-muted">-</span>
           </template>
 
@@ -79,7 +96,12 @@
               <a-button type="link" size="small" @click="handleDetail(record)">详情</a-button>
               <a-button type="link" size="small" @click="handleEdit(record)">编辑</a-button>
               <a-button type="link" size="small" @click="handleManageItems(record)">模块零件</a-button>
-              <a-popconfirm title="确定要删除此产品吗？" ok-text="删除" cancel-text="取消" @confirm="handleDelete(record)">
+              <a-popconfirm
+                title="确定要删除此产品吗？"
+                ok-text="删除"
+                cancel-text="取消"
+                @confirm="handleDelete(record)"
+              >
                 <a-button type="link" size="small" danger>删除</a-button>
               </a-popconfirm>
             </a-space>

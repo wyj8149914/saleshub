@@ -70,7 +70,13 @@
 
         <a-form :model="form" :rules="rules" layout="vertical" class="login-form" @finish="handleSubmit">
           <a-form-item label="账号" name="username">
-            <a-input v-model:value="form.username" size="large" placeholder="请输入账号" allow-clear autocomplete="username">
+            <a-input
+              v-model:value="form.username"
+              size="large"
+              placeholder="请输入账号"
+              allow-clear
+              autocomplete="username"
+            >
               <template #prefix>
                 <UserOutlined />
               </template>
@@ -78,7 +84,12 @@
           </a-form-item>
 
           <a-form-item label="密码" name="password">
-            <a-input-password v-model:value="form.password" size="large" placeholder="请输入密码" autocomplete="current-password">
+            <a-input-password
+              v-model:value="form.password"
+              size="large"
+              placeholder="请输入密码"
+              autocomplete="current-password"
+            >
               <template #prefix>
                 <LockOutlined />
               </template>
@@ -175,7 +186,9 @@ async function handleSubmit() {
   grid-template-columns: 1fr;
   background: var(--form-bg);
   color: var(--form-text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -201,7 +214,8 @@ async function handleSubmit() {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse 80% 60% at 30% 20%, black 0%, transparent 75%);
   -webkit-mask-image: radial-gradient(ellipse 80% 60% at 30% 20%, black 0%, transparent 75%);

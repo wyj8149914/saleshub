@@ -10,7 +10,15 @@
     @ok="handleSubmit"
     @cancel="handleCancel"
   >
-    <a-form ref="formRef" :model="form" :rules="rules" layout="horizontal" class="warehouse-form" :label-col="{ span: 5 }" :wrapper-col="{ span: 17 }">
+    <a-form
+      ref="formRef"
+      :model="form"
+      :rules="rules"
+      layout="horizontal"
+      class="warehouse-form"
+      :label-col="{ span: 5 }"
+      :wrapper-col="{ span: 17 }"
+    >
       <a-form-item label="仓库名称" name="name">
         <a-input v-model:value="form.name" placeholder="请输入仓库名称" :maxlength="100" show-count />
       </a-form-item>

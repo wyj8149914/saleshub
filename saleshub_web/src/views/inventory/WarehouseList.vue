@@ -55,7 +55,13 @@
             <div class="actions-cell">
               <a-space :size="4">
                 <a-button type="link" size="small" @click="handleEdit(record)">编辑</a-button>
-                <a-popconfirm title="确定要删除此仓库吗？" ok-text="删除" cancel-text="取消" @confirm="handleDelete(record)" placement="left">
+                <a-popconfirm
+                  title="确定要删除此仓库吗？"
+                  ok-text="删除"
+                  cancel-text="取消"
+                  @confirm="handleDelete(record)"
+                  placement="left"
+                >
                   <a-button type="link" size="small" danger>删除</a-button>
                 </a-popconfirm>
               </a-space>

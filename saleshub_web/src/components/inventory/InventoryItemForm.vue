@@ -10,11 +10,25 @@
     @ok="handleSubmit"
     @cancel="handleCancel"
   >
-    <a-form ref="formRef" :model="form" :rules="rules" layout="horizontal" class="item-form" :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
+    <a-form
+      ref="formRef"
+      :model="form"
+      :rules="rules"
+      layout="horizontal"
+      class="item-form"
+      :label-col="{ span: 4 }"
+      :wrapper-col="{ span: 20 }"
+    >
       <a-row :gutter="16">
         <a-col :span="12">
           <a-form-item label="一级类型" name="parent_type_id" :label-col="{ span: 8 }" :wrapper-col="{ span: 16 }">
-            <a-select v-model:value="form.parent_type_id" placeholder="请选择一级类型" allow-clear :loading="typesLoading" @change="handleParentTypeChange">
+            <a-select
+              v-model:value="form.parent_type_id"
+              placeholder="请选择一级类型"
+              allow-clear
+              :loading="typesLoading"
+              @change="handleParentTypeChange"
+            >
               <a-select-option v-for="t in parentTypes" :key="t.type_id" :value="t.type_id">
                 {{ t.type_name }}
               </a-select-option>
@@ -48,7 +62,13 @@
       </a-form-item>
 
       <a-form-item label="预警阈值" name="warnStock" help="库存低于此值会标记为预警状态">
-        <a-input-number v-model:value="form.warnStock" placeholder="默认 1" :min="0" :precision="0" style="width: 100%" />
+        <a-input-number
+          v-model:value="form.warnStock"
+          placeholder="默认 1"
+          :min="0"
+          :precision="0"
+          style="width: 100%"
+        />
       </a-form-item>
 
       <a-form-item label="是否定制" name="is_custom">
@@ -59,7 +79,13 @@
       </a-form-item>
 
       <a-form-item label="备注" name="remark">
-        <a-textarea v-model:value="form.remark" placeholder="请输入备注（可选）" :rows="2" :maxlength="500" show-count />
+        <a-textarea
+          v-model:value="form.remark"
+          placeholder="请输入备注（可选）"
+          :rows="2"
+          :maxlength="500"
+          show-count
+        />
       </a-form-item>
 
       <!-- 单图上传 -->
@@ -194,7 +220,9 @@ function populateForm() {
   if (props.item) {
     form.name = props.item.name;
     form.code = props.item.code;
-    form.specs = (props.item.specs || []).filter((s) => s.spec !== '').map((s) => ({ spec: s.spec, price: s.price ?? undefined, spec_id: s.spec_id }));
+    form.specs = (props.item.specs || [])
+      .filter((s) => s.spec !== '')
+      .map((s) => ({ spec: s.spec, price: s.price ?? undefined, spec_id: s.spec_id }));
     form.warnStock = props.item.warn_stock;
     form.image_id = props.item.image_id || undefined;
     form.remark = props.item.remark || undefined;
@@ -294,7 +322,9 @@ async function handleSubmit() {
 
   loading.value = true;
   try {
-    const validSpecs = form.specs.map((s) => ({ spec: s.spec.trim(), price: s.price, spec_id: s.spec_id })).filter((s) => s.spec !== '');
+    const validSpecs = form.specs
+      .map((s) => ({ spec: s.spec.trim(), price: s.price, spec_id: s.spec_id }))
+      .filter((s) => s.spec !== '');
 
     const specsPayload = isEditMode.value ? validSpecs : validSpecs.length > 0 ? validSpecs : undefined;
 

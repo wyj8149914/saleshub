@@ -80,7 +80,15 @@
     </div>
 
     <a-card :bordered="false" class="table-card">
-      <a-table :columns="columns" :data-source="records" :loading="loading" :pagination="pagination" bordered row-key="check_id" @change="handleTableChange">
+      <a-table
+        :columns="columns"
+        :data-source="records"
+        :loading="loading"
+        :pagination="pagination"
+        bordered
+        row-key="check_id"
+        @change="handleTableChange"
+      >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'record_no'">
             <span class="cell-code">{{ record.record_no }}</span>
@@ -100,7 +108,9 @@
           </template>
 
           <template v-else-if="column.key === 'stockChange'">
-            <span v-if="record.before_stock != null && record.after_stock != null"> {{ record.before_stock }} → {{ record.after_stock }} </span>
+            <span v-if="record.before_stock != null && record.after_stock != null">
+              {{ record.before_stock }} → {{ record.after_stock }}
+            </span>
             <span v-else class="cell-muted">-</span>
           </template>
 
@@ -301,7 +311,8 @@ const diffClass = (record: StockCheckRecord): string => {
   return 'stock-num text-zero';
 };
 
-const filterOption = (input: string, option: { label: string }) => option.label.toLowerCase().includes(input.toLowerCase());
+const filterOption = (input: string, option: { label: string }) =>
+  option.label.toLowerCase().includes(input.toLowerCase());
 
 const loadRecords = async () => {
   loading.value = true;

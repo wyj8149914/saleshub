@@ -56,7 +56,13 @@
           </a-select-option>
         </a-select>
 
-        <a-select v-model:value="filters.is_custom" placeholder="是否定制" allow-clear class="filter-select" @change="handleSearch">
+        <a-select
+          v-model:value="filters.is_custom"
+          placeholder="是否定制"
+          allow-clear
+          class="filter-select"
+          @change="handleSearch"
+        >
           <a-select-option :value="1">否</a-select-option>
           <a-select-option :value="2">是</a-select-option>
         </a-select>
@@ -84,7 +90,13 @@
     <!-- 移动端：筛选区 -->
     <div v-else class="mobile-filters">
       <div class="mobile-filter-row">
-        <a-input v-model:value="filters.name" placeholder="搜索零件名称" allow-clear class="mobile-search" @press-enter="handleSearch">
+        <a-input
+          v-model:value="filters.name"
+          placeholder="搜索零件名称"
+          allow-clear
+          class="mobile-search"
+          @press-enter="handleSearch"
+        >
           <template #prefix>
             <SearchOutlined />
           </template>
@@ -141,13 +153,23 @@
         @change="handleTableChange"
       >
         <template #expandedRowRender="{ record: item }">
-          <a-table :columns="specColumns" :data-source="item.specs" :pagination="false" row-key="spec_id" size="small" bordered class="spec-sub-table">
+          <a-table
+            :columns="specColumns"
+            :data-source="item.specs"
+            :pagination="false"
+            row-key="spec_id"
+            size="small"
+            bordered
+            class="spec-sub-table"
+          >
             <template #bodyCell="{ column, record: spec }">
               <template v-if="column.key === 'spec'">
                 <span class="cell-spec">{{ spec.spec }}</span>
               </template>
               <template v-else-if="column.key === 'price'">
-                <span v-if="spec.price !== null && spec.price !== undefined" class="cell-price"> ¥{{ spec.price }} </span>
+                <span v-if="spec.price !== null && spec.price !== undefined" class="cell-price">
+                  ¥{{ spec.price }}
+                </span>
                 <span v-else class="cell-muted">-</span>
               </template>
               <template v-else-if="column.key === 'current_stock'">
@@ -165,7 +187,14 @@
         </template>
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'image'">
-            <a-image v-if="record.image_url" :src="record.image_url" :width="50" :height="50" :preview="true" style="border-radius: 4px; object-fit: cover" />
+            <a-image
+              v-if="record.image_url"
+              :src="record.image_url"
+              :width="50"
+              :height="50"
+              :preview="true"
+              style="border-radius: 4px; object-fit: cover"
+            />
             <span v-else class="cell-muted">-</span>
           </template>
 
@@ -209,7 +238,13 @@
               <a-space :size="4">
                 <a-button type="link" size="small" @click="handleDetail(record)">详情</a-button>
                 <a-button type="link" size="small" @click="handleEdit(record)">编辑</a-button>
-                <a-popconfirm title="确定要删除此零件吗？" ok-text="删除" cancel-text="取消" @confirm="handleDelete(record)" placement="left">
+                <a-popconfirm
+                  title="确定要删除此零件吗？"
+                  ok-text="删除"
+                  cancel-text="取消"
+                  @confirm="handleDelete(record)"
+                  placement="left"
+                >
                   <a-button type="link" size="small" danger>删除</a-button>
                 </a-popconfirm>
               </a-space>
@@ -222,13 +257,27 @@
     <!-- 移动端：卡片列表 -->
     <div v-else class="mobile-card-list">
       <!-- 隐藏的 file input，用于拍照 -->
-      <input ref="cameraInputRef" type="file" accept="image/*" capture="environment" style="display: none" @change="handlePhotoCapture($event)" />
+      <input
+        ref="cameraInputRef"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        style="display: none"
+        @change="handlePhotoCapture($event)"
+      />
       <a-spin :spinning="loading">
         <div v-if="items.length === 0 && !loading" class="mobile-empty">暂无数据</div>
         <div v-else class="mobile-cards">
           <div v-for="item in items" :key="item.item_id" class="mobile-card">
             <div class="mobile-card-image">
-              <a-image v-if="item.image_url" :src="item.image_url" :width="80" :height="80" :preview="true" style="border-radius: 8px; object-fit: cover" />
+              <a-image
+                v-if="item.image_url"
+                :src="item.image_url"
+                :width="80"
+                :height="80"
+                :preview="true"
+                style="border-radius: 8px; object-fit: cover"
+              />
               <div v-else class="mobile-card-no-image">
                 <CameraOutlined class="no-image-icon" />
               </div>

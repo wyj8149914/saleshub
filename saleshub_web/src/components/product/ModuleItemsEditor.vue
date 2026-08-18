@@ -15,7 +15,14 @@
         </a-select-option>
       </a-select>
 
-      <a-select v-model:value="addForm.childTypeId" placeholder="二级类型" allow-clear :loading="typesLoading" class="add-type" @change="handleChildTypeChange">
+      <a-select
+        v-model:value="addForm.childTypeId"
+        placeholder="二级类型"
+        allow-clear
+        :loading="typesLoading"
+        class="add-type"
+        @change="handleChildTypeChange"
+      >
         <a-select-option v-for="t in childTypes" :key="t.type_id" :value="t.type_id">
           {{ t.type_name }}
         </a-select-option>
@@ -32,9 +39,21 @@
         @change="handleItemChange"
       />
 
-      <a-select v-if="showSpecSelect" v-model:value="addForm.selectedSpecId" placeholder="选择规格" :options="specOptions" class="add-spec" />
+      <a-select
+        v-if="showSpecSelect"
+        v-model:value="addForm.selectedSpecId"
+        placeholder="选择规格"
+        :options="specOptions"
+        class="add-spec"
+      />
 
-      <a-input-number v-model:value="addForm.quantity_per_product" :min="1" :precision="0" :max="9999" class="add-quantity">
+      <a-input-number
+        v-model:value="addForm.quantity_per_product"
+        :min="1"
+        :precision="0"
+        :max="9999"
+        class="add-quantity"
+      >
         <template #addonBefore>数量</template>
       </a-input-number>
 
@@ -42,7 +61,9 @@
 
       <a-button type="primary" class="add-btn" :disabled="!canAdd" @click="handleAdd"> 添加 </a-button>
 
-      <a-button type="primary" class="save-btn" :loading="saving" :disabled="!hasChanges" @click="handleSave"> 保存 </a-button>
+      <a-button type="primary" class="save-btn" :loading="saving" :disabled="!hasChanges" @click="handleSave">
+        保存
+      </a-button>
     </div>
 
     <!-- 零件列表 -->
@@ -71,10 +92,23 @@
           </span>
         </template>
         <template v-else-if="column.key === 'quantity_per_product'">
-          <a-input-number v-model:value="record.quantity_per_product" :min="1" :precision="0" :max="9999" size="small" class="qty-input" />
+          <a-input-number
+            v-model:value="record.quantity_per_product"
+            :min="1"
+            :precision="0"
+            :max="9999"
+            size="small"
+            class="qty-input"
+          />
         </template>
         <template v-else-if="column.key === 'remark'">
-          <a-input v-model:value="record.remark" placeholder="备注" :maxlength="100" size="small" class="remark-input" />
+          <a-input
+            v-model:value="record.remark"
+            placeholder="备注"
+            :maxlength="100"
+            size="small"
+            class="remark-input"
+          />
         </template>
         <template v-else-if="column.key === 'actions'">
           <a-button type="link" size="small" danger @click="handleRemove(record)"> 移除 </a-button>
@@ -166,7 +200,10 @@ const filteredItems = computed(() => {
 const itemOptions = computed(() => {
   const selectedKeys = new Set(localItems.value.map((i) => i.item_id));
   return filteredItems.value
-    .filter((item) => !selectedKeys.has(item.item_id) || item.specs.some((s) => !selectedKeys.has(`${item.item_id}_${s.spec_id}`)))
+    .filter(
+      (item) =>
+        !selectedKeys.has(item.item_id) || item.specs.some((s) => !selectedKeys.has(`${item.item_id}_${s.spec_id}`)),
+    )
     .map((item) => ({
       label: `${item.name} (${item.code})`,
       value: item.item_id,
@@ -185,7 +222,9 @@ const specOptions = computed(() => {
   const item = selectedItem.value;
   if (!item?.specs) return [];
 
-  const selectedKeys = new Set(localItems.value.filter((i) => i.item_id === addForm.selectedItemKey).map((i) => i.spec_id));
+  const selectedKeys = new Set(
+    localItems.value.filter((i) => i.item_id === addForm.selectedItemKey).map((i) => i.spec_id),
+  );
 
   return item.specs
     .filter((s) => !selectedKeys.has(s.spec_id))
@@ -206,7 +245,8 @@ const hasChanges = computed(() => {
   return JSON.stringify(localItems.value) !== JSON.stringify(originalItems.value);
 });
 
-const filterOption = (input: string, option: { label: string }) => option.label.toLowerCase().includes(input.toLowerCase());
+const filterOption = (input: string, option: { label: string }) =>
+  option.label.toLowerCase().includes(input.toLowerCase());
 
 const handleParentTypeChange = (value: string | undefined) => {
   addForm.childTypeId = undefined;

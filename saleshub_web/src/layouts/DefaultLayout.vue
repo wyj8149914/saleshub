@@ -34,7 +34,13 @@
               <DownOutlined class="menu-chevron" :class="{ 'menu-chevron-open': expandedMap[item.label] }" />
             </button>
             <div v-show="expandedMap[item.label]" class="menu-submenu">
-              <router-link v-for="child in item.children" :key="child.path" :to="child.path!" class="menu-item menu-item-child" active-class="menu-item-active">
+              <router-link
+                v-for="child in item.children"
+                :key="child.path"
+                :to="child.path!"
+                class="menu-item menu-item-child"
+                active-class="menu-item-active"
+              >
                 <component :is="child.icon" v-if="child.icon" class="menu-icon" />
                 <span class="menu-label">{{ child.label }}</span>
               </router-link>
@@ -281,7 +287,9 @@ function handleLogout() {
     'sidebar content';
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -309,7 +317,8 @@ function handleLogout() {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse 80% 50% at 30% 0%, black 0%, transparent 70%);
   -webkit-mask-image: radial-gradient(ellipse 80% 50% at 30% 0%, black 0%, transparent 70%);

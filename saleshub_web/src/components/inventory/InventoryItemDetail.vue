@@ -1,6 +1,14 @@
 <template>
   <!-- 零件详情弹窗 -->
-  <a-modal :open="visible" title="零件详情" :footer="null" :width="720" :mask-closable="true" wrap-class-name="item-detail-modal" @cancel="handleClose">
+  <a-modal
+    :open="visible"
+    title="零件详情"
+    :footer="null"
+    :width="720"
+    :mask-closable="true"
+    wrap-class-name="item-detail-modal"
+    @cancel="handleClose"
+  >
     <div v-if="item" class="detail-content">
       <!-- 基本信息 -->
       <div class="section">
@@ -18,7 +26,14 @@
       <!-- 规格信息 -->
       <div class="section">
         <div class="section-title">规格信息</div>
-        <a-table :columns="specColumns" :data-source="item.specs" :pagination="false" row-key="spec_id" size="small" bordered>
+        <a-table
+          :columns="specColumns"
+          :data-source="item.specs"
+          :pagination="false"
+          row-key="spec_id"
+          size="small"
+          bordered
+        >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'spec'">
               <span>{{ record.spec || '默认' }}</span>
@@ -40,7 +55,14 @@
       <div class="section">
         <div class="section-title">库存分布</div>
         <a-spin :spinning="stockLoading">
-          <a-table :columns="distributionColumns" :data-source="distributionData" :pagination="false" size="small" bordered row-key="key">
+          <a-table
+            :columns="distributionColumns"
+            :data-source="distributionData"
+            :pagination="false"
+            size="small"
+            bordered
+            row-key="key"
+          >
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'spec'">
                 <span class="spec-tag">{{ record.spec || '默认' }}</span>

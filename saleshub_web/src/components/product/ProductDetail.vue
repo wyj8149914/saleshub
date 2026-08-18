@@ -1,5 +1,13 @@
 <template>
-  <a-modal :open="visible" title="产品详情" :width="1000" :footer="null" :mask-closable="true" wrap-class-name="product-detail-modal" @cancel="handleClose">
+  <a-modal
+    :open="visible"
+    title="产品详情"
+    :width="1000"
+    :footer="null"
+    :mask-closable="true"
+    wrap-class-name="product-detail-modal"
+    @cancel="handleClose"
+  >
     <a-spin :spinning="loading">
       <div v-if="detail" class="product-detail">
         <!-- 产品基本信息 -->
@@ -42,7 +50,10 @@
             <tbody>
               <template v-if="detail.mode === 'module' && detail.modules">
                 <template v-for="(module, mIndex) in detail.modules" :key="module.module_id">
-                  <tr v-for="(item, iIndex) in module.items" :key="`${module.module_id}_${item.item_id}_${item.spec_id}`">
+                  <tr
+                    v-for="(item, iIndex) in module.items"
+                    :key="`${module.module_id}_${item.item_id}_${item.spec_id}`"
+                  >
                     <td v-if="mIndex === 0 && iIndex === 0" :rowspan="totalRows" class="cell-product">
                       {{ detail.product.name }}
                     </td>

@@ -35,7 +35,14 @@ import type {
   ProductItemsResponse,
   ProductDetailResponse,
 } from '@/types/inventory';
-import type { Warehouse, WarehouseListQuery, WarehouseCreatePayload, WarehouseUpdatePayload, SpecWarehouseStock, WarehouseStockItem } from '@/types/warehouse';
+import type {
+  Warehouse,
+  WarehouseListQuery,
+  WarehouseCreatePayload,
+  WarehouseUpdatePayload,
+  SpecWarehouseStock,
+  WarehouseStockItem,
+} from '@/types/warehouse';
 
 // ============ 文件上传 API ============
 export const fileApi = {

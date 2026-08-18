@@ -38,9 +38,16 @@
 
           <template v-else-if="column.key === 'actions'">
             <a-space :size="4" @click.stop>
-              <a-button v-if="!record.parent_type_id" type="link" size="small" @click="handleAddChild(record)"> 新增子类型 </a-button>
+              <a-button v-if="!record.parent_type_id" type="link" size="small" @click="handleAddChild(record)">
+                新增子类型
+              </a-button>
               <a-button type="link" size="small" @click="handleEdit(record)">编辑</a-button>
-              <a-popconfirm title="确定要删除此类型吗？" ok-text="删除" cancel-text="取消" @confirm="handleDelete(record)">
+              <a-popconfirm
+                title="确定要删除此类型吗？"
+                ok-text="删除"
+                cancel-text="取消"
+                @confirm="handleDelete(record)"
+              >
                 <a-button type="link" size="small" danger>删除</a-button>
               </a-popconfirm>
             </a-space>
@@ -61,7 +68,12 @@
     >
       <a-form ref="formRef" :model="form" :rules="formRules" layout="vertical">
         <a-form-item label="父类型" name="parent_id">
-          <a-select v-model:value="form.parent_id" placeholder="请选择父类型" :options="parentTypeOptions" allow-clear />
+          <a-select
+            v-model:value="form.parent_id"
+            placeholder="请选择父类型"
+            :options="parentTypeOptions"
+            allow-clear
+          />
         </a-form-item>
 
         <a-form-item label="类型名称" name="type_name">
