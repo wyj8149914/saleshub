@@ -1,6 +1,11 @@
 import { User } from '../../entity/user.entity';
 import {
-    LoginDto, CreateUserDto, ListUserDto, UpdateUserDto, UpdateUserStatusDto, UpdateUserPasswordDto,
+    LoginDto,
+    CreateUserDto,
+    ListUserDto,
+    UpdateUserDto,
+    UpdateUserStatusDto,
+    UpdateUserPasswordDto,
 } from '../../dto/user.dto';
 import { AppDataSource } from '../../config/database.config';
 import { getLogger } from '../../utils/logger.util';
@@ -100,7 +105,8 @@ export class UserService {
      */
     async list(dto: ListUserDto) {
         try {
-            const queryBuilder = this.userRepository.createQueryBuilder('user')
+            const queryBuilder = this.userRepository
+                .createQueryBuilder('user')
                 .select([
                     'user.user_id as user_id',
                     'user.username as username',
@@ -108,12 +114,14 @@ export class UserService {
                     'user.phone as phone',
                     'user.role as role',
                     'user.status as status',
-                    'to_char(user.last_login_time, \'YYYY-MM-DD HH24:MI:SS\') as last_login_time',
-                    'to_char(user.create_time, \'YYYY-MM-DD HH24:MI:SS\') as create_time',
+                    "to_char(user.last_login_time, 'YYYY-MM-DD HH24:MI:SS') as last_login_time",
+                    "to_char(user.create_time, 'YYYY-MM-DD HH24:MI:SS') as create_time",
                 ]);
 
             if (dto.username) {
-                queryBuilder.andWhere('user.username LIKE :username', { username: `%${dto.username}%` });
+                queryBuilder.andWhere('user.username LIKE :username', {
+                    username: `%${dto.username}%`,
+                });
             }
             if (dto.name) {
                 queryBuilder.andWhere('user.name LIKE :name', { name: `%${dto.name}%` });
@@ -130,7 +138,8 @@ export class UserService {
 
             const start = (dto.pageIndex - 1) * dto.pageSize;
             const total = await queryBuilder.getCount();
-            const users = await queryBuilder.orderBy('user.create_time', 'DESC')
+            const users = await queryBuilder
+                .orderBy('user.create_time', 'DESC')
                 .limit(dto.pageSize)
                 .offset(start)
                 .getRawMany();

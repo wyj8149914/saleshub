@@ -1,89 +1,109 @@
 <template>
   <!-- 零件详情弹窗 -->
-  <a-modal :open="visible" title="零件详情" :footer="null" :width="720" :mask-closable="true" wrap-class-name="item-detail-modal"
-    @cancel="handleClose">
+  <a-modal
+    :open="visible"
+    title="零件详情"
+    :footer="null"
+    :width="720"
+    :mask-closable="true"
+    wrap-class-name="item-detail-modal"
+    @cancel="handleClose"
+  >
     <div v-if="item" class="detail-content">
-        <!-- 基本信息 -->
-        <div class="section">
-          <div class="section-title">基本信息</div>
-          <a-descriptions :column="2" bordered size="small">
-            <a-descriptions-item label="零件名称">{{ item.name }}</a-descriptions-item>
-            <a-descriptions-item label="编码">{{ item.code }}</a-descriptions-item>
-            <a-descriptions-item label="零件类型">{{ item.type_full_name || item.type_name || '-' }}</a-descriptions-item>
-            <a-descriptions-item label="是否定制">{{ item.is_custom === 2 ? '是' : '否' }}</a-descriptions-item>
-            <a-descriptions-item label="预警库存">{{ item.warn_stock }}</a-descriptions-item>
-            <a-descriptions-item label="备注">{{ item.remark || '-' }}</a-descriptions-item>
-          </a-descriptions>
-        </div>
+      <!-- 基本信息 -->
+      <div class="section">
+        <div class="section-title">基本信息</div>
+        <a-descriptions :column="2" bordered size="small">
+          <a-descriptions-item label="零件名称">{{ item.name }}</a-descriptions-item>
+          <a-descriptions-item label="编码">{{ item.code }}</a-descriptions-item>
+          <a-descriptions-item label="零件类型">{{ item.type_full_name || item.type_name || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="是否定制">{{ item.is_custom === 2 ? '是' : '否' }}</a-descriptions-item>
+          <a-descriptions-item label="预警库存">{{ item.warn_stock }}</a-descriptions-item>
+          <a-descriptions-item label="备注">{{ item.remark || '-' }}</a-descriptions-item>
+        </a-descriptions>
+      </div>
 
-        <!-- 规格信息 -->
-        <div class="section">
-          <div class="section-title">规格信息</div>
-          <a-table :columns="specColumns" :data-source="item.specs" :pagination="false" row-key="spec_id" size="small" bordered>
+      <!-- 规格信息 -->
+      <div class="section">
+        <div class="section-title">规格信息</div>
+        <a-table
+          :columns="specColumns"
+          :data-source="item.specs"
+          :pagination="false"
+          row-key="spec_id"
+          size="small"
+          bordered
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'spec'">
+              <span>{{ record.spec || '默认' }}</span>
+            </template>
+            <template v-if="column.key === 'price'">
+              <span v-if="record.price !== null && record.price !== undefined">¥{{ record.price }}</span>
+              <span v-else class="text-muted">-</span>
+            </template>
+            <template v-if="column.key === 'current_stock'">
+              <span class="stock-num" :class="{ 'text-danger': record.current_stock <= item.warn_stock }">
+                {{ record.current_stock }}
+              </span>
+            </template>
+          </template>
+        </a-table>
+      </div>
+
+      <!-- 库存分布 -->
+      <div class="section">
+        <div class="section-title">库存分布</div>
+        <a-spin :spinning="stockLoading">
+          <a-table
+            :columns="distributionColumns"
+            :data-source="distributionData"
+            :pagination="false"
+            size="small"
+            bordered
+            row-key="key"
+          >
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'spec'">
-                <span>{{ record.spec || '默认' }}</span>
+                <span class="spec-tag">{{ record.spec || '默认' }}</span>
               </template>
-              <template v-if="column.key === 'price'">
-                <span v-if="record.price !== null && record.price !== undefined">¥{{ record.price }}</span>
-                <span v-else class="text-muted">-</span>
-              </template>
-              <template v-if="column.key === 'current_stock'">
-                <span class="stock-num" :class="{ 'text-danger': record.current_stock <= item.warn_stock }">
-                  {{ record.current_stock }}
-                </span>
+              <template v-if="column.key === 'warehouse_location'">
+                <span>{{ record.warehouse_location || '-' }}</span>
               </template>
             </template>
           </a-table>
-        </div>
-
-        <!-- 库存分布 -->
-        <div class="section">
-          <div class="section-title">库存分布</div>
-          <a-spin :spinning="stockLoading">
-            <a-table :columns="distributionColumns" :data-source="distributionData" :pagination="false" size="small"
-              bordered row-key="key">
-              <template #bodyCell="{ column, record }">
-                <template v-if="column.key === 'spec'">
-                  <span class="spec-tag">{{ record.spec || '默认' }}</span>
-                </template>
-                <template v-if="column.key === 'warehouse_location'">
-                  <span>{{ record.warehouse_location || '-' }}</span>
-                </template>
-              </template>
-            </a-table>
-          </a-spin>
-        </div>
-
-        <!-- 总库存 -->
-        <div class="total-stock">
-          总库存: <span class="total-num">{{ totalStock }}</span>
-        </div>
+        </a-spin>
       </div>
+
+      <!-- 总库存 -->
+      <div class="total-stock">
+        总库存: <span class="total-num">{{ totalStock }}</span>
+      </div>
+    </div>
   </a-modal>
 </template>
 
 <script setup lang="ts">
-import { computed, watch, ref } from 'vue'
-import { inventoryApi } from '@/api/inventory'
-import type { InventoryItem } from '@/types/inventory'
-import type { SpecWarehouseStock } from '@/types/warehouse'
+import { computed, watch, ref } from 'vue';
+import { inventoryApi } from '@/api/inventory';
+import type { InventoryItem } from '@/types/inventory';
+import type { SpecWarehouseStock } from '@/types/warehouse';
 
 interface Props {
-  visible: boolean
-  item: InventoryItem | null
+  visible: boolean;
+  item: InventoryItem | null;
 }
 
-const props = defineProps<Props>()
+const props = defineProps<Props>();
 
 interface Emits {
-  (e: 'update:visible', value: boolean): void
+  (e: 'update:visible', value: boolean): void;
 }
 
-const emit = defineEmits<Emits>()
+const emit = defineEmits<Emits>();
 
-const stockLoading = ref(false)
-const specStockData = ref<Record<string, SpecWarehouseStock[]>>({})
+const stockLoading = ref(false);
+const specStockData = ref<Record<string, SpecWarehouseStock[]>>({});
 
 // 规格表格列
 const specColumns = [
@@ -91,69 +111,69 @@ const specColumns = [
     title: '规格名称',
     key: 'spec',
     dataIndex: 'spec',
-    width: 150
+    width: 150,
   },
   {
     title: '价格',
     key: 'price',
     dataIndex: 'price',
-    width: 120
+    width: 120,
   },
   {
     title: '当前库存',
     key: 'current_stock',
     dataIndex: 'current_stock',
-    width: 100
-  }
-]
+    width: 100,
+  },
+];
 
 // 库存分布表格列
 const distributionColumns = [
   {
     title: '规格',
     key: 'spec',
-    width: 120
+    width: 120,
   },
   {
     title: '仓库',
     dataIndex: 'warehouse_name',
     key: 'warehouse_name',
-    width: 150
+    width: 150,
   },
   {
     title: '位置',
     key: 'warehouse_location',
-    width: 120
+    width: 120,
   },
   {
     title: '库存',
     dataIndex: 'current_stock',
     key: 'current_stock',
     width: 80,
-    align: 'center' as const
-  }
-]
+    align: 'center' as const,
+  },
+];
 
 // 计算总库存
 const totalStock = computed(() => {
-  if (!props.item?.specs) return 0
-  return props.item.specs.reduce((sum, spec) => sum + (spec.current_stock || 0), 0)
-})
+  if (!props.item?.specs) return 0;
+  return props.item.specs.reduce((sum, spec) => sum + (spec.current_stock || 0), 0);
+});
 
 // 计算分布表格数据
 const distributionData = computed(() => {
-  const data: Array<SpecWarehouseStock & { key: string; spec: string }> = []
-  if (!props.item?.specs) return data
+  const data: Array<SpecWarehouseStock & { key: string; spec: string }> = [];
+  if (!props.item?.specs) return data;
 
   for (const spec of props.item.specs) {
-    const warehouseList = specStockData.value[spec.spec_id] || []
+    const warehouseList = specStockData.value[spec.spec_id] || [];
     if (warehouseList.length > 0) {
       for (const wh of warehouseList) {
         data.push({
           ...wh,
           key: `${spec.spec_id}-${wh.warehouse_id}`,
-          spec: spec.spec || '默认'
-        })
+          spec: spec.spec || '默认',
+        });
       }
     } else {
       // 即使没有仓库数据也显示规格行
@@ -164,58 +184,61 @@ const distributionData = computed(() => {
         warehouse_location: null,
         current_stock: 0,
         key: `${spec.spec_id}-empty`,
-        spec: spec.spec || '默认'
-      })
+        spec: spec.spec || '默认',
+      });
     }
   }
-  return data
-})
+  return data;
+});
 
 // 加载所有规格的仓库库存分布
 const loadAllSpecWarehouseStock = async () => {
-  if (!props.item?.specs?.length) return
+  if (!props.item?.specs?.length) return;
 
-  stockLoading.value = true
+  stockLoading.value = true;
   try {
     const results = await Promise.all(
-      props.item.specs.map(spec =>
-        inventoryApi.listSpecWarehouseStock(spec.spec_id).then(res => ({
-          spec_id: spec.spec_id,
-          data: res.datas || []
-        })).catch(() => ({
-          spec_id: spec.spec_id,
-          data: []
-        }))
-      )
-    )
+      props.item.specs.map((spec) =>
+        inventoryApi
+          .listSpecWarehouseStock(spec.spec_id)
+          .then((res) => ({
+            spec_id: spec.spec_id,
+            data: res.datas || [],
+          }))
+          .catch(() => ({
+            spec_id: spec.spec_id,
+            data: [],
+          })),
+      ),
+    );
 
-    const newData: Record<string, SpecWarehouseStock[]> = {}
+    const newData: Record<string, SpecWarehouseStock[]> = {};
     for (const result of results) {
-      newData[result.spec_id] = result.data
+      newData[result.spec_id] = result.data;
     }
-    specStockData.value = newData
+    specStockData.value = newData;
   } catch (error) {
-    console.error('加载库存分布失败:', error)
+    console.error('加载库存分布失败:', error);
   } finally {
-    stockLoading.value = false
+    stockLoading.value = false;
   }
-}
+};
 
 // 关闭弹窗
 const handleClose = () => {
-  emit('update:visible', false)
-}
+  emit('update:visible', false);
+};
 
 // 监听弹窗打开，加载数据
 watch(
   () => props.visible,
   (visible) => {
     if (visible && props.item) {
-      specStockData.value = {}
-      loadAllSpecWarehouseStock()
+      specStockData.value = {};
+      loadAllSpecWarehouseStock();
     }
-  }
-)
+  },
+);
 </script>
 
 <style scoped>

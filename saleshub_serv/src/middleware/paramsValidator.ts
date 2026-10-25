@@ -13,7 +13,7 @@ export function validationMiddleware(type: any): RequestHandler {
                 const msg: any[] = [];
                 handleErrorRecursive(errors, msg);
                 // const result = { result: 1, msg: msg }
-                const allValues = msg.map(obj => Object.values(obj)).flat();
+                const allValues = msg.map((obj) => Object.values(obj)).flat();
                 res.locals.datas = { result: 1, msg: allValues.join(',') };
                 return res.json({ result: 1, msg: allValues.join(',') });
             } else {
@@ -30,7 +30,7 @@ export function validationMiddleware(type: any): RequestHandler {
 
 export function handleErrorRecursive(errors: ValidationError[], msg: any[] = []) {
     if (errors.length > 0) {
-        errors.forEach(error => {
+        errors.forEach((error) => {
             // error.constraints 包含了具体的错误提示
             if (error.constraints) {
                 // const errorData = {
@@ -38,7 +38,7 @@ export function handleErrorRecursive(errors: ValidationError[], msg: any[] = [])
                 //     message: Object.values(error.constraints)[0],
                 //     value: error.value
                 // }
-                msg.push(error.constraints)
+                msg.push(error.constraints);
                 // msg.push(errorData)
             }
 

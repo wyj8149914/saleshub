@@ -3,14 +3,14 @@
  */
 
 /** 移动端断点阈值（px） */
-const MOBILE_BREAKPOINT = 768
+const MOBILE_BREAKPOINT = 768;
 
 /**
  * 判断当前是否为移动端设备
  * 基于视口宽度判断，宽度小于 MOBILE_BREAKPOINT 视为移动端
  */
 export function isMobile(): boolean {
-  return window.innerWidth < MOBILE_BREAKPOINT
+  return window.innerWidth < MOBILE_BREAKPOINT;
 }
 
 /**
@@ -19,16 +19,16 @@ export function isMobile(): boolean {
  * @returns 清除监听的函数
  */
 export function onDeviceChange(callback: (isMobile: boolean) => void): () => void {
-  let lastIsMobile = isMobile()
+  let lastIsMobile = isMobile();
 
   const handler = () => {
-    const currentIsMobile = isMobile()
+    const currentIsMobile = isMobile();
     if (currentIsMobile !== lastIsMobile) {
-      lastIsMobile = currentIsMobile
-      callback(currentIsMobile)
+      lastIsMobile = currentIsMobile;
+      callback(currentIsMobile);
     }
-  }
+  };
 
-  window.addEventListener('resize', handler)
-  return () => window.removeEventListener('resize', handler)
+  window.addEventListener('resize', handler);
+  return () => window.removeEventListener('resize', handler);
 }

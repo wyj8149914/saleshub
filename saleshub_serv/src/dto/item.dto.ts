@@ -1,5 +1,15 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsArray, MaxLength, IsIn, IsInt, Min, IsNumber, ValidateNested } from 'class-validator';
+import {
+    IsNotEmpty,
+    IsOptional,
+    IsArray,
+    MaxLength,
+    IsIn,
+    IsInt,
+    Min,
+    IsNumber,
+    ValidateNested,
+} from 'class-validator';
 import { PageDto } from './base.dto';
 
 export class ItemSpecDto {

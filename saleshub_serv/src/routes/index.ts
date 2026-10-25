@@ -15,7 +15,7 @@ export function initializeRoutes(app: Application): void {
     const apiPrefix = appConfig.apiPrefix;
 
     // 健康检查路由
-    app.get('/health', (req, res) => {
+    app.get(`${apiPrefix}/health`, (req, res) => {
         res.json({
             status: 'ok',
             timestamp: new Date().toISOString(),

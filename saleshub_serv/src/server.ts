@@ -41,7 +41,6 @@ async function startServer(): Promise<void> {
         process.on('unhandledRejection', (reason, promise) => {
             logger.error('未处理的Promise拒绝', { reason, promise });
         });
-
     } catch (error) {
         logger.error('服务器启动失败', error);
         process.exit(1);

@@ -14,7 +14,7 @@ export const databaseConfig: DataSourceOptions = {
     database: db.database,
     synchronize: false,
     logging: false,
-    entities: [path.join(__dirname, "../entity/*.{js,ts}")],
+    entities: [path.join(__dirname, '../entity/*.{js,ts}')],
     // migrations: [path.join(__dirname, '..', 'migration', '**', '*.ts')],
     // subscribers: [path.join(__dirname, '..', 'subscriber', '**', '*.ts')],
     // 连接池配置

@@ -77,7 +77,12 @@ export class ProductItem {
     @Column({ type: 'varchar', length: 32, comment: '产品ID' })
     product_id: string;
 
-    @Column({ type: 'varchar', length: 32, nullable: true, comment: '所属模块ID，NULL表示产品直接关联' })
+    @Column({
+        type: 'varchar',
+        length: 32,
+        nullable: true,
+        comment: '所属模块ID，NULL表示产品直接关联',
+    })
     module_id: string;
 
     @Column({ type: 'varchar', length: 32, comment: '零件ID' })
@@ -86,7 +91,11 @@ export class ProductItem {
     @Column({ type: 'int', default: 1, comment: '单台产品所需数量' })
     quantity_per_product: number;
 
-    @Column({ type: 'varchar', length: 32, comment: 'BOM 指定的零件规格 inventory_item_spec.spec_id' })
+    @Column({
+        type: 'varchar',
+        length: 32,
+        comment: 'BOM 指定的零件规格 inventory_item_spec.spec_id',
+    })
     spec_id: string;
 
     @Column({ type: 'text', nullable: true, comment: '备注' })

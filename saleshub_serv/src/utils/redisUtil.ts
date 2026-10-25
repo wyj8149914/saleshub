@@ -19,7 +19,7 @@ export class RedisManager {
     private connecting: Promise<RedisClientType> | null = null; // 连接锁
 
     // 私有构造函数，防止外部直接实例化
-    private constructor() { }
+    private constructor() {}
 
     /**
      * @description: 获取RedisManager单例实例
@@ -74,7 +74,7 @@ export class RedisManager {
             this.client = createClient({
                 socket: { host: host, port: port },
                 password: password,
-                database: database
+                database: database,
             });
 
             // 设置错误处理
@@ -100,7 +100,9 @@ export class RedisManager {
         } catch (error) {
             logger.error('Failed to create Redis connection:', error);
             this.client = null;
-            throw new Error(`Redis connection failed: ${error instanceof Error ? error.message : String(error)}`);
+            throw new Error(
+                `Redis connection failed: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
     }
 
@@ -131,7 +133,10 @@ export class RedisManager {
      */
     async set(key: string, value: string, expire: number = 0) {
         const client = await this.getClient();
-        const result = expire === 0 ? await client.set(key, value) : await client.set(key, value, { EX: expire });
+        const result =
+            expire === 0
+                ? await client.set(key, value)
+                : await client.set(key, value, { EX: expire });
         return result;
     }
 

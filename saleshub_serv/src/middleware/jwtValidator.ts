@@ -23,11 +23,9 @@ export async function jwtValidator(req: Request, res: Response, next: NextFuncti
         if (jwt) {
             const verifyData = JwtUtil.verify(jwt);
             // console.log('jwt数据:', verifyData);
-
         }
         next();
     } catch (error) {
         next(error);
     }
 }
-

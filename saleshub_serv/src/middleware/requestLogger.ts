@@ -30,7 +30,11 @@ function resolveRequestId(req: Request): string {
  * @param {*} next
  * @return {*}
  */
-export async function requestLogger(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function requestLogger(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
     const requestId = resolveRequestId(req);
 
     runWithRequestContext({ requestId }, () => {
@@ -53,7 +57,9 @@ export async function requestLogger(req: Request, res: Response, next: NextFunct
                     req.body.employeeId = res.locals.employeeId;
                     logger.info(`开发环境请求头中dev_key正确,Post请求不需要解密`);
                 } catch (error: any) {
-                    logger.error(`开发环境请求头中dev_key正确,Post请求不需要解密: aesKey: ${aesKey}, error: ${error.message}`);
+                    logger.error(
+                        `开发环境请求头中dev_key正确,Post请求不需要解密: aesKey: ${aesKey}, error: ${error.message}`
+                    );
                     encryptError = true;
                 }
             }
@@ -95,7 +101,9 @@ export async function requestLogger(req: Request, res: Response, next: NextFunct
                             req.query[params] = decryptData;
                             logger.info(`参数解密成功: ${params} - 解密后:${decryptData}`);
                         } catch (error) {
-                            logger.error(`参数解密失败: ${params} - 值: ${req.query[params]}, aesKey: ${aesKey}`);
+                            logger.error(
+                                `参数解密失败: ${params} - 值: ${req.query[params]}, aesKey: ${aesKey}`
+                            );
                             encryptError = true;
                         }
                     }
@@ -105,7 +113,10 @@ export async function requestLogger(req: Request, res: Response, next: NextFunct
 
         // 请求日志记录
         const start = Date.now();
-        const reqData = JSON.stringify(req.body) === '{}' ? JSON.stringify(req.query) : JSON.stringify(req.body);
+        const reqData =
+            JSON.stringify(req.body) === '{}'
+                ? JSON.stringify(req.query)
+                : JSON.stringify(req.body);
         const logData = filterBase64Data(reqData);
         logger.info(`Request Started: ${req.method} ${req.originalUrl} - RequestData: ${logData}`);
 
@@ -117,9 +128,13 @@ export async function requestLogger(req: Request, res: Response, next: NextFunct
 
             if (!dntLog) {
                 const logData = filterBase64Data(result);
-                logger.info(`Request Completed: ${req.method} ${req.originalUrl}  - Status: ${res.statusCode} - Duration: ${duration} ms - \nResponseData: ${JSON.stringify(logData)}`);
+                logger.info(
+                    `Request Completed: ${req.method} ${req.originalUrl}  - Status: ${res.statusCode} - Duration: ${duration} ms - \nResponseData: ${JSON.stringify(logData)}`
+                );
             } else {
-                logger.info(`Request Completed: ${req.method} ${req.originalUrl}  - Status: ${res.statusCode} - Duration: ${duration} ms`);
+                logger.info(
+                    `Request Completed: ${req.method} ${req.originalUrl}  - Status: ${res.statusCode} - Duration: ${duration} ms`
+                );
             }
         });
 
@@ -147,7 +162,7 @@ function filterBase64Data(data: any): any {
     }
 
     if (Array.isArray(data)) {
-        return data.map(item => filterBase64Data(item));
+        return data.map((item) => filterBase64Data(item));
     }
 
     if (typeof data === 'object' && data !== null) {
@@ -164,7 +179,6 @@ function filterBase64Data(data: any): any {
             } else {
                 filtered[key] = filterBase64Data(data[key]);
             }
-
         }
         return filtered;
     }

@@ -2,29 +2,67 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { plainToInstance } from 'class-transformer';
 import { validationMiddleware } from '../middleware/paramsValidator';
 import { asyncHandler } from '../middleware/errorHandler.middleware';
-import { CreateInventoryItemDto, ItemIdDto, ListInventoryItemDto, UpdateInventoryItemDto } from '../dto/item.dto';
 import {
-    CreateProductDto, ProductIdDto, ListProductDto, UpdateProductDto, SetProductItemsDto, ProductItemIdDto,
-    CreateModuleDto, UpdateModuleDto, ModuleIdDto, ListModuleDto, SetModuleItemsDto,
-} from '../dto/product.dto';
-import {
-    StockInDto, StockInBatchDto, StockOutDto, StockOutBatchDto, StockOutByProductDto, StockCheckDto, ListStockHistoryDto,
-    ListStockInRecordsDto, ListStockOutRecordsDto, ListStockCheckRecordsDto, StockCheckBatchDto,
-    RevertStockInDto, RevertStockOutDto,
-} from '../dto/stock.dto';
-import {
-    CreateItemTypeDto, UpdateItemTypeDto, DeleteItemTypeDto, ListItemTypeDto,
+    CreateInventoryItemDto,
+    ItemIdDto,
+    ListInventoryItemDto,
+    UpdateInventoryItemDto,
 } from '../dto/item.dto';
 import {
-    CreateWarehouseDto, UpdateWarehouseDto, DeleteWarehouseDto, ListWarehouseDto,
-    AssignSpecWarehouseDto, ListSpecWarehouseStockDto, WarehouseIdDto,
+    CreateProductDto,
+    ProductIdDto,
+    ListProductDto,
+    UpdateProductDto,
+    SetProductItemsDto,
+    ProductItemIdDto,
+    CreateModuleDto,
+    UpdateModuleDto,
+    ModuleIdDto,
+    ListModuleDto,
+    SetModuleItemsDto,
+} from '../dto/product.dto';
+import {
+    StockInDto,
+    StockInBatchDto,
+    StockOutDto,
+    StockOutBatchDto,
+    StockOutByProductDto,
+    StockCheckDto,
+    ListStockHistoryDto,
+    ListStockInRecordsDto,
+    ListStockOutRecordsDto,
+    ListStockCheckRecordsDto,
+    StockCheckBatchDto,
+    RevertStockInDto,
+    RevertStockOutDto,
+} from '../dto/stock.dto';
+import {
+    CreateItemTypeDto,
+    UpdateItemTypeDto,
+    DeleteItemTypeDto,
+    ListItemTypeDto,
+} from '../dto/item.dto';
+import {
+    CreateWarehouseDto,
+    UpdateWarehouseDto,
+    DeleteWarehouseDto,
+    ListWarehouseDto,
+    AssignSpecWarehouseDto,
+    ListSpecWarehouseStockDto,
 } from '../dto/warehouse.dto';
-import { productService, inventoryItemService, stockService, itemTypeService, warehouseService } from '../service/inventory';
+import {
+    productService,
+    inventoryItemService,
+    stockService,
+    itemTypeService,
+    warehouseService,
+} from '../service/inventory';
 
 const router = Router();
 
 // 查询零件
-router.get('/listItems',
+router.get(
+    '/listItems',
     validationMiddleware(ListInventoryItemDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ListInventoryItemDto, req.query);
@@ -35,7 +73,8 @@ router.get('/listItems',
 );
 
 // 创建新零件
-router.post('/createItem',
+router.post(
+    '/createItem',
     validationMiddleware(CreateInventoryItemDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(CreateInventoryItemDto, req.body);
@@ -46,7 +85,8 @@ router.post('/createItem',
 );
 
 // 更新零件信息
-router.post('/updateItem',
+router.post(
+    '/updateItem',
     validationMiddleware(UpdateInventoryItemDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(UpdateInventoryItemDto, req.body);
@@ -57,7 +97,8 @@ router.post('/updateItem',
 );
 
 // 删除零件（软删除）
-router.post('/deleteItem',
+router.post(
+    '/deleteItem',
     validationMiddleware(ItemIdDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ItemIdDto, req.body);
@@ -67,8 +108,21 @@ router.post('/deleteItem',
     })
 );
 
+// 查询零件规格分配库存（懒加载）
+router.get(
+    '/listItemSpecAllocations',
+    validationMiddleware(ItemIdDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dtoObj = plainToInstance(ItemIdDto, req.query);
+        const result = await inventoryItemService.listSpecAllocations(dtoObj);
+        res.locals.datas = result;
+        next();
+    })
+);
+
 // 查询产品
-router.get('/listProducts',
+router.get(
+    '/listProducts',
     validationMiddleware(ListProductDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ListProductDto, req.query);
@@ -79,7 +133,8 @@ router.get('/listProducts',
 );
 
 // 创建新产品
-router.post('/createProduct',
+router.post(
+    '/createProduct',
     validationMiddleware(CreateProductDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(CreateProductDto, req.body);
@@ -90,7 +145,8 @@ router.post('/createProduct',
 );
 
 // 更新产品信息
-router.post('/updateProduct',
+router.post(
+    '/updateProduct',
     validationMiddleware(UpdateProductDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(UpdateProductDto, req.body);
@@ -101,7 +157,8 @@ router.post('/updateProduct',
 );
 
 // 删除产品（软删除）
-router.post('/deleteProduct',
+router.post(
+    '/deleteProduct',
     validationMiddleware(ProductIdDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ProductIdDto, req.body);
@@ -112,7 +169,8 @@ router.post('/deleteProduct',
 );
 
 // 设置产品零件(全量覆盖)
-router.post('/setProductItems',
+router.post(
+    '/setProductItems',
     validationMiddleware(SetProductItemsDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(SetProductItemsDto, req.body);
@@ -123,7 +181,8 @@ router.post('/setProductItems',
 );
 
 // 查询产品的零件列表
-router.get('/listProductItems',
+router.get(
+    '/listProductItems',
     validationMiddleware(ProductItemIdDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ProductItemIdDto, req.query);
@@ -134,7 +193,8 @@ router.get('/listProductItems',
 );
 
 // 查询产品详情
-router.get('/productDetail',
+router.get(
+    '/productDetail',
     validationMiddleware(ProductIdDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ProductIdDto, req.query);
@@ -147,7 +207,8 @@ router.get('/productDetail',
 // ============ 模块管理 ============
 
 // 创建模块
-router.post('/createModule',
+router.post(
+    '/createModule',
     validationMiddleware(CreateModuleDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(CreateModuleDto, req.body);
@@ -158,7 +219,8 @@ router.post('/createModule',
 );
 
 // 查询模块列表
-router.get('/listModule',
+router.get(
+    '/listModule',
     validationMiddleware(ListModuleDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ListModuleDto, req.query);
@@ -169,7 +231,8 @@ router.get('/listModule',
 );
 
 // 更新模块
-router.post('/updateModule',
+router.post(
+    '/updateModule',
     validationMiddleware(UpdateModuleDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(UpdateModuleDto, req.body);
@@ -180,7 +243,8 @@ router.post('/updateModule',
 );
 
 // 删除模块
-router.post('/deleteModule',
+router.post(
+    '/deleteModule',
     validationMiddleware(ModuleIdDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ModuleIdDto, req.body);
@@ -191,7 +255,8 @@ router.post('/deleteModule',
 );
 
 // 设置模块零件
-router.post('/setModuleItems',
+router.post(
+    '/setModuleItems',
     validationMiddleware(SetModuleItemsDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(SetModuleItemsDto, req.body);
@@ -202,7 +267,8 @@ router.post('/setModuleItems',
 );
 
 // 查询模块零件列表
-router.get('/listModuleItems',
+router.get(
+    '/listModuleItems',
     validationMiddleware(ModuleIdDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ModuleIdDto, req.query);
@@ -213,7 +279,8 @@ router.get('/listModuleItems',
 );
 
 // 入库操作(单条)
-router.post('/stockIn',
+router.post(
+    '/stockIn',
     validationMiddleware(StockInDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(StockInDto, req.body);
@@ -224,7 +291,8 @@ router.post('/stockIn',
 );
 
 // 按零件批量入库(同一 record_no)
-router.post('/stockInBatch',
+router.post(
+    '/stockInBatch',
     validationMiddleware(StockInBatchDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(StockInBatchDto, req.body);
@@ -235,7 +303,8 @@ router.post('/stockInBatch',
 );
 
 // 出库操作(单条)
-router.post('/stockOut',
+router.post(
+    '/stockOut',
     validationMiddleware(StockOutDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(StockOutDto, req.body);
@@ -246,7 +315,8 @@ router.post('/stockOut',
 );
 
 // 按零件批量出库(同一 record_no)
-router.post('/stockOutBatch',
+router.post(
+    '/stockOutBatch',
     validationMiddleware(StockOutBatchDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(StockOutBatchDto, req.body);
@@ -257,7 +327,8 @@ router.post('/stockOutBatch',
 );
 
 // 按产品出库(按 BOM 扣减,同一 record_no)
-router.post('/stockOutByProduct',
+router.post(
+    '/stockOutByProduct',
     validationMiddleware(StockOutByProductDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(StockOutByProductDto, req.body);
@@ -268,7 +339,8 @@ router.post('/stockOutByProduct',
 );
 
 // 查询零件历史记录
-router.get('/stockHistoryList',
+router.get(
+    '/stockHistoryList',
     validationMiddleware(ListStockHistoryDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ListStockHistoryDto, req.query);
@@ -279,7 +351,8 @@ router.get('/stockHistoryList',
 );
 
 // 查询入库记录列表
-router.get('/stockInList',
+router.get(
+    '/stockInList',
     validationMiddleware(ListStockInRecordsDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ListStockInRecordsDto, req.query);
@@ -290,7 +363,8 @@ router.get('/stockInList',
 );
 
 // 查询出库记录列表
-router.get('/stockOutList',
+router.get(
+    '/stockOutList',
     validationMiddleware(ListStockOutRecordsDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ListStockOutRecordsDto, req.query);
@@ -301,7 +375,8 @@ router.get('/stockOutList',
 );
 
 // 查询盘点记录列表
-router.get('/stockCheckList',
+router.get(
+    '/stockCheckList',
     validationMiddleware(ListStockCheckRecordsDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ListStockCheckRecordsDto, req.query);
@@ -312,7 +387,8 @@ router.get('/stockCheckList',
 );
 
 // 库存盘点
-router.post('/stockCheck',
+router.post(
+    '/stockCheck',
     validationMiddleware(StockCheckDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(StockCheckDto, req.body);
@@ -323,7 +399,8 @@ router.post('/stockCheck',
 );
 
 // 批量盘点
-router.post('/stockCheckBatch',
+router.post(
+    '/stockCheckBatch',
     validationMiddleware(StockCheckBatchDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(StockCheckBatchDto, req.body);
@@ -334,7 +411,8 @@ router.post('/stockCheckBatch',
 );
 
 // 撤销入库
-router.post('/revertStockIn',
+router.post(
+    '/revertStockIn',
     validationMiddleware(RevertStockInDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(RevertStockInDto, req.body);
@@ -345,7 +423,8 @@ router.post('/revertStockIn',
 );
 
 // 撤销出库
-router.post('/revertStockOut',
+router.post(
+    '/revertStockOut',
     validationMiddleware(RevertStockOutDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(RevertStockOutDto, req.body);
@@ -358,7 +437,8 @@ router.post('/revertStockOut',
 // ============ 类型管理 ============
 
 // 查询类型列表
-router.get('/listItemTypes',
+router.get(
+    '/listItemTypes',
     validationMiddleware(ListItemTypeDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ListItemTypeDto, req.query);
@@ -369,7 +449,8 @@ router.get('/listItemTypes',
 );
 
 // 创建类型
-router.post('/createItemType',
+router.post(
+    '/createItemType',
     validationMiddleware(CreateItemTypeDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(CreateItemTypeDto, req.body);
@@ -380,7 +461,8 @@ router.post('/createItemType',
 );
 
 // 更新类型
-router.post('/updateItemType',
+router.post(
+    '/updateItemType',
     validationMiddleware(UpdateItemTypeDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(UpdateItemTypeDto, req.body);
@@ -391,7 +473,8 @@ router.post('/updateItemType',
 );
 
 // 删除类型
-router.post('/deleteItemType',
+router.post(
+    '/deleteItemType',
     validationMiddleware(DeleteItemTypeDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(DeleteItemTypeDto, req.body);
@@ -404,7 +487,8 @@ router.post('/deleteItemType',
 // ============ 仓库管理 ============
 
 // 查询仓库列表
-router.get('/listWarehouses',
+router.get(
+    '/listWarehouses',
     validationMiddleware(ListWarehouseDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ListWarehouseDto, req.query);
@@ -415,7 +499,8 @@ router.get('/listWarehouses',
 );
 
 // 创建仓库
-router.post('/createWarehouse',
+router.post(
+    '/createWarehouse',
     validationMiddleware(CreateWarehouseDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(CreateWarehouseDto, req.body);
@@ -426,7 +511,8 @@ router.post('/createWarehouse',
 );
 
 // 更新仓库
-router.post('/updateWarehouse',
+router.post(
+    '/updateWarehouse',
     validationMiddleware(UpdateWarehouseDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(UpdateWarehouseDto, req.body);
@@ -437,7 +523,8 @@ router.post('/updateWarehouse',
 );
 
 // 删除仓库
-router.post('/deleteWarehouse',
+router.post(
+    '/deleteWarehouse',
     validationMiddleware(DeleteWarehouseDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(DeleteWarehouseDto, req.body);
@@ -448,7 +535,8 @@ router.post('/deleteWarehouse',
 );
 
 // 分配零件仓库
-router.post('/assignSpecWarehouse',
+router.post(
+    '/assignSpecWarehouse',
     validationMiddleware(AssignSpecWarehouseDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(AssignSpecWarehouseDto, req.body);
@@ -459,7 +547,8 @@ router.post('/assignSpecWarehouse',
 );
 
 // 查询规格库存明细
-router.get('/listSpecWarehouseStock',
+router.get(
+    '/listSpecWarehouseStock',
     validationMiddleware(ListSpecWarehouseStockDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(ListSpecWarehouseStockDto, req.query);

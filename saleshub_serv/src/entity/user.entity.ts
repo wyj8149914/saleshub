@@ -17,7 +17,12 @@ export class User {
     @Column({ type: 'varchar', length: 20, nullable: true, comment: '手机号' })
     phone: string;
 
-    @Column({ type: 'varchar', length: 20, default: 'user', comment: '角色：admin-管理员，user-普通用户' })
+    @Column({
+        type: 'varchar',
+        length: 20,
+        default: 'user',
+        comment: '角色：admin-管理员，user-普通用户',
+    })
     role: string;
 
     @Column({ type: 'int', default: 1, comment: '状态：1-正常，2-停用' })

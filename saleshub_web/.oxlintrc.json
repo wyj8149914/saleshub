@@ -1,10 +1,42 @@
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint", "typescript", "unicorn", "oxc", "vue", "vitest"],
-  "env": {
-    "browser": true
-  },
-  "categories": {
-    "correctness": "error"
-  }
+    // Oxlint 配置：Rust 实现的超快 linter，用于快速发现代码问题
+    // 与 ESLint 配合使用（npm run lint:oxlint）；规则比完整 ESLint 更精简、速度更快
+    // $schema：提供编辑器自动补全与校验
+    "$schema": "./node_modules/oxlint/configuration_schema.json",
+    // 启用的规则插件集合
+    // eslint：兼容部分 ESLint 规则；typescript：TS 相关；unicorn：最佳实践
+    // oxc：Oxlint 自带规则；vue：Vue SFC；vitest：测试文件规则
+    "plugins": [
+        "eslint",
+        "typescript",
+        "unicorn",
+        "oxc",
+        "vue",
+        "vitest"
+    ],
+    // 运行环境：注入对应全局变量，避免「未定义」误报
+    "env": {
+        // 浏览器环境（window、document、fetch 等）
+        "browser": true
+    },
+    // 按类别批量设置严重级别（比逐条配 rules 更省事）
+    "categories": {
+        // correctness：正确性类规则（易导致 bug）统一报 error
+        "correctness": "error"
+    },
+    "rules": {
+        // ✅ 禁止 console.log 等调试残留；允许 warn/error（业务异常排查需要）
+        "no-console": ["warn", { "allow": ["warn", "error"] }],
+        "no-debugger": "error",
+        "no-unused-vars": "off", // 交给 typescript-eslint 处理更准确
+        "eqeqeq": "error",
+        // ❌ 不要在这里配格式规则（OxLint 也不支持）
+        // "indent": ...   ← 不存在此规则
+        // "quotes": ...   ← 不存在此规则
+    },
+    "ignorePatterns": [
+        "dist/",
+        "node_modules/",
+        "*.min.js"
+    ]
 }

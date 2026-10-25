@@ -1,6 +1,11 @@
 import { AppDataSource } from '../../config/database.config';
 import { ItemType } from '../../entity/product.entity';
-import { CreateItemTypeDto, UpdateItemTypeDto, DeleteItemTypeDto, ListItemTypeDto } from '../../dto/item.dto';
+import {
+    CreateItemTypeDto,
+    UpdateItemTypeDto,
+    DeleteItemTypeDto,
+    ListItemTypeDto,
+} from '../../dto/item.dto';
 import { getLogger } from '../../utils/logger.util';
 import { v7 } from 'uuid';
 import { InventoryItem } from '../../entity/product.entity';
@@ -184,7 +189,8 @@ export class ItemTypeService {
      */
     async list(dto: ListItemTypeDto) {
         try {
-            const queryBuilder = this.itemTypeRepo.createQueryBuilder('type')
+            const queryBuilder = this.itemTypeRepo
+                .createQueryBuilder('type')
                 .leftJoin(ItemType, 'parentType', 'parentType.type_id = type.parent_id')
                 .select([
                     'type.type_id AS type_id',

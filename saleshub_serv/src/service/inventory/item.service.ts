@@ -1,18 +1,25 @@
 import { InventoryItem, InventoryItemSpec, ProductItem } from '../../entity/product.entity';
 import { ItemType } from '../../entity/product.entity';
-import { CreateInventoryItemDto, ItemIdDto, ListInventoryItemDto, UpdateInventoryItemDto } from '../../dto/item.dto';
+import {
+    CreateInventoryItemDto,
+    ItemIdDto,
+    ListInventoryItemDto,
+    UpdateInventoryItemDto,
+} from '../../dto/item.dto';
 import { AppDataSource } from '../../config/database.config';
 import { getLogger } from '../../utils/logger.util';
 import { v7 } from 'uuid';
 import { generateFileUrl } from '../../config/minio.config';
 import { MinioFile } from '../../entity/file.entity';
 import { Not } from 'typeorm';
+import { InventoryItemSpecWarehouse } from '../../entity/warehouse.entity';
 
 export class InventoryItemService {
     private inventoryItemRepository = AppDataSource.getRepository(InventoryItem);
     private inventoryItemSpecRepository = AppDataSource.getRepository(InventoryItemSpec);
     private productItemRepository = AppDataSource.getRepository(ProductItem);
     private itemTypeRepository = AppDataSource.getRepository(ItemType);
+    private specWarehouseRepository = AppDataSource.getRepository(InventoryItemSpecWarehouse);
     private logger = getLogger('SALESHUB_SERV');
 
     /**
@@ -20,7 +27,7 @@ export class InventoryItemService {
      */
     async create(dto: CreateInventoryItemDto) {
         try {
-            // 查询是否已有同名零件 
+            // 查询是否已有同名零件
             const existing = await this.inventoryItemRepository.findOne({
                 where: { name: dto.name, status: 1, type_id: dto.type_id },
             });
@@ -86,7 +93,8 @@ export class InventoryItemService {
      */
     async list(dto: ListInventoryItemDto) {
         try {
-            const queryBuilder = this.inventoryItemRepository.createQueryBuilder('item')
+            const queryBuilder = this.inventoryItemRepository
+                .createQueryBuilder('item')
                 .leftJoin(MinioFile, 'file', 'file.relation_id = item.image_id')
                 .leftJoin(ItemType, 'type', 'type.type_id = item.type_id')
                 .leftJoin(ItemType, 'pt', 'pt.type_id = type.parent_id')
@@ -130,16 +138,19 @@ export class InventoryItemService {
             const specRows =
                 itemIds.length > 0
                     ? await this.inventoryItemSpecRepository
-                        .createQueryBuilder('s')
-                        .select([
-                            's.spec_id AS spec_id',
-                            's.item_id AS item_id',
-                            's.spec AS spec',
-                            's.price AS price',
-                            's.current_stock AS current_stock',
-                        ])
-                        .where('s.item_id IN (:...ids) AND s.status = :status', { ids: itemIds, status: 1 })
-                        .getRawMany()
+                          .createQueryBuilder('s')
+                          .select([
+                              's.spec_id AS spec_id',
+                              's.item_id AS item_id',
+                              's.spec AS spec',
+                              's.price AS price',
+                              's.current_stock AS current_stock',
+                          ])
+                          .where('s.item_id IN (:...ids) AND s.status = :status', {
+                              ids: itemIds,
+                              status: 1,
+                          })
+                          .getRawMany()
                     : [];
 
             const specMap = new Map<string, any[]>();
@@ -147,7 +158,12 @@ export class InventoryItemService {
                 if (!specMap.has(row.item_id)) {
                     specMap.set(row.item_id, []);
                 }
-                specMap.get(row.item_id)?.push({ spec_id: row.spec_id, spec: row.spec, price: row.price, current_stock: Number(row.current_stock) });
+                specMap.get(row.item_id)?.push({
+                    spec_id: row.spec_id,
+                    spec: row.spec,
+                    price: row.price,
+                    current_stock: Number(row.current_stock),
+                });
             }
 
             const datas = items.map((it: any) => {
@@ -193,7 +209,12 @@ export class InventoryItemService {
         try {
             // 查询是否已有同名零件
             const existing = await this.inventoryItemRepository.findOne({
-                where: { name: dto.name, item_id: Not(dto.item_id), status: 1, type_id: dto.type_id },
+                where: {
+                    name: dto.name,
+                    item_id: Not(dto.item_id),
+                    status: 1,
+                    type_id: dto.type_id,
+                },
             });
             if (existing) {
                 return { result: 1, msg: '零件名称已存在' };
@@ -279,7 +300,10 @@ export class InventoryItemService {
             });
 
             // 收集需要修改的字段(仅更新发生变化的字段)
-            const toUpdateEntries: { spec_id: string; fields: { spec?: string; price?: number } }[] = [];
+            const toUpdateEntries: {
+                spec_id: string;
+                fields: { spec?: string; price?: number };
+            }[] = [];
             for (const specData of toUpdateData) {
                 const existing = existingSpecMap.get(specData.spec_id as string)!;
                 const fields: { spec?: string; price?: number } = {};
@@ -406,8 +430,8 @@ export class InventoryItemService {
     private async generateItemCode() {
         const result = await this.inventoryItemRepository
             .createQueryBuilder('item')
-            .select("MAX(SUBSTRING(item.code, 3)::INTEGER)", 'maxNum')
-            .where("item.code ~ :pattern", { pattern: '^IT[0-9]{6}$' })
+            .select('MAX(SUBSTRING(item.code, 3)::INTEGER)', 'maxNum')
+            .where('item.code ~ :pattern', { pattern: '^IT[0-9]{6}$' })
             .getRawOne();
 
         const nextNum = (Number(result?.maxNum) || 0) + 1;
@@ -415,5 +439,83 @@ export class InventoryItemService {
             throw new Error('零件编码已达上限');
         }
         return `IT${String(nextNum).padStart(6, '0')}`;
+    }
+
+    /**
+     * 查询零件各规格的已分配/未分配库存信息
+     * 用于前端懒加载展示规格分配库存
+     */
+    async listSpecAllocations(dto: ItemIdDto) {
+        try {
+            // 校验零件存在
+            const item = await this.inventoryItemRepository.findOne({
+                where: { item_id: dto.item_id, status: 1 },
+            });
+            if (!item) {
+                return { result: 1, msg: '零件不存在' };
+            }
+
+            // 查询该零件的所有规格
+            const specs = await this.inventoryItemSpecRepository
+                .createQueryBuilder('s')
+                .select([
+                    's.spec_id AS spec_id',
+                    's.item_id AS item_id',
+                    's.spec AS spec',
+                    's.price AS price',
+                    's.current_stock AS current_stock',
+                ])
+                .where('s.item_id = :itemId AND s.status = :status', {
+                    itemId: dto.item_id,
+                    status: 1,
+                })
+                .orderBy('s.create_time', 'ASC')
+                .getRawMany();
+
+            if (specs.length === 0) {
+                return { result: 0, msg: 'success', datas: [] };
+            }
+
+            const specIds = specs.map((s: any) => s.spec_id);
+
+            // 查询各规格在各仓库的已分配库存
+            const warehouseStocks = await this.specWarehouseRepository
+                .createQueryBuilder('sw')
+                .select([
+                    'sw.spec_id AS spec_id',
+                    'sw.warehouse_id AS warehouse_id',
+                    'sw.current_stock AS warehouse_stock',
+                ])
+                .where('sw.spec_id IN (:...specIds) AND sw.status = 1', { specIds })
+                .getRawMany();
+
+            // 按规格分组汇总已分配库存
+            const allocatedStockMap = new Map<string, number>();
+            for (const ws of warehouseStocks) {
+                const current = allocatedStockMap.get(ws.spec_id) || 0;
+                allocatedStockMap.set(ws.spec_id, current + (ws.warehouse_stock || 0));
+            }
+
+            // 组装返回数据
+            const datas = specs.map((spec: any) => {
+                const allocatedStock = allocatedStockMap.get(spec.spec_id) || 0;
+                const unallocatedStock = spec.current_stock - allocatedStock;
+
+                return {
+                    spec_id: spec.spec_id,
+                    item_id: spec.item_id,
+                    spec: spec.spec,
+                    price: spec.price,
+                    current_stock: Number(spec.current_stock),
+                    allocated_stock: allocatedStock,
+                    unallocated_stock: unallocatedStock,
+                };
+            });
+
+            return { result: 0, msg: 'success', datas };
+        } catch (error) {
+            this.logger.error('查询零件规格分配库存失败:', error);
+            return { result: 1, msg: '查询失败' };
+        }
     }
 }

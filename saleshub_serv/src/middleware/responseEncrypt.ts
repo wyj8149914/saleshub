@@ -17,7 +17,11 @@ import { encryption } from '../utils/util';
  * @param {*} next
  * @return {*}
  */
-export async function responseEncrypt(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function responseEncrypt(
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> {
     const result = res.locals.datas;
     if (result === undefined || result === null) {
         return next();

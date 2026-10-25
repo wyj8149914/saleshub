@@ -71,7 +71,7 @@ export function errorHandlerMiddleware(
 export function notFoundMiddleware(req: Request, res: Response): void {
     res.status(404).json({
         result: 404,
-        msg: `路径 ${req.originalUrl} 不存在`
+        msg: `路径 ${req.originalUrl} 不存在`,
     });
 }
 
