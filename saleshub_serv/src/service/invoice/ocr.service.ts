@@ -91,13 +91,21 @@ class InvoiceOcrService {
 
             for (const item of items) {
                 if (item.Code !== 'OK') {
-                    failed.push({ page: item.Page, sub_type: item.SubType, msg: `识别失败:${item.Code}` });
+                    failed.push({
+                        page: item.Page,
+                        sub_type: item.SubType,
+                        msg: `识别失败:${item.Code}`,
+                    });
                     continue;
                 }
 
                 const mapResult = mapInvoiceItem(item);
                 if (mapResult.result === 1 || !mapResult.data) {
-                    failed.push({ page: item.Page, sub_type: item.SubType, msg: '发票字段解析失败' });
+                    failed.push({
+                        page: item.Page,
+                        sub_type: item.SubType,
+                        msg: '发票字段解析失败',
+                    });
                     continue;
                 }
 
@@ -177,7 +185,10 @@ class InvoiceOcrService {
             return toSaveItem(invoice, false);
         } catch (error) {
             // 并发场景下唯一约束冲突,回查已有记录
-            if (error instanceof QueryFailedError && (error as unknown as { code?: string }).code === '23505') {
+            if (
+                error instanceof QueryFailedError &&
+                (error as unknown as { code?: string }).code === '23505'
+            ) {
                 const winner = await this.invoiceRepository.findOne({
                     where: { invoice_number: invoice.invoice_number },
                 });

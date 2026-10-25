@@ -1,4 +1,3 @@
-
 /** 坐标 */
 interface Coord {
     X: number;
@@ -11,7 +10,6 @@ interface Polygon {
     RightTop: Coord;
     RightBottom: Coord;
     LeftBottom: Coord;
-
 }
 
 /** 通用票据识别返回的单个字段信息 */
@@ -450,7 +448,7 @@ interface ElectronicTrainTicketFull {
 interface MixedInvoiceItem {
     // OK：表示识别成功；FailedOperation.UnsupportedInvoice：表示不支持识别；FailedOperation.UnKnowError：表示识别失败；其它错误码见各个票据接口的定义。
     Code: string;
-    //识别出的图片所属的票据类型。 -1：未知类型 0：出租车发票1：定额发票 2：火车票 3：增值税发票 5：机票行程单 8：通用机打发票 9：汽车票 10：轮船票 
+    //识别出的图片所属的票据类型。 -1：未知类型 0：出租车发票1：定额发票 2：火车票 3：增值税发票 5：机票行程单 8：通用机打发票 9：汽车票 10：轮船票
     // 11：增值税发票（卷票） 12：购车发票 13：过路过桥费发票 15：非税发票  16：全电发票17：医疗发票 18：完税凭证 19：海关缴款书 20：银行回单
     Type: number;
     Polygon: Polygon; // 该发票在原图片中的四点坐标。
@@ -475,15 +473,15 @@ interface OrcResponse {
 
 /** SubType和 SingleInvoiceInfos类型映射关系 */
 const invoieType = {
-    'VatSpecialInvoice': 'VatInvoiceInfo',
-    'VatCommonInvoice': 'VatInvoiceInfo',
-    'VatElectronicCommonInvoice': 'VatInvoiceInfo',
-    'VatElectronicSpecialInvoice': 'VatInvoiceInfo',
-    'VatElectronicInvoiceBlockchain': 'VatInvoiceInfo',
-    'VatElectronicInvoiceToll': 'VatInvoiceInfo',
-    'VatElectronicSpecialInvoiceFull': 'VatElectronicInfo',
-    'VatElectronicInvoiceFull': 'VatElectronicInfo',
-    'AirTransport': 'AirTransport',
-    'ElectronicTrainTicketFull': 'ElectronicTrainTicketFull',
-    'ElectronicFlightTicketFull': 'ElectronicFlightTicketFull',
-}
+    VatSpecialInvoice: 'VatInvoiceInfo',
+    VatCommonInvoice: 'VatInvoiceInfo',
+    VatElectronicCommonInvoice: 'VatInvoiceInfo',
+    VatElectronicSpecialInvoice: 'VatInvoiceInfo',
+    VatElectronicInvoiceBlockchain: 'VatInvoiceInfo',
+    VatElectronicInvoiceToll: 'VatInvoiceInfo',
+    VatElectronicSpecialInvoiceFull: 'VatElectronicInfo',
+    VatElectronicInvoiceFull: 'VatElectronicInfo',
+    AirTransport: 'AirTransport',
+    ElectronicTrainTicketFull: 'ElectronicTrainTicketFull',
+    ElectronicFlightTicketFull: 'ElectronicFlightTicketFull',
+};

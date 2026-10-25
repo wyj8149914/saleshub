@@ -13,7 +13,14 @@
       "Bash(/usr/bin/python3 /c/Users/Jason/AppData/Local/Temp/skills-XXXXXXuVWXzn/understand-anything-plugin/skills/understand/merge-batch-graphs.py \"D:/Work/gitproject/card\")",
       "Bash(pnpm run *)",
       "Bash(npx tsc *)",
-      "Skill(update-config)"
+      "Skill(update-config)",
+      "Bash(git -C \"E:\\\\Work\\\\Project\\\\saleshub\\\\saleshub_serv\" status)",
+      "Bash(git -C \"E:\\\\Work\\\\Project\\\\saleshub\\\\saleshub_serv\" diff tsconfig.json)",
+      "Bash(printf \"const x: MixedInvoiceItem | null = null;\\\\nconst y: OrcResponse | null = null;\\\\n\")",
+      "Bash(xxd)",
+      "Bash(printf \"const x: MixedInvoiceItem | null = null;\\\\n\")",
+      "Bash(grep -E '\"\"\\(axios|node-fetch|got|undici\\)\"\"' package.json)",
+      "Bash(grep -rn \"user_id\" src/middleware/*.ts)"
     ]
   }
 }

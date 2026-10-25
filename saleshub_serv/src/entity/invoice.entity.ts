@@ -38,7 +38,11 @@ export class Invoice {
     @Column({ type: 'int', comment: '发票类型:16-全电发票等,见腾讯云MixedInvoiceOCR文档' })
     invoice_type: number;
 
-    @Column({ type: 'varchar', length: 64, comment: '发票详细类型SubType,如VatElectronicInvoiceFull' })
+    @Column({
+        type: 'varchar',
+        length: 64,
+        comment: '发票详细类型SubType,如VatElectronicInvoiceFull',
+    })
     sub_type: string;
 
     @Column({ type: 'varchar', length: 100, nullable: true, comment: '发票详细类型描述' })
@@ -58,7 +62,12 @@ export class Invoice {
     @Column({ type: 'varchar', length: 32, comment: '发票号码' })
     invoice_number: string;
 
-    @Column({ type: 'varchar', length: 20, nullable: true, comment: '开票日期(原始格式,如2026年09月09日)' })
+    @Column({
+        type: 'varchar',
+        length: 20,
+        nullable: true,
+        comment: '开票日期(原始格式,如2026年09月09日)',
+    })
     invoice_date: string | null;
 
     @Column({ type: 'numeric', precision: 12, scale: 2, nullable: true, comment: '税前金额' })
@@ -96,18 +105,34 @@ export class Invoice {
     @Column({ type: 'int', nullable: true, comment: '发票性质:1-实开,2-进项抵扣' })
     invoice_nature: number | null;
 
-    @Column({ type: 'int', nullable: true, comment: '发票用途:1-办公资产费,2-差旅费,3-成本费,4-接待费,5-快递费' })
+    @Column({
+        type: 'int',
+        nullable: true,
+        comment: '发票用途:1-办公资产费,2-差旅费,3-成本费,4-接待费,5-快递费',
+    })
     invoice_purpose: number | null;
 
     // ============ JSONB 数据 ============
 
-    @Column({ type: 'jsonb', nullable: true, comment: '明细条目数组(VatElectronicItems/VatInvoiceItemInfos)' })
+    @Column({
+        type: 'jsonb',
+        nullable: true,
+        comment: '明细条目数组(VatElectronicItems/VatInvoiceItemInfos)',
+    })
     items: Record<string, unknown>[] | null;
 
-    @Column({ type: 'jsonb', nullable: true, comment: '类型特有字段完整对象(SingleInvoiceInfos中对应类型的值,含铁路车次/机票航段等)' })
+    @Column({
+        type: 'jsonb',
+        nullable: true,
+        comment: '类型特有字段完整对象(SingleInvoiceInfos中对应类型的值,含铁路车次/机票航段等)',
+    })
     detail: Record<string, unknown> | null;
 
-    @Column({ type: 'jsonb', nullable: true, comment: '完整识别结果(MixedInvoiceItem,含坐标/印章信息)' })
+    @Column({
+        type: 'jsonb',
+        nullable: true,
+        comment: '完整识别结果(MixedInvoiceItem,含坐标/印章信息)',
+    })
     raw_response: MixedInvoiceItem | null;
 
     // ============ 惯例字段 ============
