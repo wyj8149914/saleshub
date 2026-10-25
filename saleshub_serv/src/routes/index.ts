@@ -1,7 +1,8 @@
 import { Application, Router } from 'express';
-import inventoryRouter from './inventory.route';
+import invoiceRouter from './invoice.route';
 import fileRouter from './file.route';
 import userRouter from './user.route';
+import inventoryRouter from './inventory.route';
 import { getLogger } from '../utils/logger.util';
 import { appConfig } from '../config/env.config';
 const logger = getLogger('SALESHUB_SERV');
@@ -26,6 +27,7 @@ export function initializeRoutes(app: Application): void {
     app.use(`${apiPrefix}/inventory`, inventoryRouter);
     app.use(`${apiPrefix}/file`, fileRouter);
     app.use(`${apiPrefix}/user`, userRouter);
+    app.use(`${apiPrefix}/invoice`, invoiceRouter);
 
     logger.info('✅ 路由初始化完成');
 }

@@ -1,7 +1,8 @@
 {
     "compilerOptions": {
         "target": "ES2020", // 指定编译输出的 JS 语法标准。TS 会将新语法降级至 ES2020
-        "module": "commonjs", //指定模块系统规范。输出 require/module.exports 格式
+        "module": "nodenext", //指定模块系统规范。输出 require/module.exports 格式
+        "moduleResolution": "nodenext", // 模块解析策略。按 Node.js 规则查找 node_modules。
         "lib": [
             "ES2020"
         ], // 指定编译时包含的内置类型库（如 Array.prototype.flat、Promise 等）
@@ -12,7 +13,6 @@
         "skipLibCheck": true, // 跳过对 .d.ts 类型声明文件的类型检查
         "forceConsistentCasingInFileNames": true, // 强制要求文件名大小写一致
         "resolveJsonModule": true, // 允许直接导入 .json 文件
-        "moduleResolution": "node", // 模块解析策略。按 Node.js 规则查找 node_modules。
         "allowSyntheticDefaultImports": true, // 允许无默认导出的模块使用 import x from 'y'（仅类型检查）
         "emitDecoratorMetadata": true, // 为装饰器（如 NestJS、TypeORM 中的 @Entity()）生成元数据
         "experimentalDecorators": true,
@@ -21,7 +21,6 @@
             "node",
             "jest"
         ],
-        "baseUrl": "./src",
     },
     "include": [
         "src/**/*"

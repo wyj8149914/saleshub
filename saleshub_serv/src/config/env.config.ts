@@ -15,7 +15,8 @@ function getAppConfig() {
         'MINIO_ENDPOINT', 'MINIO_PORT', 'MINIO_ACCESS_KEY', 'MINIO_SECRET_KEY', 'MINIO_PUBLIC_BUCKET', 'MINIO_URL',
         'JWT_SECRET', 'JWT_EXPIRES_IN', 'REFRESH_TOKEN_EXPIRES_IN',
         'DB_AES_KEY', 'DB_AES_SALT', 'DB_ALGORITHM',
-        'API_PREFIX'
+        'API_PREFIX',
+        'INVOICE_OCR_URL',
     ];
 
     for (const envVar of requiredEnvVars) {
@@ -105,7 +106,8 @@ function getAppConfig() {
             maxCompanyMembers: parseInt(process.env.MAX_COMPANY_MEMBERS!, 10),
             inviteExpireDays: parseInt(process.env.INVITE_EXPIRE_DAYS!, 10),
         },
-        publicPath: ['/saleshub/user/login', '/saleshub/user/refresh']
+        publicPath: ['/saleshub/user/login', '/saleshub/user/refresh'],
+        invoiceOcrUrl: process.env.INVOICE_OCR_URL!,
     };
 }
 

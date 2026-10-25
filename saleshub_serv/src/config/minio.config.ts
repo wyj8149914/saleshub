@@ -70,3 +70,13 @@ export async function deleteFile(bucket: string, objectName: string): Promise<vo
         throw error;
     }
 }
+
+// 获取文件内容 Buffer
+export async function getFileBuffer(bucket: string, objectName: string): Promise<Buffer> {
+    const stream = await minioClient.getObject(bucket, objectName);
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+        chunks.push(chunk as Buffer);
+    }
+    return Buffer.concat(chunks);
+}
