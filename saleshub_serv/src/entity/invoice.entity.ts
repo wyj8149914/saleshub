@@ -1,4 +1,5 @@
 import { Entity, Column, PrimaryColumn } from 'typeorm';
+import { MixedInvoiceItem } from '../interface/orc.interface';
 
 /**
  * 发票识别结果实体

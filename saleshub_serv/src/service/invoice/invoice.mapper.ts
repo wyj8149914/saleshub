@@ -1,4 +1,5 @@
 import { Invoice } from '../../entity/invoice.entity';
+import { MixedInvoiceItem } from '../../interface/orc.interface';
 
 /** 增值税发票类 SubType,对应 SingleInvoiceInfos 中的 VatInvoiceInfo 结构 */
 const VAT_INVOICE_SUBTYPES = [

@@ -445,7 +445,7 @@ interface ElectronicTrainTicketFull {
     IDInfo: string | null;
 }
 
-interface MixedInvoiceItem {
+export interface MixedInvoiceItem {
     // OK：表示识别成功；FailedOperation.UnsupportedInvoice：表示不支持识别；FailedOperation.UnKnowError：表示识别失败；其它错误码见各个票据接口的定义。
     Code: string;
     //识别出的图片所属的票据类型。 -1：未知类型 0：出租车发票1：定额发票 2：火车票 3：增值税发票 5：机票行程单 8：通用机打发票 9：汽车票 10：轮船票
@@ -465,14 +465,14 @@ interface MixedInvoiceItem {
 }
 
 /** 通用票据识别返回的单个字段信息 */
-interface OrcResponse {
+export interface OrcResponse {
     MixedInvoiceItems: MixedInvoiceItem[]; // 识别结果
     TotalPDFCount: number; // PDF文件总页码
     RequestId: string; // 请求ID
 }
 
 /** SubType和 SingleInvoiceInfos类型映射关系 */
-const invoieType = {
+export const InvoiceType = {
     VatSpecialInvoice: 'VatInvoiceInfo',
     VatCommonInvoice: 'VatInvoiceInfo',
     VatElectronicCommonInvoice: 'VatInvoiceInfo',

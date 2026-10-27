@@ -1,0 +1,307 @@
+{
+    "/saleshub/invoice/upload": {
+        "method": "POST",
+        "summary": "单文件上传并识别发票",
+        "description": "上传一张图片或 PDF，先存入 MinIO 并在 public.minio_file 登记（SHA-256 去重，逻辑同 /saleshub/file/upload），再调用腾讯云混合发票识别并写入 inventory.invoice。请求体为 multipart/form-data（非 JSON）。字段 file 必填，单文件，最大 5MB，仅支持 image/* 或 application/pdf。user_id、invoice_nature、invoice_purpose 为表单文本字段且必填。同一文件（如多页 PDF）可识别出多张发票，每张各存一条记录；发票号码唯一，重复识别不重复入库，已有记录进入 datas.existed。识别或 OCR 调用失败时仍保留已上传文件，datas.relation_id 可供后续关联。文件类型不符时 HTTP 400，result=9001，msg 为「仅支持图片或PDF文件」。未选文件、超过 5MB、表单字段校验失败时 result=1。MinIO 上传失败时 result=1 且无 datas。OCR 未识别到发票时 result=1、msg 为「未识别到发票」，datas 仍返回 relation_id 与空列表。识别流程完成（含部分发票失败）时 result=0、msg 为「识别完成」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "description": "Content-Type: multipart/form-data（非 application/json）",
+            "properties": {
+                "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "待识别文件，表单字段名必须为 file，单文件，最大 5MB，仅支持图片或 PDF"
+                },
+                "user_id": {
+                    "type": "string",
+                    "description": "识别用户 ID，最长 32 字符"
+                },
+                "invoice_nature": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "description": "发票性质：1-实开，2-进项抵扣"
+                },
+                "invoice_purpose": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5
+                    ],
+                    "description": "发票用途：1-办公资产费，2-差旅费，3-成本费，4-接待费，5-快递费"
+                }
+            },
+            "required": [
+                "file",
+                "user_id",
+                "invoice_nature",
+                "invoice_purpose"
+            ]
+        },
+        "example_request": {
+            "_note": "实际为 multipart/form-data。curl 示例：curl -F \"file=@invoice.pdf\" -F \"user_id=用户ID\" -F \"invoice_nature=1\" -F \"invoice_purpose=2\" http://host/saleshub/invoice/upload",
+            "file": "<binary>",
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "invoice_nature": 1,
+            "invoice_purpose": 2
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-识别流程完成，1-未选文件、超大小、参数错误、文件上传失败、未识别到发票或 OCR 调用失败；文件类型不符时 HTTP 400 且 result=9001"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「识别完成」「请选择要上传的文件」「单个文件大小不能超过5MB」「请通过 file 字段上传文件」「用户ID不能为空」「发票性质只能为1-实开或2-进项抵扣」「未识别到发票」「识别失败」"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "文件已入库后返回。MinIO 上传失败时无此字段",
+                    "properties": {
+                        "relation_id": {
+                            "type": "string",
+                            "description": "原始文件 ID（minio_file.relation_id，32 位无连字符），写入 invoice.file_id"
+                        },
+                        "invoices": {
+                            "type": "array",
+                            "description": "本次新入库的发票",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "invoice_id": {
+                                        "type": "string",
+                                        "description": "发票主键 UUID（无连字符，32 位）"
+                                    },
+                                    "invoice_number": {
+                                        "type": "string",
+                                        "description": "发票号码"
+                                    },
+                                    "sub_type_desc": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "发票详细类型描述，可能为 null"
+                                    },
+                                    "total_amount": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "价税合计，数字字符串（如 478.00），可能为 null"
+                                    },
+                                    "is_duplicate": {
+                                        "type": "boolean",
+                                        "description": "本数组中恒为 false"
+                                    }
+                                }
+                            }
+                        },
+                        "existed": {
+                            "type": "array",
+                            "description": "发票号码已存在、未重复入库的记录",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "invoice_id": {
+                                        "type": "string",
+                                        "description": "已有发票主键"
+                                    },
+                                    "invoice_number": {
+                                        "type": "string",
+                                        "description": "发票号码"
+                                    },
+                                    "sub_type_desc": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "发票详细类型描述"
+                                    },
+                                    "total_amount": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "价税合计"
+                                    },
+                                    "is_duplicate": {
+                                        "type": "boolean",
+                                        "description": "本数组中恒为 true"
+                                    }
+                                }
+                            }
+                        },
+                        "failed": {
+                            "type": "array",
+                            "description": "单张识别、字段解析或入库失败的发票，不影响同文件其他发票",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "page": {
+                                        "type": "number",
+                                        "description": "所在页码，从 1 开始"
+                                    },
+                                    "sub_type": {
+                                        "type": "string",
+                                        "description": "腾讯云 SubType，如 VatElectronicInvoiceFull"
+                                    },
+                                    "msg": {
+                                        "type": "string",
+                                        "description": "失败原因，如「识别失败:FailedOperation.xxx」「发票字段解析失败」「入库失败」"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/invoice/uploadBatch": {
+        "method": "POST",
+        "summary": "批量上传并识别发票",
+        "description": "一次提交多个图片或 PDF（表单字段名 files，最多 50 个），服务端最多 4 路并发逐文件执行与 /upload 相同的存文件加识别入库流程。单个文件失败不影响其他文件。所有文件共用同一组 user_id、invoice_nature、invoice_purpose。单文件最大 5MB。类型不符的文件不中断请求，作为失败条目并入 datas.results（relation_id 为 null，msg 为「仅支持图片或PDF文件」）。只要请求里有文件（含全部被类型过滤），整体 result 恒为 0、msg 为「识别完成」，成败看每条 result 以及 success_count、fail_count。未选择任何文件时 result=1、msg 为「请选择要上传的文件」。超过 50 个文件时 result=1、msg 为「单次最多上传50个文件」。超过 5MB 时整单失败，msg 为「单个文件大小不能超过5MB」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "description": "Content-Type: multipart/form-data（非 application/json）",
+            "properties": {
+                "files": {
+                    "type": "array",
+                    "description": "待识别文件列表，表单字段名必须为 files，可重复追加，最多 50 个，每个最大 5MB",
+                    "items": {
+                        "type": "string",
+                        "format": "binary"
+                    }
+                },
+                "user_id": {
+                    "type": "string",
+                    "description": "识别用户 ID，所有文件共用"
+                },
+                "invoice_nature": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "description": "发票性质：1-实开，2-进项抵扣，所有文件共用"
+                },
+                "invoice_purpose": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5
+                    ],
+                    "description": "发票用途：1-办公资产费，2-差旅费，3-成本费，4-接待费，5-快递费，所有文件共用"
+                }
+            },
+            "required": [
+                "files",
+                "user_id",
+                "invoice_nature",
+                "invoice_purpose"
+            ]
+        },
+        "example_request": {
+            "_note": "实际为 multipart/form-data。curl 示例：curl -F \"files=@a.pdf\" -F \"files=@b.jpg\" -F \"user_id=用户ID\" -F \"invoice_nature=2\" -F \"invoice_purpose=3\" http://host/saleshub/invoice/uploadBatch",
+            "files": [
+                "<binary>",
+                "<binary>"
+            ],
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "invoice_nature": 2,
+            "invoice_purpose": 3
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "整单结果码：0-已处理（含部分文件失败），1-未选文件、超过数量或大小、参数校验失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "整单提示，成功处理时为「识别完成」"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "逐文件结果与汇总。整单失败时无此字段",
+                    "properties": {
+                        "results": {
+                            "type": "array",
+                            "description": "逐文件结果。类型被拒绝的文件排在前面，其后为实际上传文件，顺序与提交顺序一致",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "original_name": {
+                                        "type": "string",
+                                        "description": "原始文件名（服务端已按 UTF-8 修正 multipart 中文乱码）"
+                                    },
+                                    "relation_id": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "MinIO 文件 ID。类型不符、上传前异常或未产生文件时为 null"
+                                    },
+                                    "result": {
+                                        "type": "number",
+                                        "description": "该文件结果码：0-识别流程完成，1-失败"
+                                    },
+                                    "msg": {
+                                        "type": "string",
+                                        "description": "该文件提示，如「识别完成」「未识别到发票」「识别失败」「仅支持图片或PDF文件」「处理异常」"
+                                    },
+                                    "datas": {
+                                        "type": "object",
+                                        "description": "该文件的发票明细。类型不符或处理异常时可能没有此字段",
+                                        "properties": {
+                                            "invoices": {
+                                                "type": "array",
+                                                "description": "本次新入库的发票，结构同 /upload 的 invoices"
+                                            },
+                                            "existed": {
+                                                "type": "array",
+                                                "description": "已存在的发票，结构同 /upload 的 existed"
+                                            },
+                                            "failed": {
+                                                "type": "array",
+                                                "description": "单张失败信息，结构同 /upload 的 failed"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "total": {
+                            "type": "number",
+                            "description": "结果条数，含类型被拒绝的文件"
+                        },
+                        "success_count": {
+                            "type": "number",
+                            "description": "result=0 的文件数（类型被拒绝的不计入）"
+                        },
+                        "fail_count": {
+                            "type": "number",
+                            "description": "result=1 的文件数，含类型被拒绝的文件"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
