@@ -3,9 +3,7 @@
         "target": "ES2020", // 指定编译输出的 JS 语法标准。TS 会将新语法降级至 ES2020
         "module": "nodenext", //指定模块系统规范。输出 require/module.exports 格式
         "moduleResolution": "nodenext", // 模块解析策略。按 Node.js 规则查找 node_modules。
-        "lib": [
-            "ES2020"
-        ], // 指定编译时包含的内置类型库（如 Array.prototype.flat、Promise 等）
+        "lib": ["ES2020"], // 指定编译时包含的内置类型库（如 Array.prototype.flat、Promise 等）
         "outDir": "./dist", // 指定编译后输出文件的目录
         "rootDir": "./src", // 指定源文件的根目录
         "strict": true, // 启用所有严格的类型检查选项
@@ -17,17 +15,8 @@
         "emitDecoratorMetadata": true, // 为装饰器（如 NestJS、TypeORM 中的 @Entity()）生成元数据
         "experimentalDecorators": true,
         "strictPropertyInitialization": false, // 关闭类属性必须在构造函数中初始化的检查
-        "types": [
-            "node",
-            "jest"
-        ],
+        "types": ["node", "jest"]
     },
-    "include": [
-        "src/**/*"
-    ],
-    "exclude": [
-        "node_modules",
-        "dist",
-        "**/*.test.ts"
-    ]
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist"]
 }

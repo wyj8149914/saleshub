@@ -102,7 +102,11 @@ class InvoiceOcrService {
                 { timeout: 60_000 }
             );
             const ocrResponse = response.data;
-            const items = ocrResponse?.MixedInvoiceItems ?? [];
+            if (ocrResponse.result !== 0) {
+                return { result: 1, msg: ocrResponse.msg };
+            }
+            this.logger.info('OCR识别结果:', ocrResponse);
+            const items = ocrResponse.datas.MixedInvoiceItems ?? [];
             if (items.length === 0) {
                 this.logger.warn('OCR未识别到发票:', { file_id: dto.file_id });
                 return { result: 1, msg: '未识别到发票' };
@@ -148,7 +152,7 @@ class InvoiceOcrService {
                 // 业务属性:发票性质/用途由上传方指定
                 invoice.invoice_nature = dto.invoice_nature;
                 invoice.invoice_purpose = dto.invoice_purpose;
-                invoice.ocr_request_id = ocrResponse.RequestId;
+                invoice.ocr_request_id = ocrResponse.datas.RequestId;
                 invoice.ocr_code = item.Code;
                 invoice.status = 1;
                 invoice.create_time = now;

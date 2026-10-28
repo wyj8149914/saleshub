@@ -1,10 +1,10 @@
 {
     "name": "card-backend-node",
     "version": "1.0.0",
-    "description": "电子名片系统 - Node.js后端服务",
+    "description": "库存销售管理统 - Node.js后端服务",
     "main": "dist/server.js",
     "scripts": {
-        "build": "tsc",
+        "build": "tsc -p tsconfig.build.json",
         "start:dev": "cross-env NODE_ENV=development node dist/server.js",
         "start:pro": "cross-env NODE_ENV=production node dist/server.js",
         "dev": "cross-env NODE_ENV=development ts-node src/server.ts",

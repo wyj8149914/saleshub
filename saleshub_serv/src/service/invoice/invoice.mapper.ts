@@ -1,5 +1,10 @@
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { Invoice } from '../../entity/invoice.entity';
 import { MixedInvoiceItem } from '../../interface/orc.interface';
+
+// 启用自定义格式解析,支持「2026年07月27日」格式的开票日期
+dayjs.extend(customParseFormat);
 
 /** 增值税发票类 SubType,对应 SingleInvoiceInfos 中的 VatInvoiceInfo 结构 */
 const VAT_INVOICE_SUBTYPES = [
@@ -29,7 +34,7 @@ function s(value: unknown): string | null {
 /** 金额清洗:仅保留合法数字字符串(如 "478.00"),非法返回 null */
 function n(value: unknown): string | null {
     const str = String(value);
-    return str !== null && /^-?\d+(\.\d+)?$/.test(str) ? str : null;
+    return /^-?\d+(\.\d+)?$/.test(str) ? str : null;
 }
 
 /**
@@ -60,7 +65,7 @@ export function mapInvoiceItem(item: MixedInvoiceItem) {
         invoice.title = s(info.Title);
         invoice.invoice_code = s(info.Code);
         invoice.invoice_number = s(info.Number) ?? '';
-        invoice.invoice_date = s(info.Date);
+        invoice.invoice_date = s(info.Date) ? dayjs(s(info.Date), 'YYYY年MM月DD日').toDate() : null;
         invoice.pretax_amount = n(info.PretaxAmount);
         invoice.tax_amount = n(info.Tax);
         invoice.total_amount = n(info.Total);
@@ -77,7 +82,7 @@ export function mapInvoiceItem(item: MixedInvoiceItem) {
         invoice.title = s(info.Title);
         invoice.invoice_code = null;
         invoice.invoice_number = s(info.Number) ?? '';
-        invoice.invoice_date = s(info.Date);
+        invoice.invoice_date = s(info.Date) ? dayjs(s(info.Date), 'YYYY年MM月DD日').toDate() : null;
         invoice.pretax_amount = n(info.PretaxAmount);
         invoice.tax_amount = n(info.Tax);
         invoice.total_amount = n(info.Total);
@@ -94,7 +99,7 @@ export function mapInvoiceItem(item: MixedInvoiceItem) {
         invoice.title = s(info.Title);
         invoice.invoice_code = null;
         invoice.invoice_number = s(info.Number) ?? '';
-        invoice.invoice_date = s(info.Date);
+        invoice.invoice_date = s(info.Date) ? dayjs(s(info.Date), 'YYYY年MM月DD日').toDate() : null;
         invoice.pretax_amount = n(info.Fare);
         invoice.tax_amount = n(info.Tax);
         invoice.total_amount = n(info.Total);
@@ -111,7 +116,7 @@ export function mapInvoiceItem(item: MixedInvoiceItem) {
         invoice.title = s(info.TypeOfVoucher);
         invoice.invoice_code = null;
         invoice.invoice_number = s(info.Number) ?? '';
-        invoice.invoice_date = s(info.Date);
+        invoice.invoice_date = s(info.Date) ? dayjs(s(info.Date), 'YYYY年MM月DD日').toDate() : null;
         invoice.pretax_amount = null;
         invoice.tax_amount = null;
         invoice.total_amount = n(info.Total) ?? n(info.Fare);
@@ -128,7 +133,7 @@ export function mapInvoiceItem(item: MixedInvoiceItem) {
         invoice.title = s(info.TypeOfVoucher);
         invoice.invoice_code = null;
         invoice.invoice_number = s(info.Number) ?? '';
-        invoice.invoice_date = s(info.Date);
+        invoice.invoice_date = s(info.Date) ? dayjs(s(info.Date), 'YYYY年MM月DD日').toDate() : null;
         invoice.pretax_amount = n(info.Fare);
         invoice.tax_amount = n(info.Tax);
         invoice.total_amount = n(info.Total);

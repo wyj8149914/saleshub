@@ -466,9 +466,13 @@ export interface MixedInvoiceItem {
 
 /** 通用票据识别返回的单个字段信息 */
 export interface OrcResponse {
-    MixedInvoiceItems: MixedInvoiceItem[]; // 识别结果
-    TotalPDFCount: number; // PDF文件总页码
-    RequestId: string; // 请求ID
+    result: number;
+    msg: string;
+    datas: {
+        MixedInvoiceItems: MixedInvoiceItem[]; // 识别结果
+        TotalPDFCount: number; // PDF文件总页码
+        RequestId: string; // 请求ID
+    };
 }
 
 /** SubType和 SingleInvoiceInfos类型映射关系 */

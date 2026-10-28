@@ -69,7 +69,7 @@ export class Invoice {
         nullable: true,
         comment: '开票日期(原始格式,如2026年09月09日)',
     })
-    invoice_date: string | null;
+    invoice_date: Date | null;
 
     @Column({ type: 'numeric', precision: 12, scale: 2, nullable: true, comment: '税前金额' })
     pretax_amount: string | null;
