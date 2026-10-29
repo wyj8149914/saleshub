@@ -64,6 +64,39 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/finance',
+    component: () => import('@/layouts/DefaultLayout.vue'),
+    redirect: '/finance/invoice',
+    meta: { requiresAuth: true, title: '业财管理' },
+    children: [
+      {
+        path: 'invoice',
+        name: 'InvoiceList',
+        component: () => import('@/views/finance/InvoiceList.vue'),
+        meta: { title: '发票管理' },
+      },
+      {
+        // 发票源文件查看页:从发票详情抽屉「查看源文件」进入
+        path: 'invoice/:invoiceId/file',
+        name: 'InvoiceFileViewer',
+        component: () => import('@/views/finance/InvoiceFileViewer.vue'),
+        meta: { title: '发票源文件' },
+      },
+      {
+        path: 'expense',
+        name: 'ExpenseList',
+        component: () => import('@/views/finance/ExpenseList.vue'),
+        meta: { title: '支出费用' },
+      },
+      {
+        path: 'sales-order',
+        name: 'SalesOrderList',
+        component: () => import('@/views/finance/SalesOrderList.vue'),
+        meta: { title: '销售订单' },
+      },
+    ],
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('@/views/NotFound.vue'),
