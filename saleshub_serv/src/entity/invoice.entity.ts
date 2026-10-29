@@ -146,4 +146,7 @@ export class Invoice {
 
     @Column({ type: 'timestamp', comment: '更新时间' })
     update_time: Date;
+
+    @Column({ type: 'varchar', length: 50, nullable: true, comment: '标签' })
+    tag: string | null;
 }

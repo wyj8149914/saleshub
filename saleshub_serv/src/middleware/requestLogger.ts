@@ -24,6 +24,14 @@ function resolveRequestId(req: Request): string {
 }
 
 /**
+ * express.json / urlencoded 不解析 multipart,req.body 要等路由上的 multer 执行后才有文本字段
+ */
+function isMultipartFormData(req: Request): boolean {
+    const contentType = req.get('content-type') ?? '';
+    return contentType.toLowerCase().includes('multipart/form-data');
+}
+
+/**
  * @description: 路由前中间件,主要用来参数解密,记录请求日志,上报监控
  * @param {*} req
  * @param {*} res
@@ -48,8 +56,13 @@ export async function requestLogger(
             res.locals.employeeId = req.query.employeeId;
         }
 
+        // multipart 由路由 multer 解析,此处 req.body 尚未生成,且 multer 会重建 req.body
+        const multipart = isMultipartFormData(req);
+
         // 如果dntEncrypt为true,则不需要解密
-        if (dntEncrypt) {
+        if (multipart) {
+            logger.info('Post请求为 multipart/form-data,表单字段由路由 multer 解析后再记录');
+        } else if (dntEncrypt) {
             if (req.method === 'POST') {
                 try {
                     req.body = req.body.datas ? req.body.datas : req.body;
@@ -113,16 +126,31 @@ export async function requestLogger(
 
         // 请求日志记录
         const start = Date.now();
-        const reqData =
-            JSON.stringify(req.body) === '{}'
-                ? JSON.stringify(req.query)
-                : JSON.stringify(req.body);
-        const logData = filterBase64Data(reqData);
-        logger.info(`Request Started: ${req.method} ${req.originalUrl} - RequestData: ${logData}`);
+        if (multipart) {
+            // 此时流还未被 multer 消费,body 为空;字段在响应结束时再记
+            logger.info(
+                `Request Started: ${req.method} ${req.originalUrl} - RequestData: multipart/form-data`
+            );
+        } else {
+            const reqData =
+                JSON.stringify(req.body) === '{}'
+                    ? JSON.stringify(req.query)
+                    : JSON.stringify(req.body);
+            const logData = filterBase64Data(reqData);
+            logger.info(
+                `Request Started: ${req.method} ${req.originalUrl} - RequestData: ${logData}`
+            );
+        }
 
         // 响应完成记录日志
         res.on('finish', () => {
             const duration = Date.now() - start;
+            if (multipart) {
+                const requestData = JSON.stringify(req.body);
+                logger.info(
+                    `Request Params: ${req.method} ${req.originalUrl} - RequestData: ${requestData}`
+                );
+            }
             const result = res.locals.datas;
             const dntLog = res.locals.dntLog;
 

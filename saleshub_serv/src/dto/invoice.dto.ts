@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { PageDto } from './base.dto';
 
 /**
  * 发票OCR识别请求DTO
@@ -20,6 +21,10 @@ export class InvoiceOcrDto {
     @IsString()
     @IsOptional()
     biz_id?: string;
+
+    @IsString()
+    @IsOptional()
+    tag?: string;
 
     /** 发票性质:1-实开,2-进项抵扣(可选,不传则入库留空) */
     @Type(() => Number)
@@ -48,6 +53,18 @@ export class InvoiceUploadDto {
     @IsNotEmpty({ message: '用户ID不能为空' })
     user_id: string;
 
+    @IsString()
+    @IsOptional()
+    tag?: string;
+
+    @IsString()
+    @IsOptional()
+    biz_type?: string;
+
+    @IsString()
+    @IsOptional()
+    biz_id?: string;
+
     /** 发票性质:1-实开,2-进项抵扣 */
     @Type(() => Number)
     @IsInt()
@@ -61,4 +78,60 @@ export class InvoiceUploadDto {
         message: '发票用途只能为1-办公资产费,2-差旅费,3-成本费,4-接待费,5-快递费',
     })
     invoice_purpose: number;
+}
+
+/**
+ * 发票列表查询DTO(GET /invoice/list,Query 参数)
+ *
+ * 不按用户过滤,查询全部正常状态发票;筛选条件均可选
+ */
+export class ListInvoiceDto extends PageDto {
+    /** 发票性质:1-实开,2-进项抵扣(可选,不传则不过滤) */
+    @Type(() => Number)
+    @IsInt()
+    @IsIn([1, 2], { message: '发票性质只能为1-实开或2-进项抵扣' })
+    @IsOptional()
+    invoice_nature: number;
+
+    /** 发票用途:1-办公资产费,2-差旅费,3-成本费,4-接待费,5-快递费(可选,不传则不过滤) */
+    @Type(() => Number)
+    @IsInt()
+    @IsIn([1, 2, 3, 4, 5], {
+        message: '发票用途只能为1-办公资产费,2-差旅费,3-成本费,4-接待费,5-快递费',
+    })
+    @IsOptional()
+    invoice_purpose: number;
+
+    /** 开票日期起(含),格式 YYYY-MM-DD(可选) */
+    @IsString()
+    @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '开票日期起格式必须为YYYY-MM-DD' })
+    @IsOptional()
+    start_date: string;
+
+    /** 开票日期止(含),格式 YYYY-MM-DD(可选) */
+    @IsString()
+    @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '开票日期止格式必须为YYYY-MM-DD' })
+    @IsOptional()
+    end_date: string;
+
+    /** 关键字,对发票号码/销售方名称/购买方名称模糊匹配(可选) */
+    @IsString()
+    @MaxLength(100, { message: '关键字长度不能超过100' })
+    @IsOptional()
+    keyword: string;
+
+    /** 标签,对标签模糊匹配(可选) */
+    @IsString()
+    @MaxLength(50, { message: '标签长度不能超过50' })
+    @IsOptional()
+    tag: string;
+}
+
+/**
+ * 发票详情请求DTO(GET /invoice/detail,Query 参数)
+ */
+export class InvoiceIdDto {
+    @IsString()
+    @IsNotEmpty({ message: '发票ID不能为空' })
+    invoice_id: string;
 }

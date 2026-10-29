@@ -80,7 +80,7 @@ export interface InvoiceBatchDatas {
     fail_count: number;
 }
 
-class InvoiceOcrService {
+export class InvoiceOcrService {
     private invoiceRepository = AppDataSource.getRepository(Invoice);
     private logger = getLogger('INVOICE_SERV');
 
@@ -148,6 +148,9 @@ class InvoiceOcrService {
                 }
                 if (dto.biz_id) {
                     invoice.biz_id = dto.biz_id;
+                }
+                if (dto.tag) {
+                    invoice.tag = dto.tag;
                 }
                 // 业务属性:发票性质/用途由上传方指定
                 invoice.invoice_nature = dto.invoice_nature;
@@ -218,6 +221,7 @@ class InvoiceOcrService {
             user_id: dto.user_id,
             invoice_nature: dto.invoice_nature,
             invoice_purpose: dto.invoice_purpose,
+            tag: dto.tag,
         });
 
         // 附加 relation_id 供前端关联原始文件;识别失败时下发空列表保持结构一致
@@ -337,5 +341,3 @@ class InvoiceOcrService {
         }
     }
 }
-
-export const invoiceOcrService = new InvoiceOcrService();
