@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS inventory.sales_order (
     user_id VARCHAR(32) NOT NULL,
     create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    contract_file_id VARCHAR(32),
     CONSTRAINT pk_sales_order PRIMARY KEY (order_id),
     CONSTRAINT uk_sales_order_no UNIQUE (order_no),
     CONSTRAINT chk_sales_order_amount CHECK (amount >= 0),
@@ -46,6 +47,7 @@ COMMENT ON COLUMN inventory.sales_order.remark IS '备注';
 COMMENT ON COLUMN inventory.sales_order.user_id IS '创建人用户ID';
 COMMENT ON COLUMN inventory.sales_order.create_time IS '创建时间';
 COMMENT ON COLUMN inventory.sales_order.update_time IS '更新时间';
+COMMENT ON COLUMN inventory.sales_order.contract_file_id IS '合同文件ID(minio_file.relation_id)';
 
 -- 常用查询索引
 CREATE INDEX IF NOT EXISTS idx_sales_order_user_id ON inventory.sales_order (user_id);

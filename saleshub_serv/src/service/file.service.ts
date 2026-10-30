@@ -6,6 +6,7 @@ import { AppDataSource } from '../config/database.config';
 import { minioConfig, uploadFile, deleteFile, generateFileUrl } from '../config/minio.config';
 import { MinioFile } from '../entity/file.entity';
 import { getLogger } from '../utils/logger.util';
+import dayjs from 'dayjs';
 
 interface UploadFileInput {
     buffer: Buffer;
@@ -63,7 +64,8 @@ class FileService {
             }
 
             const ext = path.extname(file.originalname).slice(1);
-            const objectName = `${hash.slice(0, 2)}/${hash}${ext ? '.' + ext : ''}`;
+            const dateString = dayjs().format('YYYYMM');
+            const objectName = `${dateString}/${hash}${ext ? '.' + ext : ''}`;
             const bucket = minioConfig.bucket;
 
             await uploadFile(bucket, objectName, file.buffer, { 'Content-Type': file.mimetype });

@@ -4,7 +4,12 @@ import { plainToInstance } from 'class-transformer';
 import { validationMiddleware } from '../middleware/paramsValidator';
 import { asyncHandler } from '../middleware/errorHandler.middleware';
 import { BadRequestError } from '../utils/error.util';
-import { InvoiceUploadDto, ListInvoiceDto, InvoiceIdDto } from '../dto/invoice.dto';
+import {
+    InvoiceUploadDto,
+    ListInvoiceDto,
+    InvoiceIdDto,
+    TaxFileInvoiceDto,
+} from '../dto/invoice.dto';
 import { ocrService, UploadFileItem, invoiceService } from '../service/invoice';
 
 const router = Router();
@@ -175,7 +180,8 @@ router.post(
  * GET /list
  * 分页查询发票列表:不按用户过滤,只查正常状态发票
  * Query: pageIndex/pageSize-分页(必填), invoice_nature-发票性质, invoice_purpose-发票用途,
- *       start_date/end_date-开票日期区间(含当天,YYYY-MM-DD), keyword-关键字(发票号码/销售方/购买方模糊)
+ *       is_tax_filed-报税状态(1-未报税/2-已报税), start_date/end_date-开票日期区间(含当天,YYYY-MM-DD),
+ *       keyword-关键字(发票号码/销售方/购买方模糊)
  */
 router.get(
     '/list',
@@ -199,6 +205,24 @@ router.get(
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dto = plainToInstance(InvoiceIdDto, req.query);
         const result = await invoiceService.detail(dto);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+/**
+ * POST /taxFile
+ * 批量报税/取消报税:列表多选发票后一次性设置报税状态
+ * Body: invoice_ids-发票ID列表(1~200个), is_tax_filed-目标报税状态(1-未报税/2-已报税),
+ *       user_id-操作人用户ID
+ */
+router.post(
+    '/taxFile',
+    validationMiddleware(TaxFileInvoiceDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        // validationMiddleware 已将校验通过的 DTO 回写到 req.body
+        const dto = req.body as TaxFileInvoiceDto;
+        const result = await invoiceService.taxFile(dto);
         res.locals.datas = result;
         next();
     })

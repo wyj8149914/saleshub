@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import { Invoice } from '../../entity/invoice.entity';
+import { Invoice } from '../../entity/finance.entity';
 import { MixedInvoiceItem } from '../../interface/orc.interface';
 
 // 启用自定义格式解析,支持「2026年07月27日」格式的开票日期

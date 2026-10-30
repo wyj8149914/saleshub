@@ -307,7 +307,7 @@
     "/saleshub/invoice/list": {
         "method": "GET",
         "summary": "发票列表",
-        "description": "分页查询全部正常状态（status=1）的发票，不按用户过滤。支持筛选：发票性质 invoice_nature（精确）、发票用途 invoice_purpose（精确）、开票日期区间 start_date/end_date（YYYY-MM-DD，均含当天）、关键字 keyword（对发票号码、销售方名称、购买方名称模糊匹配，任一命中即返回）。按 create_time 降序。列表仅返回轻量票面字段，不含明细 items 等大字段；需要完整信息（含明细与原始文件地址）请调用 /saleshub/invoice/detail。",
+        "description": "分页查询全部正常状态（status=1）的发票，不按用户过滤。支持筛选：发票性质 invoice_nature（精确）、发票用途 invoice_purpose（精确）、报税状态 is_tax_filed（精确：1-未报税，2-已报税）、标签 tag（模糊匹配）、开票日期区间 start_date/end_date（YYYY-MM-DD，均含当天）、关键字 keyword（对发票号码、销售方名称、购买方名称模糊匹配，任一命中即返回）。按 create_time 降序。列表仅返回轻量票面字段，不含明细 items 等大字段；需要完整信息（含明细与原始文件地址）请调用 /saleshub/invoice/detail。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -339,6 +339,14 @@
                     ],
                     "description": "发票用途：1-办公资产费，2-差旅费，3-成本费，4-接待费，5-快递费（Query 参数，可选）"
                 },
+                "is_tax_filed": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "description": "报税状态：1-未报税，2-已报税（Query 参数，可选）"
+                },
                 "start_date": {
                     "type": "string",
                     "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
@@ -353,6 +361,11 @@
                     "type": "string",
                     "maxLength": 100,
                     "description": "关键字，对发票号码/销售方名称/购买方名称模糊匹配（Query 参数，可选）"
+                },
+                "tag": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "标签，对标签模糊匹配（Query 参数，可选）"
                 }
             },
             "required": [
@@ -365,9 +378,11 @@
             "pageSize": 10,
             "invoice_nature": 1,
             "invoice_purpose": 2,
+            "is_tax_filed": 1,
             "start_date": "2026-01-01",
             "end_date": "2026-01-31",
-            "keyword": "办公用品"
+            "keyword": "办公用品",
+            "tag": "办公用品"
         },
         "response_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
@@ -398,6 +413,13 @@
                                     "invoice_id": {
                                         "type": "string",
                                         "description": "发票主键 UUID（无连字符，32 位）"
+                                    },
+                                    "tag": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "标签，可能为 null"
                                     },
                                     "user_id": {
                                         "type": "string",
@@ -496,13 +518,31 @@
                                         ],
                                         "description": "发票用途：1-办公资产费，2-差旅费，3-成本费，4-接待费，5-快递费，可能为 null"
                                     },
+                                    "is_tax_filed": {
+                                        "type": "number",
+                                        "description": "是否报税：1-未报税，2-已报税（识别导入默认为 1-未报税）"
+                                    },
+                                    "tax_filed_time": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "报税时间，YYYY-MM-DD HH24:MI:SS 格式字符串，未报税或已取消报税时为 null"
+                                    },
+                                    "tax_filed_by": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "报税操作人用户 ID，未报税或已取消报税时为 null"
+                                    },
                                     "status": {
                                         "type": "number",
                                         "description": "状态：1-正常"
                                     },
                                     "create_time": {
                                         "type": "string",
-                                        "description": "入库时间，ISO 日期时间字符串"
+                                        "description": "入库时间，YYYY-MM-DD HH24:MI:SS 格式字符串"
                                     }
                                 }
                             }
@@ -515,7 +555,7 @@
     "/saleshub/invoice/detail": {
         "method": "GET",
         "summary": "发票详情",
-        "description": "按 invoice_id 查询单张发票的完整信息。仅 status=1 的发票可查，不存在或已作废时 result=1、msg 为「发票不存在」。返回全部票面字段、明细条目 items 及原始发票文件预览地址 file_url（通过 file_id 关联 minio_file 生成，文件缺失时为空字符串）；不含识别明细 detail、原始识别结果 raw_response、OCR 请求号 ocr_request_id 与 OCR 错误码 ocr_code。",
+        "description": "按 invoice_id 查询单张发票的完整信息。仅 status=1 的发票可查，不存在或已作废时 result=1、msg 为「发票不存在」。返回全部票面字段、报税状态字段、明细条目 items 及原始发票文件预览地址 file_url（通过 file_id 关联 minio_file 生成，文件缺失时为空字符串）；不含识别明细 detail、原始识别结果 raw_response、OCR 请求号 ocr_request_id 与 OCR 错误码 ocr_code。",
         "request_body": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "type": "object",
@@ -551,6 +591,13 @@
                         "invoice_id": {
                             "type": "string",
                             "description": "发票主键 UUID（无连字符，32 位）"
+                        },
+                        "tag": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "标签，可能为 null"
                         },
                         "user_id": {
                             "type": "string",
@@ -705,6 +752,24 @@
                             ],
                             "description": "发票用途：1-办公资产费，2-差旅费，3-成本费，4-接待费，5-快递费，可能为 null"
                         },
+                        "is_tax_filed": {
+                            "type": "number",
+                            "description": "是否报税：1-未报税，2-已报税（识别导入默认为 1-未报税）"
+                        },
+                        "tax_filed_time": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "报税时间，ISO 日期时间字符串，未报税或已取消报税时为 null"
+                        },
+                        "tax_filed_by": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "报税操作人用户 ID，未报税或已取消报税时为 null"
+                        },
                         "items": {
                             "type": [
                                 "array",
@@ -727,6 +792,75 @@
                         "file_url": {
                             "type": "string",
                             "description": "原始发票文件（图片/PDF）预览地址；原始文件缺失时为空字符串"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/invoice/taxFile": {
+        "method": "POST",
+        "summary": "批量报税/取消报税",
+        "description": "列表多选发票后批量设置报税状态。先校验后更新：任一发票不符合条件（不存在/已作废，或已处于目标报税状态）时整批拒绝，不做任何更新，result=1，msg 为「以下发票不符合报税(或取消报税)条件(不存在/已作废或状态已符合):…」并列出不合规发票 ID（最多展示 5 个，超出以「等N条」提示）。报税（is_tax_filed=2）只允许操作未报税发票，成功后写入报税时间与操作人；取消报税（is_tax_filed=1）只允许操作已报税发票，同时清空报税时间与操作人。单次最多 200 条。校验与更新之间状态被并发修改时，更新条件兜底过滤，updated_count 为实际变更条数。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "invoice_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 200,
+                    "description": "发票主键 UUID 列表（无连字符，32 位），1~200 个",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "is_tax_filed": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "description": "目标报税状态：1-未报税（取消报税），2-已报税"
+                },
+                "user_id": {
+                    "type": "string",
+                    "description": "操作人用户 ID"
+                }
+            },
+            "required": [
+                "invoice_ids",
+                "is_tax_filed",
+                "user_id"
+            ]
+        },
+        "example_request": {
+            "invoice_ids": [
+                "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+                "0194a8f0e1b27c4a9d0e8f7b6c5d4e2a"
+            ],
+            "is_tax_filed": 2,
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-存在不符合条件的发票、参数校验失败或操作失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「success」「以下发票不符合报税条件(不存在/已作废或状态已符合):xxx,yyy」「发票ID列表不能为空」「单次最多操作200张发票」「报税状态只能为1-未报税或2-已报税」「操作人用户ID不能为空」「操作失败」"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "更新结果。校验被拒绝或操作失败时无此字段",
+                    "properties": {
+                        "updated_count": {
+                            "type": "number",
+                            "description": "实际发生状态变更的发票条数"
                         }
                     }
                 }

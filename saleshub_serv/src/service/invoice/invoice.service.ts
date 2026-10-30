@@ -1,8 +1,9 @@
 import dayjs from 'dayjs';
+import { In } from 'typeorm';
 import { AppDataSource } from '../../config/database.config';
-import { Invoice } from '../../entity/invoice.entity';
+import { Invoice } from '../../entity/finance.entity';
 import { MinioFile } from '../../entity/file.entity';
-import { ListInvoiceDto, InvoiceIdDto } from '../../dto/invoice.dto';
+import { ListInvoiceDto, InvoiceIdDto, TaxFileInvoiceDto } from '../../dto/invoice.dto';
 import { getLogger } from '../../utils/logger.util';
 import { generateFileUrl } from '../../config/minio.config';
 
@@ -25,6 +26,9 @@ interface InvoiceListItem {
     buyer_name: string | null;
     invoice_nature: number | null;
     invoice_purpose: number | null;
+    is_tax_filed: number;
+    tax_filed_time: string | null;
+    tax_filed_by: string | null;
     status: number;
     create_time: Date;
 }
@@ -37,7 +41,7 @@ interface InvoiceListResult {
 }
 
 /** 发票详情数据(含明细 items 与原始文件地址,排除 detail/raw_response/ocr_request_id/ocr_code) */
-interface InvoiceDetailData extends Omit<InvoiceListItem, 'create_time'> {
+interface InvoiceDetailData extends Omit<InvoiceListItem, 'create_time' | 'tax_filed_time'> {
     biz_type: string | null;
     biz_id: string | null;
     page: number | null;
@@ -47,6 +51,7 @@ interface InvoiceDetailData extends Omit<InvoiceListItem, 'create_time'> {
     remark: string | null;
     issuer: string | null;
     items: Record<string, unknown>[] | null;
+    tax_filed_time: Date | null;
     create_time: Date;
     update_time: Date;
     /** 原始发票文件(图片/PDF)预览地址 */
@@ -60,6 +65,13 @@ interface InvoiceDetailResult {
     datas?: InvoiceDetailData;
 }
 
+/** 报税操作响应 */
+interface TaxFileInvoiceResult {
+    result: number;
+    msg: string;
+    datas?: { updated_count: number };
+}
+
 export class InvoiceService {
     private invoiceRepository = AppDataSource.getRepository(Invoice);
     private logger = getLogger('INVOICE_SERV');
@@ -68,7 +80,7 @@ export class InvoiceService {
      * 分页查询发票列表(GET /invoice/list)
      * - 只查正常状态(status=1),作废发票不展示
      * - 不按用户过滤,查询全部发票
-     * - 支持筛选:发票性质、发票用途、开票日期区间(含起止当天)、关键字
+     * - 支持筛选:发票性质、发票用途、报税状态、开票日期区间(含起止当天)、关键字
      *   (对发票号码/销售方名称/购买方名称模糊匹配)
      * - 按创建时间降序,返回轻量字段(不含 items 等大字段)
      *
@@ -97,6 +109,9 @@ export class InvoiceService {
                     'invoice.buyer_name AS buyer_name',
                     'invoice.invoice_nature AS invoice_nature',
                     'invoice.invoice_purpose AS invoice_purpose',
+                    'invoice.is_tax_filed AS is_tax_filed',
+                    "to_char(invoice.tax_filed_time, 'YYYY-MM-DD HH24:MI:SS') AS tax_filed_time",
+                    'invoice.tax_filed_by AS tax_filed_by',
                     'invoice.status AS status',
                     "to_char(invoice.create_time, 'YYYY-MM-DD HH24:MI:SS') AS create_time",
                 ])
@@ -110,6 +125,11 @@ export class InvoiceService {
             if (dto.invoice_purpose) {
                 queryBuilder.andWhere('invoice.invoice_purpose = :invoicePurpose', {
                     invoicePurpose: dto.invoice_purpose,
+                });
+            }
+            if (dto.is_tax_filed) {
+                queryBuilder.andWhere('invoice.is_tax_filed = :isTaxFiled', {
+                    isTaxFiled: dto.is_tax_filed,
                 });
             }
             if (dto.start_date) {
@@ -190,6 +210,9 @@ export class InvoiceService {
                     'invoice.issuer AS issuer',
                     'invoice.invoice_nature AS invoice_nature',
                     'invoice.invoice_purpose AS invoice_purpose',
+                    'invoice.is_tax_filed AS is_tax_filed',
+                    'to_char(invoice.tax_filed_time, "YYYY-MM-DD HH24:MI:SS") AS tax_filed_time',
+                    'invoice.tax_filed_by AS tax_filed_by',
                     'invoice.items AS items',
                     'invoice.status AS status',
                     'invoice.create_time AS create_time',
@@ -219,6 +242,81 @@ export class InvoiceService {
         } catch (error) {
             this.logger.error('查询发票详情失败:', error);
             return { result: 1, msg: '查询失败' };
+        }
+    }
+
+    /**
+     * 批量报税/取消报税(POST /invoice/taxFile)
+     * - 先校验后更新:查询符合更新条件的发票,存在不符合条件的ID时整体拒绝,不做任何更新
+     *   (不符合条件:发票不存在/已作废,或已处于目标报税状态)
+     * - 报税只允许操作未报税(1)的发票;取消报税只允许操作已报税(2)的发票
+     * - 报税:写入报税时间与操作人;取消报税:同时清空报税时间与操作人
+     * - 校验与更新之间状态被并发修改时,更新条件兜底过滤,updated_count 为实际变更条数
+     *
+     * @param dto 发票ID列表、目标报税状态与操作人用户ID
+     */
+    async taxFile(dto: TaxFileInvoiceDto): Promise<TaxFileInvoiceResult> {
+        try {
+            const isFiled = dto.is_tax_filed === 2;
+
+            // 1. 先查询符合更新条件的发票(存在、未作废、当前状态与目标相反)
+            const validInvoices = await this.invoiceRepository.find({
+                where: {
+                    invoice_id: In(dto.invoice_ids),
+                    status: 1,
+                    is_tax_filed: isFiled ? 1 : 2,
+                },
+                select: ['invoice_id', 'invoice_number'],
+            });
+            const validIds = new Set(validInvoices.map((inv) => inv.invoice_id));
+
+            // 2. 存在不符合条件的ID:整体拒绝并返回错误信息,不做任何更新
+            const invalidIds = dto.invoice_ids.filter((id) => !validIds.has(id));
+            const invalidNumbers = validInvoices.map((inv) => inv.invoice_number).join(',');
+            if (invalidIds.length > 0) {
+                // 错误信息最多展示5个ID,超出时以数量提示
+                const suffix = invalidIds.length > 5 ? ` 等${invalidIds.length}条` : '';
+                this.logger.warn('发票报税操作被拒绝,存在不符合条件的发票:', {
+                    is_tax_filed: dto.is_tax_filed,
+                    operator: dto.user_id,
+                    invalid_ids: invalidIds,
+                });
+                return {
+                    result: 1,
+                    msg: `以下发票不符合${isFiled ? '报税' : '取消报税'}条件(不存在/已作废或状态已符合):${invalidNumbers}${suffix}`,
+                };
+            }
+
+            // 3. 全部符合条件后执行批量更新
+            const now = new Date();
+            // 更新条件限定当前状态为目标状态的相反值,兜底过滤校验后并发变更的数据
+            const updateResult = await this.invoiceRepository.update(
+                {
+                    invoice_id: In(dto.invoice_ids),
+                    status: 1,
+                    is_tax_filed: isFiled ? 1 : 2,
+                },
+                {
+                    is_tax_filed: dto.is_tax_filed,
+                    tax_filed_time: isFiled ? now : null,
+                    tax_filed_by: isFiled ? dto.user_id : null,
+                    update_time: now,
+                }
+            );
+            this.logger.info('发票报税操作完成:', {
+                invoice_ids: dto.invoice_ids,
+                is_tax_filed: dto.is_tax_filed,
+                operator: dto.user_id,
+                updated: updateResult.affected ?? 0,
+            });
+            return {
+                result: 0,
+                msg: 'success',
+                datas: { updated_count: updateResult.affected ?? 0 },
+            };
+        } catch (error) {
+            this.logger.error('发票报税操作失败:', error);
+            return { result: 1, msg: '操作失败' };
         }
     }
 }

@@ -4,7 +4,7 @@ import { v7 } from 'uuid';
 import { QueryFailedError } from 'typeorm';
 import { AppDataSource } from '../../config/database.config';
 import { appConfig } from '../../config/env.config';
-import { Invoice } from '../../entity/invoice.entity';
+import { Invoice } from '../../entity/finance.entity';
 import { InvoiceOcrDto, InvoiceUploadDto } from '../../dto/invoice.dto';
 import { getLogger } from '../../utils/logger.util';
 import { fileService } from '../file.service';
@@ -155,6 +155,8 @@ export class InvoiceOcrService {
                 // 业务属性:发票性质/用途由上传方指定
                 invoice.invoice_nature = dto.invoice_nature;
                 invoice.invoice_purpose = dto.invoice_purpose;
+                // 报税状态:识别导入默认未报税,由用户在列表手动报税
+                invoice.is_tax_filed = 1;
                 invoice.ocr_request_id = ocrResponse.datas.RequestId;
                 invoice.ocr_code = item.Code;
                 invoice.status = 1;

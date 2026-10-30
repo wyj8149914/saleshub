@@ -51,15 +51,15 @@ src/
 
 ### 命名规范
 
-| 类型 | 命名规则 | 示例 |
-|------|----------|------|
-| Entity | PascalCase | `User`, `Card` |
-| DTO | PascalCase + 后缀 `Dto` | `WxLoginDto`, `UpdateProfileDto` |
-| Service | PascalCase + 后缀 `Service` | `UserService`, `CardService` |
-| Middleware | camelCase | `jwtValidator`, `requestLogger` |
-| 方法/函数 | camelCase | `login`, `updateUser`, `getCardById` |
-| 常量 | camelCase 或 UPPER_CASE | `appConfig`, `MAX_SIZE` |
-| 接口 | 大写 `I` 开头 | `IApiResponse`, `IJwtPayload` |
+| 类型       | 命名规则                    | 示例                                 |
+| ---------- | --------------------------- | ------------------------------------ |
+| Entity     | PascalCase                  | `User`, `Card`                       |
+| DTO        | PascalCase + 后缀 `Dto`     | `WxLoginDto`, `UpdateProfileDto`     |
+| Service    | PascalCase + 后缀 `Service` | `UserService`, `CardService`         |
+| Middleware | camelCase                   | `jwtValidator`, `requestLogger`      |
+| 方法/函数  | camelCase                   | `login`, `updateUser`, `getCardById` |
+| 常量       | camelCase 或 UPPER_CASE     | `appConfig`, `MAX_SIZE`              |
+| 接口       | 大写 `I` 开头               | `IApiResponse`, `IJwtPayload`        |
 
 ### 导入顺序
 
@@ -133,7 +133,8 @@ export class UserService {
 使用 `validationMiddleware` 验证参数，`asyncHandler` 包装异步：
 
 ```typescript
-router.post<{}, MessageResponse>('/login',
+router.post<{}, MessageResponse>(
+    '/login',
     validationMiddleware(WxLoginDto),
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(WxLoginDto, req.body);
@@ -281,19 +282,19 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 ### 提交消息编写规范
 
 1. **第一行**: `<类型>: <简短描述>` (不超过50字)
-   - 使用中文,简洁明确
-   - 使用祈使句语气
-   - 不包含句号
+    - 使用中文,简洁明确
+    - 使用祈使句语气
+    - 不包含句号
 
 2. **详细说明**: 使用 `## 主要变更` 或 `## 详细变更说明` 开头
-   - 按模块/功能分类
-   - 每个变更使用 `-` 列表
-   - 具体说明变更内容和原因
+    - 按模块/功能分类
+    - 每个变更使用 `-` 列表
+    - 具体说明变更内容和原因
 
 3. **Co-Authored-By**: 使用AI辅助开发时必须添加
-   ```
-   Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
-   ```
+    ```
+    Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+    ```
 
 ### 提交前检查清单
 
@@ -308,6 +309,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 ### 提交示例
 
 **好的提交示例:**
+
 ```
 功能: 网格工单系统新增区域用户支持及微信登录功能
 
@@ -325,6 +327,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 ```
 
 **不好的提交示例:**
+
 ```
 fix bug
 update
@@ -332,7 +335,8 @@ feat
 tmp
 ```
 
-1. **不要自动推送**: 提交代码时不要使用 `git push`
-2. **提交消息语言**:
-   - 使用中文编写提交消息
-   - 技术术语可以保留英文(如: JWT, TypeORM, API等)
+1. **不要自动提交**: 不要自动提交代码,只有明确说明提交代码时才提交
+2. **不要自动推送**: 提交代码时不要使用 `git push`
+3. **提交消息语言**:
+    - 使用中文编写提交消息
+    - 技术术语可以保留英文(如: JWT, TypeORM, API等)

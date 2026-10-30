@@ -1,5 +1,16 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import {
+    ArrayMaxSize,
+    ArrayMinSize,
+    IsArray,
+    IsIn,
+    IsInt,
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+    Matches,
+    MaxLength,
+} from 'class-validator';
 import { PageDto } from './base.dto';
 
 /**
@@ -125,6 +136,39 @@ export class ListInvoiceDto extends PageDto {
     @MaxLength(50, { message: '标签长度不能超过50' })
     @IsOptional()
     tag: string;
+
+    /** 是否报税:1-未报税,2-已报税(可选,不传则不过滤) */
+    @Type(() => Number)
+    @IsInt()
+    @IsIn([1, 2], { message: '报税状态只能为1-未报税或2-已报税' })
+    @IsOptional()
+    is_tax_filed: number;
+}
+
+/**
+ * 发票批量报税请求DTO(POST /invoice/taxFile)
+ *
+ * 列表多选发票后批量设置报税状态;取消报税时同时清空报税时间与操作人
+ */
+export class TaxFileInvoiceDto {
+    /** 发票ID列表(1~200个) */
+    @IsArray()
+    @ArrayMinSize(1, { message: '发票ID列表不能为空' })
+    @ArrayMaxSize(200, { message: '单次最多操作200张发票' })
+    @IsString({ each: true })
+    @IsNotEmpty({ each: true, message: '发票ID不能为空字符串' })
+    invoice_ids: string[];
+
+    /** 目标报税状态:1-未报税(取消报税),2-已报税 */
+    @Type(() => Number)
+    @IsInt()
+    @IsIn([1, 2], { message: '报税状态只能为1-未报税或2-已报税' })
+    is_tax_filed: number;
+
+    /** 操作人用户ID */
+    @IsString()
+    @IsNotEmpty({ message: '操作人用户ID不能为空' })
+    user_id: string;
 }
 
 /**

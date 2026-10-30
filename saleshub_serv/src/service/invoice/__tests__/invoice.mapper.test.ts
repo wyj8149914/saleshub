@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import dayjs from 'dayjs';
-import { Invoice } from '../../../entity/invoice.entity';
+import { Invoice } from '../../../entity/finance.entity';
 import { MixedInvoiceItem } from '../../../interface/orc.interface';
 import { mapInvoiceItem } from '../invoice.mapper';
 
