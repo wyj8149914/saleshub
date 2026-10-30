@@ -259,6 +259,9 @@ export class Expense {
     @Column({ type: 'varchar', length: 50, comment: '费用单编号,格式ZC+6位递增数字(如ZC000001)' })
     expense_no: string;
 
+    @Column({ type: 'varchar', length: 100, nullable: true, comment: '费用名称' })
+    expense_title: string | null;
+
     @Column({ type: 'int', comment: '费用类型:1-有发票采购,2-无发票支出' })
     expense_type: number;
 
@@ -283,6 +286,14 @@ export class Expense {
         comment: '采购来源渠道:1-淘宝,2-京东,3-拼多多,4-抖音,5-线下,99-其他',
     })
     channel: number | null;
+
+    @Column({
+        type: 'varchar',
+        length: 50,
+        nullable: true,
+        comment: '电商订单号(淘宝/京东等平台订单,线下采购为空)',
+    })
+    order_no: string | null;
 
     @Column({ type: 'numeric', precision: 12, scale: 2, comment: '支出金额' })
     amount: string;

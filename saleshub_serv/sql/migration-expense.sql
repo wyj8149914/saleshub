@@ -10,10 +10,12 @@
 CREATE TABLE IF NOT EXISTS inventory.expense (
     expense_id VARCHAR(32) NOT NULL,
     expense_no VARCHAR(50) NOT NULL,
+    expense_title VARCHAR(100),
     expense_type INT NOT NULL,
     user_id VARCHAR(32) NOT NULL,
     invoice_id VARCHAR(32),
     channel INT,
+    order_no VARCHAR(50),
     amount NUMERIC(12, 2) NOT NULL,
     expense_date TIMESTAMP NOT NULL,
     category INT,
@@ -39,10 +41,12 @@ COMMENT ON TABLE inventory.expense IS '支出费用单表';
 -- 字段注释
 COMMENT ON COLUMN inventory.expense.expense_id IS '支出费用单主键ID';
 COMMENT ON COLUMN inventory.expense.expense_no IS '费用单编号,格式ZC+6位递增数字(如ZC000001)';
+COMMENT ON COLUMN inventory.expense.expense_title IS '费用名称';
 COMMENT ON COLUMN inventory.expense.expense_type IS '费用类型:1-有发票采购,2-无发票支出';
 COMMENT ON COLUMN inventory.expense.user_id IS '创建人用户ID';
 COMMENT ON COLUMN inventory.expense.invoice_id IS '关联发票ID(invoice.invoice_id)';
 COMMENT ON COLUMN inventory.expense.channel IS '采购来源渠道:1-淘宝,2-京东,3-拼多多,4-抖音,5-线下,99-其他';
+COMMENT ON COLUMN inventory.expense.order_no IS '电商订单号(淘宝/京东等平台订单,线下采购为空)';
 COMMENT ON COLUMN inventory.expense.amount IS '支出金额';
 COMMENT ON COLUMN inventory.expense.expense_date IS '支出日期';
 COMMENT ON COLUMN inventory.expense.category IS '支出分类:1-办公资产费,2-差旅费,3-成本费,4-接待费,5-快递费,6-软件服务费,7-其他';
