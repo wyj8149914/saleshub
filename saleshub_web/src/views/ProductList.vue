@@ -366,18 +366,6 @@ onMounted(() => {
   padding: 0;
 }
 
-.table-card :deep(.ant-table-thead > tr > th) {
-  background: #fafafa;
-  font-weight: 600;
-  font-size: 16px;
-  color: #52525b;
-  border-bottom: 1px solid #e4e4e7;
-}
-
-.table-card :deep(.ant-table-tbody > tr > td) {
-  font-size: 16px;
-}
-
 /* 隔行灰底（偶数行） */
 .table-card :deep(.ant-table-tbody > tr:nth-child(even) > td) {
   background: #e8f0f8;
@@ -409,13 +397,6 @@ onMounted(() => {
 
 .cell-muted {
   color: #a1a1aa;
-}
-
-/* 操作按钮去掉内边距，更紧凑 */
-.table-card :deep(.ant-btn-link) {
-  padding: 4px 8px;
-  height: auto;
-  font-size: 16px;
 }
 
 .table-card :deep(.ant-btn-link:hover) {

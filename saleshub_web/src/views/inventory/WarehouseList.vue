@@ -277,26 +277,6 @@ onMounted(() => {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.table-card :deep(.ant-card-body) {
-  padding: 0;
-}
-
-.table-card :deep(.ant-table-thead > tr > th) {
-  background: #fafafa;
-  font-weight: 600;
-  font-size: 14px;
-  color: #52525b;
-  border-bottom: 1px solid #e4e4e7;
-}
-
-.table-card :deep(.ant-table-tbody > tr > td) {
-  font-size: 14px;
-}
-
-.table-card :deep(.ant-table-tbody > tr:nth-child(even) > td) {
-  background: #e8f0f8;
-}
-
 .table-card :deep(.ant-table-tbody > tr:hover > td) {
   background: #cadff9;
 }

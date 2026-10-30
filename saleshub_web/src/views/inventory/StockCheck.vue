@@ -450,22 +450,6 @@ onMounted(() => {
   padding: 0;
 }
 
-.table-card :deep(.ant-table-thead > tr > th) {
-  background: #fafafa;
-  font-weight: 600;
-  font-size: 16px;
-  color: #52525b;
-  border-bottom: 1px solid #e4e4e7;
-}
-
-.table-card :deep(.ant-table-tbody > tr > td) {
-  font-size: 16px;
-}
-
-.table-card :deep(.ant-table-tbody > tr:nth-child(even) > td) {
-  background: #f0f4f8;
-}
-
 .table-card :deep(.ant-table-tbody > tr:hover > td) {
   background: #dce8f5;
 }

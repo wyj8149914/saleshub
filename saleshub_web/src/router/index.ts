@@ -76,13 +76,6 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '发票管理' },
       },
       {
-        // 发票源文件查看页:从发票详情抽屉「查看源文件」进入
-        path: 'invoice/:invoiceId/file',
-        name: 'InvoiceFileViewer',
-        component: () => import('@/views/finance/InvoiceFileViewer.vue'),
-        meta: { title: '发票源文件' },
-      },
-      {
         path: 'expense',
         name: 'ExpenseList',
         component: () => import('@/views/finance/ExpenseList.vue'),

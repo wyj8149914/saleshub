@@ -152,6 +152,7 @@
         :row-expandable="isRowExpandable"
         @change="handleTableChange"
         @expand="handleTableExpand"
+        :scroll="{ x: 'max-content' }"
       >
         <template #expandedRowRender="{ record: item }">
           <a-table
@@ -404,17 +405,17 @@ import ItemTypeManager from '@/components/inventory/ItemTypeManager.vue';
 import { isMobile, onDeviceChange } from '@/utils/device';
 
 const columns = [
-  { title: '图片', dataIndex: 'image_url', key: 'image', width: 80, align: 'center' },
-  { title: '类型', dataIndex: 'type_full_name', key: 'type', width: 200, align: 'center' },
-  { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, align: 'center' },
-  { title: '编码', dataIndex: 'code', key: 'code', width: 140, align: 'center' },
-  { title: '是否定制', dataIndex: 'is_custom', key: 'isCustom', width: 80, align: 'center' },
-  { title: '规格数量', key: 'allSpecs', width: 110, ellipsis: true, align: 'center' },
-  { title: '总库存', key: 'totalStock', width: 80, align: 'center' },
-  { title: '预警库存', key: 'warnStock', width: 80, align: 'center' },
-  { title: '预警状态', key: 'warningStatus', width: 100, align: 'center' },
-  { title: '备注', key: 'remark', width: 120, align: 'center', ellipsis: true },
-  { title: '操作', key: 'actions', align: 'center' },
+  { title: '名称', dataIndex: 'name', key: 'name', ellipsis: true, align: 'center', fixed: 'left' },
+  { title: '图片', dataIndex: 'image_url', key: 'image', align: 'center' },
+  { title: '类型', dataIndex: 'type_full_name', key: 'type', align: 'center' },
+  { title: '编码', dataIndex: 'code', key: 'code', align: 'center' },
+  { title: '是否定制', dataIndex: 'is_custom', key: 'isCustom', align: 'center' },
+  { title: '规格数量', key: 'allSpecs', ellipsis: true, align: 'center' },
+  { title: '总库存', key: 'totalStock', align: 'center' },
+  { title: '预警库存', key: 'warnStock', align: 'center' },
+  { title: '预警状态', key: 'warningStatus', align: 'center' },
+  { title: '备注', key: 'remark', align: 'center', ellipsis: true },
+  { title: '操作', key: 'actions', align: 'center', fixed: 'right' },
 ];
 
 const specColumns = [
@@ -996,22 +997,6 @@ onUnmounted(() => {
   padding: 0;
 }
 
-.table-card :deep(.ant-table-thead > tr > th) {
-  background: #fafafa;
-  font-weight: 600;
-  font-size: 16px;
-  color: #52525b;
-  border-bottom: 1px solid #e4e4e7;
-}
-
-.table-card :deep(.ant-table-tbody > tr > td) {
-  font-size: 16px;
-}
-
-.table-card :deep(.ant-table-tbody > tr:nth-child(even) > td) {
-  background: #e8f0f8;
-}
-
 .table-card :deep(.ant-table-tbody > tr:hover > td) {
   background: #cadff9;
 }
@@ -1106,12 +1091,6 @@ onUnmounted(() => {
   border-radius: 4px;
   font-size: 13px;
   margin: 0;
-}
-
-.table-card :deep(.ant-btn-link) {
-  padding: 4px 8px;
-  height: auto;
-  font-size: 16px;
 }
 
 .table-card :deep(.ant-btn-link:hover) {
