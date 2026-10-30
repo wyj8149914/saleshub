@@ -9,6 +9,7 @@
           allow-clear
           style="width: 120px"
           :options="natureOptions"
+          @change="handleSearch"
         />
 
         <a-select
@@ -17,6 +18,7 @@
           allow-clear
           style="width: 130px"
           :options="purposeOptions"
+          @change="handleSearch"
         />
 
         <a-select
@@ -25,6 +27,7 @@
           allow-clear
           style="width: 110px"
           :options="taxStatusOptions"
+          @change="handleSearch"
         />
 
         <a-range-picker v-model:value="filterDateRange" format="YYYY-MM-DD" value-format="YYYY-MM-DD" />

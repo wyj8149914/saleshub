@@ -61,15 +61,15 @@ src/
 
 ### 命名规范
 
-| 类型 | 命名规则 | 示例 |
-|------|----------|------|
-| 组件 (.vue) | PascalCase | `ProductList.vue`, `InventoryItemForm.vue` |
-| TypeScript 接口/类型 | PascalCase | `Product`, `InventoryItem`, `ApiResponse` |
-| 枚举 | PascalCase | `ItemType`, `ItemStatus` |
-| 变量/函数 | camelCase | `loadProducts`, `handleDelete` |
-| 常量 | camelCase 或 UPPER_CASE | `apiUrl`, `MAX_SIZE` |
-| CSS 类名 | kebab-case | `.product-list`, `.inventory-item` |
-| 路由名称 | PascalCase | `ProductList`, `StockIn` |
+| 类型                 | 命名规则                | 示例                                       |
+| -------------------- | ----------------------- | ------------------------------------------ |
+| 组件 (.vue)          | PascalCase              | `ProductList.vue`, `InventoryItemForm.vue` |
+| TypeScript 接口/类型 | PascalCase              | `Product`, `InventoryItem`, `ApiResponse`  |
+| 枚举                 | PascalCase              | `ItemType`, `ItemStatus`                   |
+| 变量/函数            | camelCase               | `loadProducts`, `handleDelete`             |
+| 常量                 | camelCase 或 UPPER_CASE | `apiUrl`, `MAX_SIZE`                       |
+| CSS 类名             | kebab-case              | `.product-list`, `.inventory-item`         |
+| 路由名称             | PascalCase              | `ProductList`, `StockIn`                   |
 
 ### 导入顺序
 
@@ -144,7 +144,7 @@ import axios from 'axios';
 import type { ApiResponse, Product } from '@/types/inventory';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000'
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
 });
 
 export const inventoryApi = {
@@ -156,7 +156,7 @@ export const inventoryApi = {
   async createProduct(product: Partial<Product>): Promise<ApiResponse<Product>> {
     const { data } = await api.post<ApiResponse<Product>>('/api/product', product);
     return data;
-  }
+  },
 };
 ```
 
@@ -164,7 +164,7 @@ export const inventoryApi = {
 
 ```typescript
 interface ApiResponse<T = any> {
-  result: number;  // 0 成功，非 0 失败
+  result: number; // 0 成功，非 0 失败
   msg: string;
   alg: string;
   datas: T;
@@ -179,7 +179,7 @@ interface ApiResponse<T = any> {
 // types/inventory.ts
 export enum ItemType {
   DEVICE = 'device',
-  COMMON = 'common'
+  COMMON = 'common',
 }
 
 export interface Product {
@@ -228,7 +228,7 @@ export const useInventoryStore = defineStore('inventory', () => {
   return {
     products,
     loading,
-    fetchProducts
+    fetchProducts,
   };
 });
 ```
@@ -251,15 +251,15 @@ const routes = [
         path: 'products',
         name: 'ProductList',
         component: () => import('@/views/inventory/ProductList.vue'),
-        meta: { title: '产品管理' }
-      }
-    ]
-  }
+        meta: { title: '产品管理' },
+      },
+    ],
+  },
 ];
 
 export default createRouter({
   history: createWebHistory(),
-  routes
+  routes,
 });
 ```
 
@@ -285,7 +285,7 @@ Modal.confirm({
   title: '确认删除？',
   onOk: async () => {
     await handleDelete();
-  }
+  },
 });
 ```
 
@@ -374,4 +374,102 @@ npm run format
 
 ## Git Commit 规范
 
-遵循后端相同的 commit 规范（参考 `saleshub_serv/CLAUDE.md`）。
+### 提交消息格式规范
+
+不要主动提交代码,本项目遵循结构化的Git提交消息格式,包含以下部分:
+
+```
+<类型>: <简短描述>
+
+## 详细变更说明
+
+### 1. <主要功能/模块名称>
+- 具体变更1
+- 具体变更2
+
+### 2. <另一个功能/模块名称>
+- 具体变更3
+- 具体变更4
+
+...
+
+### N. 其他变更
+- 代码清理/优化说明
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+```
+
+### 提交类型 (Type)
+
+使用中文类型标识,常见类型包括:
+
+- **功能** (feat): 新功能
+- **修改** (fix): Bug修复
+- **重构** (refactor): 代码重构(不改变功能)
+- **新增** (add): 添加新内容(文档/配置等)
+- **删除** (remove): 删除功能或文件
+- **优化** (optimize): 性能或代码优化
+- **文档** (docs): 文档变更
+- **测试** (test): 测试相关
+
+### 提交消息编写规范
+
+1. **第一行**: `<类型>: <简短描述>` (不超过50字)
+   - 使用中文,简洁明确
+   - 使用祈使句语气
+   - 不包含句号
+
+2. **详细说明**: 使用 `## 主要变更` 或 `## 详细变更说明` 开头
+   - 按模块/功能分类
+   - 每个变更使用 `-` 列表
+   - 具体说明变更内容和原因
+
+3. **Co-Authored-By**: 使用AI辅助开发时必须添加
+   ```
+   Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+   ```
+
+### 提交前检查清单
+
+在执行 `git commit` 前,确保:
+
+1. ✅ **代码已测试**: 新功能正常工作,无运行时错误
+2. ✅ **无调试代码**: 移除所有 `console.log`, `debugger` 等
+3. ✅ **代码格式**: 运行 `npm run lint` 确保代码风格一致
+4. ✅ **敏感信息**: 不包含 `.env` 等敏感配置文件
+5. ✅ **提交消息**: 使用完整格式,清晰描述变更内容
+
+### 提交示例
+
+**好的提交示例:**
+
+```
+功能: 网格工单系统新增区域用户支持及微信登录功能
+
+## 主要变更
+
+### 1. 网格工单系统优化
+- 新增区域工单列表查询接口(/districtList),支持区域用户按权限查询辖区内工单
+- 优化12345工单处理逻辑,支持通过community_id直接关联工单,不依赖grid_id
+
+### 2. 区域用户微信登录支持
+- DistrictUser实体新增open_id和union_id字段,支持微信登录绑定
+- 微信登录接口(getGridBindInfo)新增区域用户登录支持
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+```
+
+**不好的提交示例:**
+
+```
+fix bug
+update
+feat
+tmp
+```
+
+1. **不要自动提交**: 不要自动提交代码,只有明确说明提交代码时才提交
+2. **不要自动推送**: 提交代码时不要使用 `git push`
+3. **提交消息语言**:
+   - 使用中文编写提交消息
+   - 技术术语可以保留英文(如: JWT, TypeORM, API等)

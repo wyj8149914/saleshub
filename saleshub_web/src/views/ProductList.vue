@@ -366,11 +366,6 @@ onMounted(() => {
   padding: 0;
 }
 
-/* 隔行灰底（偶数行） */
-.table-card :deep(.ant-table-tbody > tr:nth-child(even) > td) {
-  background: #e8f0f8;
-}
-
 /* hover 时覆盖为浅蓝（写在隔行规则之后以确保生效） */
 .table-card :deep(.ant-table-tbody > tr:hover > td) {
   background: #cadff9;
