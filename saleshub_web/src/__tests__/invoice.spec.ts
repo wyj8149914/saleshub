@@ -17,6 +17,7 @@ import {
   checkInvoiceFiles,
   formatFileSize,
   invoiceItemFieldLabel,
+  sumInvoiceTotalAmount,
   validateTaxSelection,
 } from '@/utils/invoice';
 
@@ -212,5 +213,23 @@ describe('发票报税', () => {
 
     const filed = [makeInvoice(InvoiceTaxStatus.FILED), makeInvoice(InvoiceTaxStatus.FILED)];
     expect(validateTaxSelection(filed, InvoiceTaxStatus.NOT_FILED).valid).toBe(true);
+  });
+
+  it('价税合计汇总:累加金额,空值不计入,保留两位小数', () => {
+    const records = [
+      { ...makeInvoice(InvoiceTaxStatus.NOT_FILED), total_amount: '100.50' },
+      { ...makeInvoice(InvoiceTaxStatus.NOT_FILED), total_amount: '200.25' },
+      { ...makeInvoice(InvoiceTaxStatus.NOT_FILED), total_amount: null },
+    ];
+    expect(sumInvoiceTotalAmount(records)).toBe('300.75');
+  });
+
+  it('价税合计汇总:空列表为 0.00,浮点精度修正为两位小数', () => {
+    expect(sumInvoiceTotalAmount([])).toBe('0.00');
+    const records = [
+      { ...makeInvoice(InvoiceTaxStatus.NOT_FILED), total_amount: '0.1' },
+      { ...makeInvoice(InvoiceTaxStatus.NOT_FILED), total_amount: '0.2' },
+    ];
+    expect(sumInvoiceTotalAmount(records)).toBe('0.30');
   });
 });

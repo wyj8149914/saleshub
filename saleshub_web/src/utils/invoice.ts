@@ -95,6 +95,15 @@ export interface TaxSelectionCheck {
 }
 
 /**
+ * 汇总发票价税合计金额:total_amount 为空或非数字的不计入,结果保留两位小数
+ * @param invoices 发票列表
+ * @returns 价税合计总额文本,如「478.00」;空列表为「0.00」
+ */
+export function sumInvoiceTotalAmount(invoices: Invoice[]): string {
+  return invoices.reduce((sum, invoice) => sum + Number(invoice.total_amount ?? 0), 0).toFixed(2);
+}
+
+/**
  * 校验多选发票是否满足批量报税/取消报税的前置条件
  * 服务端为整批校验(任一发票不符合条件即整批拒绝),前端预校验可避免无效请求
  * @param records 选中行记录(按选中 key 过滤后的完整行数据)

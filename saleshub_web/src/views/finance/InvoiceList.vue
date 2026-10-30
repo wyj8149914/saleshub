@@ -1,6 +1,7 @@
 <template>
   <div class="page">
     <div class="page-head">
+      <!-- 第一行:搜索条件与查询/重置 -->
       <a-space :size="12" wrap>
         <a-select
           v-model:value="filterNature"
@@ -40,99 +41,105 @@
 
         <a-button type="primary" @click="handleSearch">查询</a-button>
         <a-button @click="handleReset">重置</a-button>
+      </a-space>
 
+      <!-- 第二行:批量报税/取消报税(需先勾选发票)与单个/批量识别 -->
+      <a-space :size="12" wrap class="action-buttons">
         <a-button type="primary" @click="openUpload('single')">
           <template #icon><FileAddOutlined /></template>
           单个识别
         </a-button>
-        <a-button @click="openUpload('batch')">
+        <a-button type="primary" @click="openUpload('batch')">
           <template #icon><FolderAddOutlined /></template>
           批量识别
         </a-button>
+        <a-button type="primary" :disabled="!hasSelection" @click="handleTaxFile(InvoiceTaxStatus.FILED)">
+          <template #icon><CheckCircleOutlined /></template>
+          批量报税
+        </a-button>
+        <a-button type="primary" :disabled="!hasSelection" @click="handleTaxFile(InvoiceTaxStatus.NOT_FILED)">
+          <template #icon><CloseCircleOutlined /></template>
+          取消报税
+        </a-button>
+
+        <!-- 勾选发票后的合计提示 -->
+        <span v-if="hasSelection" class="selected-summary">
+          已选 {{ selectedRowKeys.length }} 张,价税合计:{{ selectedTotalAmount }}
+        </span>
       </a-space>
     </div>
 
-    <!-- 批量报税操作条:选中发票后显示 -->
-    <a-alert v-if="selectedRowKeys.length > 0" type="info" show-icon>
-      <template #message>
-        <a-space :size="12" wrap>
-          <span>已选 {{ selectedRowKeys.length }} 张发票</span>
-          <a-button type="primary" size="small" @click="handleTaxFile(InvoiceTaxStatus.FILED)">批量报税</a-button>
-          <a-button size="small" @click="handleTaxFile(InvoiceTaxStatus.NOT_FILED)">取消报税</a-button>
-          <a-button type="link" size="small" @click="clearSelection">取消选择</a-button>
-        </a-space>
-      </template>
-    </a-alert>
+    <a-card :bordered="false" class="table-card">
+      <a-table
+        :columns="columns"
+        :data-source="records"
+        :loading="loading"
+        :row-selection="rowSelection"
+        :pagination="{
+          current: pageIndex,
+          pageSize,
+          total,
+          showSizeChanger: true,
+          showTotal: (t: number) => `共 ${t} 条`,
+          onChange: handlePageChange,
+        }"
+        bordered
+        :row-key="(record: Invoice) => record.invoice_id"
+        :scroll="{ x: 'max-content' }"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'sub_type_desc'">
+            {{ record.sub_type_desc || '-' }}
+          </template>
 
-    <a-table
-      :columns="columns"
-      :data-source="records"
-      :loading="loading"
-      :row-selection="rowSelection"
-      :pagination="{
-        current: pageIndex,
-        pageSize,
-        total,
-        showSizeChanger: true,
-        showTotal: (t: number) => `共 ${t} 条`,
-        onChange: handlePageChange,
-      }"
-      bordered
-      :row-key="(record: Invoice) => record.invoice_id"
-      :scroll="{ x: true }"
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'sub_type_desc'">
-          {{ record.sub_type_desc || '-' }}
-        </template>
+          <template v-else-if="column.key === 'invoice_date'">
+            {{ formatDatePart(record.invoice_date) }}
+          </template>
 
-        <template v-else-if="column.key === 'invoice_date'">
-          {{ formatDatePart(record.invoice_date) }}
-        </template>
+          <template v-else-if="column.key === 'total_amount'">
+            <span class="amount-text">¥{{ record.total_amount ?? '-' }}</span>
+          </template>
 
-        <template v-else-if="column.key === 'total_amount'">
-          <span class="amount-text">{{ record.total_amount ?? '-' }}</span>
-        </template>
+          <template v-else-if="column.key === 'tax_amount'">
+            <span class="amount-text">¥{{ record.tax_amount ?? '-' }}</span>
+          </template>
 
-        <template v-else-if="column.key === 'tax_amount'">
-          <span class="amount-text">{{ record.tax_amount ?? '-' }}</span>
-        </template>
+          <template v-else-if="column.key === 'invoice_nature'">
+            <a-tag
+              v-if="record.invoice_nature != null"
+              :color="record.invoice_nature === InvoiceNature.ACTUAL ? 'blue' : 'purple'"
+            >
+              {{ INVOICE_NATURE_LABELS[record.invoice_nature] || '-' }}
+            </a-tag>
+            <span v-else>-</span>
+          </template>
 
-        <template v-else-if="column.key === 'invoice_nature'">
-          <a-tag
-            v-if="record.invoice_nature != null"
-            :color="record.invoice_nature === InvoiceNature.ACTUAL ? 'blue' : 'purple'"
-          >
-            {{ INVOICE_NATURE_LABELS[record.invoice_nature] || '-' }}
-          </a-tag>
-          <span v-else>-</span>
-        </template>
+          <template v-else-if="column.key === 'invoice_purpose'">
+            <a-tag v-if="record.invoice_purpose != null" color="cyan">
+              {{ INVOICE_PURPOSE_LABELS[record.invoice_purpose] || '-' }}
+            </a-tag>
+            <span v-else>-</span>
+          </template>
 
-        <template v-else-if="column.key === 'invoice_purpose'">
-          <a-tag v-if="record.invoice_purpose != null" color="cyan">
-            {{ INVOICE_PURPOSE_LABELS[record.invoice_purpose] || '-' }}
-          </a-tag>
-          <span v-else>-</span>
-        </template>
+          <template v-else-if="column.key === 'is_tax_filed'">
+            <a-tag v-if="record.is_tax_filed === InvoiceTaxStatus.FILED" color="success">已报税</a-tag>
+            <a-tag v-else>未报税</a-tag>
+          </template>
 
-        <template v-else-if="column.key === 'is_tax_filed'">
-          <a-tag v-if="record.is_tax_filed === InvoiceTaxStatus.FILED" color="success">已报税</a-tag>
-          <a-tag v-else>未报税</a-tag>
-        </template>
+          <template v-else-if="column.key === 'tax_filed_time'">
+            {{ formatDateTime(record.tax_filed_time) }}
+          </template>
 
-        <template v-else-if="column.key === 'tax_filed_time'">
-          {{ formatDateTime(record.tax_filed_time) }}
-        </template>
+          <template v-else-if="column.key === 'create_time'">
+            {{ formatDateTime(record.create_time) }}
+          </template>
 
-        <template v-else-if="column.key === 'create_time'">
-          {{ formatDateTime(record.create_time) }}
+          <template v-else-if="column.key === 'action'">
+            <a-button type="link" size="small" @click="openDetail(record)">详情</a-button>
+          </template>
         </template>
-
-        <template v-else-if="column.key === 'action'">
-          <a-button type="link" size="small" @click="openDetail(record)">详情</a-button>
-        </template>
-      </template>
-    </a-table>
+      </a-table>
+    </a-card>
 
     <!-- 单个/批量识别弹窗 -->
     <InvoiceUploadModal v-model:open="uploadOpen" :mode="uploadMode" @success="loadList" />
@@ -149,7 +156,7 @@
  */
 import { computed, onMounted, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { FileAddOutlined, FolderAddOutlined } from '@ant-design/icons-vue';
+import { CheckCircleOutlined, CloseCircleOutlined, FileAddOutlined, FolderAddOutlined } from '@ant-design/icons-vue';
 import { invoiceApi } from '@/api/invoice';
 import { useAuthStore } from '@/stores/auth';
 import {
@@ -160,24 +167,24 @@ import {
   InvoiceTaxStatus,
 } from '@/types/invoice';
 import type { Invoice, InvoiceListQuery } from '@/types/invoice';
-import { validateTaxSelection } from '@/utils/invoice';
+import { sumInvoiceTotalAmount, validateTaxSelection } from '@/utils/invoice';
 import InvoiceUploadModal from '@/components/invoice/InvoiceUploadModal.vue';
 import InvoiceDetailDrawer from '@/components/invoice/InvoiceDetailDrawer.vue';
 
 const columns = [
   { title: '发票号码', dataIndex: 'invoice_number', key: 'invoice_number', width: 200, fixed: 'left' as const },
-  { title: '发票类型', dataIndex: 'sub_type_desc', key: 'sub_type_desc', width: 150 },
   { title: '销售方', dataIndex: 'seller_name', key: 'seller_name', ellipsis: true },
+  { title: '价税合计', dataIndex: 'total_amount', key: 'total_amount', align: 'right' as const },
+  { title: '报税状态', dataIndex: 'is_tax_filed', key: 'is_tax_filed' },
+  { title: '性质', dataIndex: 'invoice_nature', key: 'invoice_nature' },
+  { title: '用途', dataIndex: 'invoice_purpose', key: 'invoice_purpose' },
+  { title: '发票类型', dataIndex: 'sub_type_desc', key: 'sub_type_desc' },
+  { title: '开票日期', dataIndex: 'invoice_date', key: 'invoice_date' },
+  { title: '报税时间', dataIndex: 'tax_filed_time', key: 'tax_filed_time' },
   { title: '购买方', dataIndex: 'buyer_name', key: 'buyer_name', ellipsis: true },
-  { title: '开票日期', dataIndex: 'invoice_date', key: 'invoice_date', width: 110 },
-  { title: '价税合计', dataIndex: 'total_amount', key: 'total_amount', width: 100, align: 'right' as const },
-  { title: '税额', dataIndex: 'tax_amount', key: 'tax_amount', width: 100, align: 'right' as const },
-  { title: '性质', dataIndex: 'invoice_nature', key: 'invoice_nature', width: 90 },
-  { title: '用途', dataIndex: 'invoice_purpose', key: 'invoice_purpose', width: 100 },
-  { title: '报税状态', dataIndex: 'is_tax_filed', key: 'is_tax_filed', width: 90 },
-  { title: '报税时间', dataIndex: 'tax_filed_time', key: 'tax_filed_time', width: 160 },
-  { title: '入库时间', dataIndex: 'create_time', key: 'create_time', width: 160 },
-  { title: '操作', key: 'action', width: 80, fixed: 'right' as const },
+  { title: '税额', dataIndex: 'tax_amount', key: 'tax_amount', align: 'right' as const },
+  { title: '入库时间', dataIndex: 'create_time', key: 'create_time' },
+  { title: '操作', key: 'action', fixed: 'right' as const },
 ];
 
 // ============ 列表状态 ============
@@ -192,6 +199,9 @@ const authStore = useAuthStore();
 /** 已选中发票的 invoice_id 列表 */
 const selectedRowKeys = ref<string[]>([]);
 
+/** 是否已勾选发票,控制批量报税/取消报税按钮可用状态 */
+const hasSelection = computed(() => selectedRowKeys.value.length > 0);
+
 /** 行多选配置:勾选变化时同步 selectedRowKeys */
 const rowSelection = computed(() => ({
   selectedRowKeys: selectedRowKeys.value,
@@ -199,6 +209,14 @@ const rowSelection = computed(() => ({
     selectedRowKeys.value = keys as string[];
   },
 }));
+
+/** 已勾选的完整行数据(用于批量报税预校验与金额汇总) */
+const selectedRecords = computed(() =>
+  records.value.filter((record) => selectedRowKeys.value.includes(record.invoice_id)),
+);
+
+/** 已勾选发票的价税合计总额(空值不计入,两位小数) */
+const selectedTotalAmount = computed(() => sumInvoiceTotalAmount(selectedRecords.value));
 
 /** 清空选中 */
 const clearSelection = () => {
@@ -324,9 +342,9 @@ const handleTaxFile = (targetStatus: number) => {
     message.error('用户信息缺失,请重新登录后再试');
     return;
   }
-  // 按选中 key 过滤出完整行数据,用于前端预校验
-  const selectedRecords = records.value.filter((record) => selectedRowKeys.value.includes(record.invoice_id));
-  const check = validateTaxSelection(selectedRecords, targetStatus);
+  // 已勾选行数据用于前端预校验(与服务端整批校验规则一致)
+  const recordsToTax = selectedRecords.value;
+  const check = validateTaxSelection(recordsToTax, targetStatus);
   if (!check.valid) {
     message.warning(check.msg);
     return;
@@ -335,14 +353,14 @@ const handleTaxFile = (targetStatus: number) => {
   Modal.confirm({
     title: isFiling ? '确认批量报税？' : '确认取消报税？',
     content: isFiling
-      ? `将对选中的 ${selectedRecords.length} 张发票标记为已报税,并记录报税时间与操作人。`
-      : `将对选中的 ${selectedRecords.length} 张发票恢复为未报税,并清空其报税时间与操作人。`,
+      ? `将对选中的 ${recordsToTax.length} 张发票标记为已报税,价税合计 ${sumInvoiceTotalAmount(recordsToTax)} 元,并记录报税时间与操作人。`
+      : `将对选中的 ${recordsToTax.length} 张发票恢复为未报税,价税合计 ${sumInvoiceTotalAmount(recordsToTax)} 元,并清空其报税时间与操作人。`,
     okText: isFiling ? '报税' : '取消报税',
     cancelText: '取消',
     onOk: async () => {
       try {
         const res = await invoiceApi.taxFile({
-          invoice_ids: selectedRecords.map((record) => record.invoice_id),
+          invoice_ids: recordsToTax.map((record) => record.invoice_id),
           is_tax_filed: targetStatus,
           user_id: userId,
         });
@@ -386,16 +404,39 @@ onMounted(() => {
   gap: 16px;
 }
 
+/* 头部两行布局:第一行筛选条件,第二行操作按钮 */
 .page-head {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* 已选发票合计提示:金额加粗等宽 */
+.selected-summary {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .amount-text {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.action-buttons {
+  margin-top: 12px;
+}
+
+.table-card {
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.table-card :deep(.ant-card-body) {
+  padding: 0;
+}
+
+.table-card :deep(.ant-table-tbody > tr:hover > td) {
+  background: #dce8f5;
 }
 </style>
