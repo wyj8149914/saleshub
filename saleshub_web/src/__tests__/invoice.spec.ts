@@ -4,15 +4,20 @@ import {
   INVOICE_ITEM_FIELD_LABELS,
   INVOICE_NATURE_LABELS,
   INVOICE_PURPOSE_LABELS,
+  INVOICE_TAX_STATUS_LABELS,
   InvoiceNature,
   InvoicePurpose,
+  InvoiceTaxStatus,
 } from '@/types/invoice';
+import type { Invoice } from '@/types/invoice';
 import {
   INVOICE_MAX_BATCH_COUNT,
   INVOICE_MAX_FILE_SIZE_MB,
+  INVOICE_MAX_TAX_COUNT,
   checkInvoiceFiles,
   formatFileSize,
   invoiceItemFieldLabel,
+  validateTaxSelection,
 } from '@/utils/invoice';
 
 /** 构造指定名称、类型与大小的测试文件 */
@@ -130,5 +135,82 @@ describe('文件大小格式化', () => {
     expect(formatFileSize(1.5 * 1024 * 1024)).toBe('1.5 MB');
     expect(formatFileSize(356 * 1024)).toBe('356 KB');
     expect(formatFileSize(512)).toBe('512 B');
+  });
+});
+
+describe('发票报税', () => {
+  /** 构造仅报税状态不同的最小发票对象 */
+  function makeInvoice(isTaxFiled: number): Invoice {
+    return {
+      invoice_id: `id-${isTaxFiled}-${Math.random().toString(36).slice(2, 8)}`,
+      user_id: 'u1',
+      file_id: 'f1',
+      invoice_type: 16,
+      sub_type: 'VatElectronicInvoiceFull',
+      sub_type_desc: null,
+      title: null,
+      invoice_code: null,
+      invoice_number: '12345678',
+      invoice_date: null,
+      pretax_amount: null,
+      tax_amount: null,
+      total_amount: null,
+      seller_name: null,
+      buyer_name: null,
+      invoice_nature: null,
+      invoice_purpose: null,
+      is_tax_filed: isTaxFiled,
+      tax_filed_time: null,
+      tax_filed_by: null,
+      status: 1,
+      create_time: '2026-01-01 00:00:00',
+    };
+  }
+
+  it('报税状态标签覆盖全部枚举值', () => {
+    [InvoiceTaxStatus.NOT_FILED, InvoiceTaxStatus.FILED].forEach((v) => {
+      expect(INVOICE_TAX_STATUS_LABELS[v]).toBeTruthy();
+    });
+    expect(INVOICE_TAX_STATUS_LABELS[InvoiceTaxStatus.NOT_FILED]).toBe('未报税');
+    expect(INVOICE_TAX_STATUS_LABELS[InvoiceTaxStatus.FILED]).toBe('已报税');
+  });
+
+  it('报税选择校验:空选中拒绝', () => {
+    const { valid, msg } = validateTaxSelection([], InvoiceTaxStatus.FILED);
+    expect(valid).toBe(false);
+    expect(msg).toBeTruthy();
+  });
+
+  it('报税选择校验:超过 200 条拒绝', () => {
+    const records = Array.from({ length: INVOICE_MAX_TAX_COUNT + 1 }, () => makeInvoice(InvoiceTaxStatus.NOT_FILED));
+    const { valid, msg } = validateTaxSelection(records, InvoiceTaxStatus.FILED);
+    expect(valid).toBe(false);
+    expect(msg).toContain('200');
+  });
+
+  it('报税时选中含已报税行拒绝', () => {
+    const records = [
+      makeInvoice(InvoiceTaxStatus.NOT_FILED),
+      makeInvoice(InvoiceTaxStatus.FILED),
+    ];
+    const { valid } = validateTaxSelection(records, InvoiceTaxStatus.FILED);
+    expect(valid).toBe(false);
+  });
+
+  it('取消报税时选中含未报税行拒绝', () => {
+    const records = [
+      makeInvoice(InvoiceTaxStatus.FILED),
+      makeInvoice(InvoiceTaxStatus.NOT_FILED),
+    ];
+    const { valid } = validateTaxSelection(records, InvoiceTaxStatus.NOT_FILED);
+    expect(valid).toBe(false);
+  });
+
+  it('全部状态与目标一致的合法选中通过', () => {
+    const notFiled = [makeInvoice(InvoiceTaxStatus.NOT_FILED), makeInvoice(InvoiceTaxStatus.NOT_FILED)];
+    expect(validateTaxSelection(notFiled, InvoiceTaxStatus.FILED).valid).toBe(true);
+
+    const filed = [makeInvoice(InvoiceTaxStatus.FILED), makeInvoice(InvoiceTaxStatus.FILED)];
+    expect(validateTaxSelection(filed, InvoiceTaxStatus.NOT_FILED).valid).toBe(true);
   });
 });

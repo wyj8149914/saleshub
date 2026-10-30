@@ -1,8 +1,9 @@
 /**
- * 发票模块工具函数:文件校验、明细字段名翻译
+ * 发票模块工具函数:文件校验、批量报税选择校验、明细字段名翻译
  * 校验函数均为纯函数,不弹提示,便于单元测试与调用方自行处理提示
  */
 import { INVOICE_ITEM_FIELD_LABELS } from '@/types/invoice';
+import type { Invoice } from '@/types/invoice';
 
 /** 发票识别支持的文件类型:图片或 PDF(用于 upload 组件 accept 属性) */
 export const INVOICE_ACCEPT = 'image/*,application/pdf';
@@ -12,6 +13,9 @@ export const INVOICE_MAX_FILE_SIZE_MB = 5;
 
 /** 批量识别最多文件数,与后端一致 */
 export const INVOICE_MAX_BATCH_COUNT = 50;
+
+/** 单次批量报税最多发票数,与后端一致 */
+export const INVOICE_MAX_TAX_COUNT = 200;
 
 /** 发票文件类型扩展名兜底(部分环境 File.type 为空) */
 const INVOICE_FILE_EXT_REGEXP = /\.(pdf|jpe?g|png|bmp|webp|gif)$/i;
@@ -80,6 +84,36 @@ export function checkInvoiceFiles(files: File[], maxCount: number = INVOICE_MAX_
  */
 export function invoiceItemFieldLabel(field: string): string {
   return INVOICE_ITEM_FIELD_LABELS[field] || field;
+}
+
+/** 批量报税选择校验结果 */
+export interface TaxSelectionCheck {
+  /** 是否通过校验 */
+  valid: boolean;
+  /** 未通过时的提示文案,可直接用于 message.warning */
+  msg?: string;
+}
+
+/**
+ * 校验多选发票是否满足批量报税/取消报税的前置条件
+ * 服务端为整批校验(任一发票不符合条件即整批拒绝),前端预校验可避免无效请求
+ * @param records 选中行记录(按选中 key 过滤后的完整行数据)
+ * @param targetStatus 目标报税状态:1-未报税(取消报税),2-已报税
+ * @returns 校验结果,未通过时带提示文案
+ */
+export function validateTaxSelection(records: Invoice[], targetStatus: number): TaxSelectionCheck {
+  if (records.length === 0) {
+    return { valid: false, msg: '请先选择要操作的发票' };
+  }
+  if (records.length > INVOICE_MAX_TAX_COUNT) {
+    return { valid: false, msg: `单次最多操作${INVOICE_MAX_TAX_COUNT}张发票` };
+  }
+  // 报税要求全部为未报税,取消报税要求全部为已报税;混合选中或含已符合目标状态的行即整批拒绝
+  const mismatched = records.some((record) => record.is_tax_filed === targetStatus);
+  if (mismatched) {
+    return { valid: false, msg: '选中发票中存在状态不一致的发票,请重新选择' };
+  }
+  return { valid: true };
 }
 
 /**

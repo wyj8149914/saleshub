@@ -5,6 +5,8 @@ import type {
   InvoiceDetail,
   InvoiceUploadResult,
   InvoiceUploadBatchResult,
+  InvoiceTaxFileParams,
+  InvoiceTaxFileResult,
 } from '@/types/invoice';
 import type { PaginatedData } from '@/types/inventory';
 
@@ -69,6 +71,15 @@ export const invoiceApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: OCR_TIMEOUT,
     });
+  },
+
+  /**
+   * 批量报税/取消报税(1~200 条)
+   * 服务端整批校验:任一发票不存在/已作废/状态已符合目标时整批拒绝,不做任何更新
+   * @param params 发票 ID 列表 + 目标报税状态(1-取消报税,2-报税) + 操作人用户 ID
+   */
+  taxFile(params: InvoiceTaxFileParams) {
+    return http.post<InvoiceTaxFileResult>('/saleshub/invoice/taxFile', params);
   },
 };
 

@@ -60,6 +60,16 @@
           <a-descriptions-item label="发票用途">
             {{ purposeLabel }}
           </a-descriptions-item>
+          <a-descriptions-item label="报税状态">
+            <a-tag v-if="detail.is_tax_filed === InvoiceTaxStatus.FILED" color="success">已报税</a-tag>
+            <a-tag v-else>未报税</a-tag>
+          </a-descriptions-item>
+          <a-descriptions-item label="报税时间">
+            {{ formatDateTime(detail.tax_filed_time) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="报税操作人">
+            {{ detail.tax_filed_by || '-' }}
+          </a-descriptions-item>
           <a-descriptions-item label="开票人">
             {{ detail.issuer || '-' }}
           </a-descriptions-item>
@@ -114,7 +124,7 @@
 import { computed, ref, watch } from 'vue';
 import { EyeOutlined } from '@ant-design/icons-vue';
 import { invoiceApi } from '@/api/invoice';
-import { INVOICE_NATURE_LABELS, INVOICE_PURPOSE_LABELS } from '@/types/invoice';
+import { INVOICE_NATURE_LABELS, INVOICE_PURPOSE_LABELS, InvoiceTaxStatus } from '@/types/invoice';
 import type { InvoiceDetail, InvoiceItemEntry } from '@/types/invoice';
 import { invoiceItemFieldLabel } from '@/utils/invoice';
 
@@ -184,7 +194,7 @@ function formatInvoiceDate(date: string | null): string {
 }
 
 /** 时间格式化为本地日期时间 */
-function formatDateTime(date: string): string {
+function formatDateTime(date: string | null): string {
   if (!date) return '-';
   return new Date(date).toLocaleString('zh-CN', {
     year: 'numeric',

@@ -22,6 +22,14 @@ export enum InvoicePurpose {
   EXPRESS = 5,
 }
 
+/** 发票报税状态:1-未报税,2-已报税 */
+export enum InvoiceTaxStatus {
+  /** 未报税 */
+  NOT_FILED = 1,
+  /** 已报税 */
+  FILED = 2,
+}
+
 // ============ 标签映射 ============
 
 /** 发票性质中文标签映射 */
@@ -55,6 +63,12 @@ export const INVOICE_ITEM_FIELD_LABELS: Record<string, string> = {
   Total: '合计',
 };
 
+/** 报税状态中文标签映射 */
+export const INVOICE_TAX_STATUS_LABELS: Record<number, string> = {
+  [InvoiceTaxStatus.NOT_FILED]: '未报税',
+  [InvoiceTaxStatus.FILED]: '已报税',
+};
+
 // ============ 列表与详情 ============
 
 /** 发票列表查询参数 */
@@ -65,6 +79,8 @@ export interface InvoiceListQuery {
   invoice_nature?: number;
   /** 发票用途:1-办公资产费,2-差旅费,3-成本费,4-接待费,5-快递费(可选) */
   invoice_purpose?: number;
+  /** 报税状态:1-未报税,2-已报税(可选) */
+  is_tax_filed?: number;
   /** 开票日期起(含当天),YYYY-MM-DD(可选) */
   start_date?: string;
   /** 开票日期止(含当天),YYYY-MM-DD(可选) */
@@ -111,6 +127,12 @@ export interface Invoice {
   invoice_nature: number | null;
   /** 发票用途,可能为 null */
   invoice_purpose: number | null;
+  /** 是否报税:1-未报税,2-已报税 */
+  is_tax_filed: number;
+  /** 报税时间,未报税或已取消报税时为 null */
+  tax_filed_time: string | null;
+  /** 报税操作人用户 ID,未报税或已取消报税时为 null */
+  tax_filed_by: string | null;
   /** 状态:1-正常 */
   status: number;
   /** 入库时间,ISO 日期时间字符串 */
@@ -215,4 +237,22 @@ export interface InvoiceUploadBatchResult {
   success_count: number;
   /** result=1 的文件数,含类型被拒绝的文件 */
   fail_count: number;
+}
+
+// ============ 批量报税 ============
+
+/** 批量报税/取消报税请求参数 */
+export interface InvoiceTaxFileParams {
+  /** 发票主键 UUID 列表(无连字符,32 位),1~200 个 */
+  invoice_ids: string[];
+  /** 目标报税状态:1-未报税(取消报税),2-已报税 */
+  is_tax_filed: number;
+  /** 操作人用户 ID */
+  user_id: string;
+}
+
+/** 批量报税/取消报税结果 datas */
+export interface InvoiceTaxFileResult {
+  /** 实际发生状态变更的发票条数 */
+  updated_count: number;
 }
