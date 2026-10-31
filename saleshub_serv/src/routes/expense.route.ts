@@ -9,7 +9,7 @@ import {
     ListExpenseDto,
     UpdateExpenseDto,
 } from '../dto/expense.dto';
-import { expenseService } from '../service/expense';
+import { expenseService } from '../service/finace';
 
 const router = Router();
 

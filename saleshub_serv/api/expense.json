@@ -1,0 +1,822 @@
+{
+    "/saleshub/expense/create": {
+        "method": "POST",
+        "summary": "新建支出费用单",
+        "description": "新建一条支出费用单，费用单与采购明细行在同一事务内写入。费用单编号 ZC+6位递增数字（如 ZC000001）在事务内生成，并发唯一冲突时自动重试（最多 3 次）。费用类型分两种互斥场景：1-有发票采购：必须关联发票（先调 /saleshub/invoice/upload 识别入库后回填 invoice_id）、采购来源渠道 channel 与采购明细 items（1~100 行），发票与费用单 1:1，该发票已被其他费用单关联时拒绝，msg 为「该发票已被支出费用单关联,费用单编号:xxx」；2-无发票支出：不能传 invoice_id（传了拒绝，msg 为「无发票支出不能关联发票」），仅记录金额/分类/收款方/付款方式。金额最多两位小数，支出日期格式 YYYY-MM-DD。参数校验失败时 result=1，msg 为具体校验提示（如「费用类型只能为1-有发票采购或2-无发票支出」「支出金额最多两位小数」「采购明细最多100行」）。事务写入失败时 result=1、msg 为「新建失败」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "expense_type": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "description": "费用类型：1-有发票采购，2-无发票支出"
+                },
+                "expense_title": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "费用名称（可选）"
+                },
+                "user_id": {
+                    "type": "string",
+                    "description": "创建人用户 ID"
+                },
+                "amount": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "支出金额，最多两位小数"
+                },
+                "expense_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "支出日期，格式 YYYY-MM-DD"
+                },
+                "invoice_id": {
+                    "type": "string",
+                    "description": "关联发票 ID（类型1必填，/saleshub/invoice/upload 识别入库后返回的发票主键；类型2不能传）"
+                },
+                "channel": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        99
+                    ],
+                    "description": "采购来源渠道：1-淘宝，2-京东，3-拼多多，4-抖音，5-线下，99-其他（类型1必填）"
+                },
+                "order_no": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "电商订单号，淘宝/京东等平台订单（线下采购可不传，可选）"
+                },
+                "category": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7
+                    ],
+                    "description": "支出分类：1-办公资产费，2-差旅费，3-成本费，4-接待费，5-快递费，6-软件服务费，7-其他（可选）"
+                },
+                "payee": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "收款方/对方名称，无发票线下付款场景常用（可选）"
+                },
+                "payment_method": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5
+                    ],
+                    "description": "付款方式：1-现金，2-微信，3-支付宝，4-银行转账，5-其他（可选）"
+                },
+                "remark": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "备注（可选）"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "description": "采购明细行列表（类型1必填，1~100行；类型2不能传）。行金额(quantity*price)由查询计算，不落库",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "item_id": {
+                                "type": "string",
+                                "description": "库存零件 ID（inventory_item.item_id）"
+                            },
+                            "spec_id": {
+                                "type": "string",
+                                "description": "库存规格 ID（inventory_item_spec.spec_id）"
+                            },
+                            "quantity": {
+                                "type": "number",
+                                "description": "采购数量，正整数"
+                            },
+                            "price": {
+                                "type": "number",
+                                "minimum": 0,
+                                "description": "采购单价，最多两位小数"
+                            },
+                            "remark": {
+                                "type": "string",
+                                "maxLength": 500,
+                                "description": "备注（可选）"
+                            }
+                        },
+                        "required": [
+                            "item_id",
+                            "spec_id",
+                            "quantity",
+                            "price"
+                        ]
+                    }
+                }
+            },
+            "required": [
+                "expense_type",
+                "user_id",
+                "amount",
+                "expense_date"
+            ]
+        },
+        "example_request": {
+            "expense_type": 1,
+            "expense_title": "采购打印纸",
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "amount": 478.00,
+            "expense_date": "2026-10-30",
+            "invoice_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e2a",
+            "channel": 2,
+            "order_no": "78564321",
+            "category": 1,
+            "payee": "京东平台",
+            "payment_method": 4,
+            "remark": "办公室用",
+            "items": [
+                {
+                    "item_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4001",
+                    "spec_id": "0194a8f0e1b27c4a9d0e8f7b6c5d5001",
+                    "quantity": 10,
+                    "price": 47.80,
+                    "remark": "A4纸"
+                }
+            ]
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-创建成功，1-参数校验失败、发票不存在/已被关联或事务写入失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「创建成功」「有发票采购必须选择采购来源渠道」「无发票支出不能关联发票」「发票不存在或已作废」「该发票已被支出费用单关联,费用单编号:xxx」「新建失败」"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "新建结果。失败时无此字段",
+                    "properties": {
+                        "expense_id": {
+                            "type": "string",
+                            "description": "支出费用单主键 UUID（无连字符，32 位）"
+                        },
+                        "expense_no": {
+                            "type": "string",
+                            "description": "费用单编号，格式 ZC+6位递增数字（如 ZC000001）"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/expense/update": {
+        "method": "POST",
+        "summary": "修改支出费用单",
+        "description": "修改支出费用单，仅正常状态（status=1）费用单可修改，不存在或已作废时 result=1、msg 为「支出费用单不存在或已作废」。费用类型与费用单编号不允许修改，全部业务字段可选，仅更新传入的字段。类型2-无发票支出不能传 invoice_id（传了拒绝）；类型1-有发票采购可换绑发票（校验新发票存在且未被其他费用单关联，与当前相同则视为已绑定直接放行）并更新采购来源渠道；类型2不允许传发票/渠道相关字段。传入 items 时整批替换采购明细：旧行置为停用（status=2），新行在同一事务内重新写入（仅类型1支持）。参数校验失败时 result=1，msg 为具体校验提示；事务更新失败时 result=1、msg 为「修改失败」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "expense_id": {
+                    "type": "string",
+                    "description": "支出费用单主键 UUID（无连字符，32 位）"
+                },
+                "expense_title": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "费用名称（可选）"
+                },
+                "amount": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "支出金额，最多两位小数（可选）"
+                },
+                "expense_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "支出日期，格式 YYYY-MM-DD（可选）"
+                },
+                "invoice_id": {
+                    "type": "string",
+                    "description": "关联发票 ID（可选，类型1专用；换绑发票校验规则同 /saleshub/expense/bindInvoice）"
+                },
+                "channel": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        99
+                    ],
+                    "description": "采购来源渠道：1-淘宝，2-京东，3-拼多多，4-抖音，5-线下，99-其他（可选）"
+                },
+                "order_no": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "电商订单号（可选）"
+                },
+                "category": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7
+                    ],
+                    "description": "支出分类：1-办公资产费，2-差旅费，3-成本费，4-接待费，5-快递费，6-软件服务费，7-其他（可选）"
+                },
+                "payee": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "收款方/对方名称（可选）"
+                },
+                "payment_method": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5
+                    ],
+                    "description": "付款方式：1-现金，2-微信，3-支付宝，4-银行转账，5-其他（可选）"
+                },
+                "remark": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "备注（可选）"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "description": "采购明细行列表（可选，类型1专用，传入时整批替换，1~100行），行结构同 /saleshub/expense/create 的 items",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "item_id": {
+                                "type": "string",
+                                "description": "库存零件 ID"
+                            },
+                            "spec_id": {
+                                "type": "string",
+                                "description": "库存规格 ID"
+                            },
+                            "quantity": {
+                                "type": "number",
+                                "description": "采购数量，正整数"
+                            },
+                            "price": {
+                                "type": "number",
+                                "description": "采购单价，最多两位小数"
+                            },
+                            "remark": {
+                                "type": "string",
+                                "maxLength": 500,
+                                "description": "备注（可选）"
+                            }
+                        },
+                        "required": [
+                            "item_id",
+                            "spec_id",
+                            "quantity",
+                            "price"
+                        ]
+                    }
+                }
+            },
+            "required": [
+                "expense_id"
+            ]
+        },
+        "example_request": {
+            "expense_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e1b",
+            "amount": 500.00,
+            "remark": "金额修正"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-费用单不存在/已作废、参数校验失败或修改失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「success」「支出费用单不存在或已作废」「无发票支出不能关联发票」「发票不存在或已作废」「该发票已被支出费用单关联,费用单编号:xxx」「修改失败」"
+                }
+            }
+        }
+    },
+    "/saleshub/expense/list": {
+        "method": "GET",
+        "summary": "支出费用单列表",
+        "description": "分页查询全部正常状态（status=1）的支出费用单，作废费用单不展示。支持筛选：费用类型 expense_type（精确）、采购来源渠道 channel（精确）、支出分类 category（精确）、付款方式 payment_method（精确）、支出日期区间 start_date/end_date（YYYY-MM-DD，均含当天）、关键字 keyword（对费用单编号、收款方模糊匹配，任一命中即返回）。按 create_time 降序。左联发票表带出发票号码 invoice_number 与价税合计 invoice_total_amount（类型1关联发票时展示，其余为 null）。列表不含采购明细行，需要完整信息请调用 /saleshub/expense/detail。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "pageIndex": {
+                    "type": "number",
+                    "description": "页码，从 1 开始（Query 参数）"
+                },
+                "pageSize": {
+                    "type": "number",
+                    "description": "每页条数（Query 参数）"
+                },
+                "expense_type": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "description": "费用类型：1-有发票采购，2-无发票支出（Query 参数，可选）"
+                },
+                "channel": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        99
+                    ],
+                    "description": "采购来源渠道：1-淘宝，2-京东，3-拼多多，4-抖音，5-线下，99-其他（Query 参数，可选）"
+                },
+                "category": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7
+                    ],
+                    "description": "支出分类：1-办公资产费，2-差旅费，3-成本费，4-接待费，5-快递费，6-软件服务费，7-其他（Query 参数，可选）"
+                },
+                "payment_method": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5
+                    ],
+                    "description": "付款方式：1-现金，2-微信，3-支付宝，4-银行转账，5-其他（Query 参数，可选）"
+                },
+                "start_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "支出日期起（含当天），格式 YYYY-MM-DD（Query 参数，可选）"
+                },
+                "end_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "支出日期止（含当天），格式 YYYY-MM-DD（Query 参数，可选）"
+                },
+                "keyword": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "关键字，对费用单编号/收款方模糊匹配（Query 参数，可选）"
+                }
+            },
+            "required": [
+                "pageIndex",
+                "pageSize"
+            ]
+        },
+        "example_request": {
+            "pageIndex": 1,
+            "pageSize": 10,
+            "expense_type": 1,
+            "channel": 2,
+            "category": 1,
+            "payment_method": 4,
+            "start_date": "2026-10-01",
+            "end_date": "2026-10-31",
+            "keyword": "ZC000001"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "分页结果",
+                    "properties": {
+                        "total": {
+                            "type": "number",
+                            "description": "符合条件的总条数"
+                        },
+                        "items": {
+                            "type": "array",
+                            "description": "支出费用单列表",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "expense_id": {
+                                        "type": "string",
+                                        "description": "支出费用单主键 UUID（无连字符，32 位）"
+                                    },
+                                    "expense_no": {
+                                        "type": "string",
+                                        "description": "费用单编号，格式 ZC+6位递增数字（如 ZC000001）"
+                                    },
+                                    "expense_title": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "费用名称，可能为 null"
+                                    },
+                                    "expense_type": {
+                                        "type": "number",
+                                        "description": "费用类型：1-有发票采购，2-无发票支出"
+                                    },
+                                    "user_id": {
+                                        "type": "string",
+                                        "description": "创建人用户 ID"
+                                    },
+                                    "invoice_id": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "关联发票 ID，类型2或未关联时为 null"
+                                    },
+                                    "invoice_number": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "关联发票号码（左联发票表，发票正常状态时返回），可能为 null"
+                                    },
+                                    "invoice_total_amount": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "关联发票价税合计，数字字符串（如 478.00），可能为 null"
+                                    },
+                                    "channel": {
+                                        "type": [
+                                            "number",
+                                            "null"
+                                        ],
+                                        "description": "采购来源渠道：1-淘宝，2-京东，3-拼多多，4-抖音，5-线下，99-其他，可能为 null"
+                                    },
+                                    "order_no": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "电商订单号，可能为 null"
+                                    },
+                                    "amount": {
+                                        "type": "string",
+                                        "description": "支出金额，数字字符串（如 478.00）"
+                                    },
+                                    "expense_date": {
+                                        "type": "string",
+                                        "description": "支出日期，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                                    },
+                                    "category": {
+                                        "type": [
+                                            "number",
+                                            "null"
+                                        ],
+                                        "description": "支出分类：1-办公资产费，2-差旅费，3-成本费，4-接待费，5-快递费，6-软件服务费，7-其他，可能为 null"
+                                    },
+                                    "payee": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "收款方/对方名称，可能为 null"
+                                    },
+                                    "payment_method": {
+                                        "type": [
+                                            "number",
+                                            "null"
+                                        ],
+                                        "description": "付款方式：1-现金，2-微信，3-支付宝，4-银行转账，5-其他，可能为 null"
+                                    },
+                                    "remark": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "备注，可能为 null"
+                                    },
+                                    "status": {
+                                        "type": "number",
+                                        "description": "状态：1-正常"
+                                    },
+                                    "create_time": {
+                                        "type": "string",
+                                        "description": "创建时间，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/expense/detail": {
+        "method": "GET",
+        "summary": "支出费用单详情",
+        "description": "按 expense_id 查询单个支出费用单的完整信息。仅 status=1 的费用单可查，不存在或已作废时 result=1、msg 为「支出费用单不存在」。返回费用单全部业务字段、正常状态（status=1）采购明细行 items（按创建时间升序），以及关联发票摘要（发票号码、详细类型描述、开票日期、原始发票文件预览地址 invoice_url，通过发票 file_id 关联 minio_file 生成，文件缺失时无 invoice_url 字段）。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "expense_id": {
+                    "type": "string",
+                    "description": "支出费用单主键 UUID（Query 参数）"
+                }
+            },
+            "required": [
+                "expense_id"
+            ]
+        },
+        "example_request": {
+            "expense_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e1b"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-费用单不存在或查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「支出费用单不存在」"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "费用单详情",
+                    "properties": {
+                        "expense_id": {
+                            "type": "string",
+                            "description": "支出费用单主键 UUID（无连字符，32 位）"
+                        },
+                        "expense_no": {
+                            "type": "string",
+                            "description": "费用单编号，格式 ZC+6位递增数字（如 ZC000001）"
+                        },
+                        "expense_title": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "费用名称，可能为 null"
+                        },
+                        "expense_type": {
+                            "type": "number",
+                            "description": "费用类型：1-有发票采购，2-无发票支出"
+                        },
+                        "user_id": {
+                            "type": "string",
+                            "description": "创建人用户 ID"
+                        },
+                        "invoice_id": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "关联发票 ID，类型2或未关联时为 null"
+                        },
+                        "channel": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "description": "采购来源渠道：1-淘宝，2-京东，3-拼多多，4-抖音，5-线下，99-其他，可能为 null"
+                        },
+                        "order_no": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "电商订单号，可能为 null"
+                        },
+                        "amount": {
+                            "type": "string",
+                            "description": "支出金额，数字字符串（如 478.00）"
+                        },
+                        "expense_date": {
+                            "type": "string",
+                            "description": "支出日期，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                        },
+                        "category": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "description": "支出分类：1-办公资产费，2-差旅费，3-成本费，4-接待费，5-快递费，6-软件服务费，7-其他，可能为 null"
+                        },
+                        "payee": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "收款方/对方名称，可能为 null"
+                        },
+                        "payment_method": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "description": "付款方式：1-现金，2-微信，3-支付宝，4-银行转账，5-其他，可能为 null"
+                        },
+                        "remark": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "备注，可能为 null"
+                        },
+                        "status": {
+                            "type": "number",
+                            "description": "状态：1-正常"
+                        },
+                        "create_time": {
+                            "type": "string",
+                            "description": "创建时间，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                        },
+                        "update_time": {
+                            "type": "string",
+                            "description": "更新时间，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                        },
+                        "items": {
+                            "type": "array",
+                            "description": "采购明细行（仅正常状态，费用类型1专有；类型2为空数组），按创建时间升序",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "relation_id": {
+                                        "type": "string",
+                                        "description": "明细行主键 UUID（无连字符，32 位）"
+                                    },
+                                    "expense_id": {
+                                        "type": "string",
+                                        "description": "所属支出费用单 ID"
+                                    },
+                                    "item_id": {
+                                        "type": "string",
+                                        "description": "库存零件 ID（inventory_item.item_id）"
+                                    },
+                                    "spec_id": {
+                                        "type": "string",
+                                        "description": "库存规格 ID（inventory_item_spec.spec_id）"
+                                    },
+                                    "quantity": {
+                                        "type": "number",
+                                        "description": "采购数量"
+                                    },
+                                    "price": {
+                                        "type": "string",
+                                        "description": "采购单价，数字字符串（如 47.80）"
+                                    },
+                                    "remark": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "备注，可能为 null"
+                                    },
+                                    "status": {
+                                        "type": "number",
+                                        "description": "状态：1-正常"
+                                    },
+                                    "create_time": {
+                                        "type": "string",
+                                        "description": "创建时间，ISO 日期时间字符串"
+                                    },
+                                    "update_time": {
+                                        "type": "string",
+                                        "description": "更新时间，ISO 日期时间字符串"
+                                    }
+                                }
+                            }
+                        },
+                        "invoice_number": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "关联发票号码，未关联发票时为 null"
+                        },
+                        "sub_type_desc": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "关联发票详细类型描述，如「电子发票(普通发票)」，可能为 null"
+                        },
+                        "invoice_date": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "关联发票开票日期，ISO 日期时间字符串，可能为 null"
+                        },
+                        "file_object_name": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "关联发票原始文件在 MinIO 的对象名，仅用于生成预览地址，可能为 null"
+                        },
+                        "invoice_url": {
+                            "type": "string",
+                            "description": "原始发票文件（图片/PDF）预览地址；原始文件缺失时无此字段"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/expense/bindInvoice": {
+        "method": "POST",
+        "summary": "支出费用单关联发票",
+        "description": "供前端上传发票后回填：先调已有 /saleshub/invoice/upload 识别入库，拿到 invoice_id 后调本接口绑定到费用单。仅类型1-有发票采购费用单可关联（其他类型 result=1、msg 为「仅类型1-有发票采购费用单可关联发票」）；费用单不存在或已作废时 result=1。发票必须存在且正常状态，发票与费用单 1:1：已被其他费用单关联时拒绝，msg 为「该发票已被支出费用单关联,费用单编号:xxx」；重复关联同一发票幂等返回成功。已关联旧发票的费用单可直接换绑，旧发票自动释放。校验通过后回填发票 ID，数据库唯一约束兜底并发。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "expense_id": {
+                    "type": "string",
+                    "description": "支出费用单主键 UUID（无连字符，32 位）"
+                },
+                "invoice_id": {
+                    "type": "string",
+                    "description": "关联发票 ID（/saleshub/invoice/upload 返回的发票主键）"
+                }
+            },
+            "required": [
+                "expense_id",
+                "invoice_id"
+            ]
+        },
+        "example_request": {
+            "expense_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e1b",
+            "invoice_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e2a"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功（含重复关联同一发票的幂等成功），1-费用单不存在/类型不符、发票不存在/已被关联或操作失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「success」「支出费用单不存在或已作废」「仅类型1-有发票采购费用单可关联发票」「发票不存在或已作废」「该发票已被支出费用单关联,费用单编号:xxx」「操作失败」"
+                }
+            }
+        }
+    }
+}

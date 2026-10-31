@@ -10,7 +10,7 @@ import {
     InvoiceIdDto,
     TaxFileInvoiceDto,
 } from '../dto/invoice.dto';
-import { ocrService, UploadFileItem, invoiceService } from '../service/invoice';
+import { ocrService, UploadFileItem, invoiceService } from '../service/finace';
 
 const router = Router();
 
@@ -34,8 +34,8 @@ function wrapMulter(middleware: RequestHandler, unexpectedFileMsg: string): Requ
                     err.code === 'LIMIT_FILE_SIZE'
                         ? `单个文件大小不能超过5MB`
                         : err.code === 'LIMIT_UNEXPECTED_FILE'
-                          ? unexpectedFileMsg
-                          : `文件上传失败:${err.code}`;
+                            ? unexpectedFileMsg
+                            : `文件上传失败:${err.code}`;
                 res.locals.datas = { result: 1, msg };
                 res.json(res.locals.datas);
                 return;
