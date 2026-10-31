@@ -23,7 +23,10 @@
     <div v-if="phase === 'form'" class="upload-form">
       <a-form layout="vertical">
         <a-form-item label="发票性质" required>
-          <a-radio-group v-model:value="formState.invoice_nature" :disabled="submitting">
+          <a-radio-group
+            v-model:value="formState.invoice_nature"
+            :disabled="submitting || fixedNature != null"
+          >
             <a-radio :value="InvoiceNature.ACTUAL">实开</a-radio>
             <a-radio :value="InvoiceNature.DEDUCTION">进项抵扣</a-radio>
           </a-radio-group>
@@ -236,12 +239,16 @@ interface Props {
   open: boolean;
   /** 识别模式:single-单文件,batch-批量 */
   mode: 'single' | 'batch';
+  /** 固定发票性质:传入时性质预填且不可修改(如支出费用场景固定实开) */
+  fixedNature?: number;
 }
 
 interface Emits {
   (e: 'update:open', value: boolean): void;
   /** 本次识别有新发票入库,通知父级刷新列表 */
   (e: 'success'): void;
+  /** 单个识别完成,返回完整识别结果(供调用方选取发票,如支出费用关联) */
+  (e: 'uploaded', result: InvoiceUploadResult): void;
 }
 
 const props = defineProps<Props>();
@@ -292,7 +299,8 @@ watch(
 /** 重置到表单初始状态 */
 function resetState() {
   phase.value = 'form';
-  formState.invoice_nature = undefined;
+  // 固定发票性质时预填,否则留空由用户选择
+  formState.invoice_nature = props.fixedNature;
   formState.invoice_purpose = undefined;
   selectedFile.value = null;
   selectedFiles.value = [];
@@ -451,6 +459,8 @@ async function handleSubmit() {
         formState.tag,
       );
       singleResult.value = res.datas;
+      // 通知调用方识别结果(如支出费用关联场景选取发票)
+      emit('uploaded', res.datas);
       if (res.datas.invoices.length > 0) {
         hasNewInvoices.value = true;
       }
