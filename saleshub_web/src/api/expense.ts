@@ -44,6 +44,15 @@ export const expenseApi = {
   bindInvoice(payload: ExpenseBindInvoicePayload) {
     return http.post('/saleshub/expense/bindInvoice', payload);
   },
+
+  /**
+   * 删除支出费用单(软删除,费用单与采购明细行同事务作废)
+   * 类型1关联的发票随费用单作废自动释放,可再次被其他费用单选择
+   * @param expense_id 费用单 ID
+   */
+  delete(expense_id: string) {
+    return http.post('/saleshub/expense/delete', { expense_id });
+  },
 };
 
 export default expenseApi;

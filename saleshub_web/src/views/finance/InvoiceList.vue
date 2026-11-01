@@ -139,6 +139,16 @@
 
           <template v-else-if="column.key === 'action'">
             <a-button type="link" size="small" @click="openDetail(record)">详情</a-button>
+            <!-- 删除:行内二次确认;已被费用单关联的发票由服务端拒绝并提示 -->
+            <a-popconfirm
+              title="确定要删除此发票吗？"
+              ok-text="删除"
+              cancel-text="取消"
+              placement="left"
+              @confirm="handleDelete(record)"
+            >
+              <a-button type="link" size="small" danger>删除</a-button>
+            </a-popconfirm>
           </template>
         </template>
       </a-table>
@@ -331,6 +341,23 @@ const detailId = ref('');
 const openDetail = (record: Invoice) => {
   detailId.value = record.invoice_id;
   detailOpen.value = true;
+};
+
+/**
+ * 删除发票:popconfirm 二次确认 → 调接口 → 成功后刷新列表
+ * 若当前页删至最后一条且不在第一页,自动回退一页,避免看到空页
+ */
+const handleDelete = async (record: Invoice) => {
+  try {
+    await invoiceApi.delete(record.invoice_id);
+    message.success('删除成功');
+    if (records.value.length === 1 && pageIndex.value > 1) {
+      pageIndex.value -= 1;
+    }
+    loadList();
+  } catch {
+    // 错误已由全局拦截器提示(如发票已被费用单关联)
+  }
 };
 
 /**

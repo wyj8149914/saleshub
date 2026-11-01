@@ -81,6 +81,15 @@ export const invoiceApi = {
   taxFile(params: InvoiceTaxFileParams) {
     return http.post<InvoiceTaxFileResult>('/saleshub/invoice/taxFile', params);
   },
+
+  /**
+   * 删除发票(软删除,status 置为作废)
+   * 已被正常状态支出费用单关联的发票服务端拒绝删除,需先删除费用单释放
+   * @param invoice_id 发票 ID
+   */
+  delete(invoice_id: string) {
+    return http.post('/saleshub/invoice/delete', { invoice_id });
+  },
 };
 
 export default invoiceApi;

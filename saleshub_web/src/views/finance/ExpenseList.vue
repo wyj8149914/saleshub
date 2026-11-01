@@ -146,6 +146,16 @@
               >
                 {{ record.invoice_id ? '换绑发票' : '关联发票' }}
               </a-button>
+              <!-- 删除:行内二次确认;作废后关联发票自动释放 -->
+              <a-popconfirm
+                title="确定要删除此费用单吗？"
+                ok-text="删除"
+                cancel-text="取消"
+                placement="left"
+                @confirm="handleDelete(record)"
+              >
+                <a-button type="link" size="small" danger>删除</a-button>
+              </a-popconfirm>
             </a-space>
           </template>
         </template>
@@ -169,6 +179,7 @@
  * 入口:新建/修改(弹窗)、详情(抽屉)、类型1费用单关联/换绑发票(弹窗)
  */
 import { onMounted, ref } from 'vue';
+import { message } from 'ant-design-vue';
 import { PlusOutlined } from '@ant-design/icons-vue';
 import { expenseApi } from '@/api/expense';
 import {
@@ -196,7 +207,7 @@ const columns = [
   { title: '收款方', key: 'payee', width: 140, ellipsis: true },
   { title: '付款方式', key: 'payment_method', width: 100 },
   { title: '备注', key: 'remark', ellipsis: true },
-  { title: '操作', key: 'action', width: 190, fixed: 'right' as const },
+  { title: '操作', key: 'action', width: 230, fixed: 'right' as const },
 ];
 
 // ============ 列表状态 ============
@@ -324,6 +335,23 @@ const bindTarget = ref<Expense | null>(null);
 const openBind = (record: Expense) => {
   bindTarget.value = record;
   bindOpen.value = true;
+};
+
+/**
+ * 删除费用单:popconfirm 二次确认 → 调接口 → 成功后刷新列表
+ * 若当前页删至最后一条且不在第一页,自动回退一页,避免看到空页
+ */
+const handleDelete = async (record: Expense) => {
+  try {
+    await expenseApi.delete(record.expense_id);
+    message.success('删除成功');
+    if (records.value.length === 1 && pageIndex.value > 1) {
+      pageIndex.value -= 1;
+    }
+    loadList();
+  } catch {
+    // 错误已由全局拦截器提示
+  }
 };
 
 /** 支出日期仅展示日期部分 */
