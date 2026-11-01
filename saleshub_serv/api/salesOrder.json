@@ -279,10 +279,6 @@
                                         "type": "string",
                                         "description": "订单名称"
                                     },
-                                    "user_id": {
-                                        "type": "string",
-                                        "description": "创建人用户 ID"
-                                    },
                                     "customer_name": {
                                         "type": "string",
                                         "description": "客户名称"
@@ -312,7 +308,7 @@
                                     },
                                     "delivery_date": {
                                         "type": "string",
-                                        "description": "交货日期，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                                        "description": "交货日期，YYYY-MM-DD 格式字符串"
                                     },
                                     "order_status": {
                                         "type": "number",
@@ -324,17 +320,6 @@
                                             "null"
                                         ],
                                         "description": "备注，可能为 null"
-                                    },
-                                    "contract_file_id": {
-                                        "type": [
-                                            "string",
-                                            "null"
-                                        ],
-                                        "description": "合同文件 ID（minio_file.relation_id），可能为 null"
-                                    },
-                                    "status": {
-                                        "type": "number",
-                                        "description": "状态：1-正常"
                                     },
                                     "create_time": {
                                         "type": "string",
