@@ -552,6 +552,181 @@
             }
         }
     },
+    "/saleshub/invoice/unboundList": {
+        "method": "GET",
+        "summary": "查询未绑定支出费用单的实开发票列表",
+        "description": "查询未被支出费用单绑定的发票列表，供新建支出费用单（有发票采购）时下拉选择发票。只查正常状态（status=1）且发票性质为实开（invoice_nature=1）的发票，通过 NOT EXISTS 子查询排除已被正常状态（status=1）费用单关联的发票（已作废费用单不占用发票，其关联的发票会重新出现在本列表中）。不分页，一次性返回全部结果，无 total 字段。按创建时间降序。返回轻量票面字段，字段结构同 /saleshub/invoice/list 的 items，不含明细 items 等大字段。无查询参数。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {},
+            "description": "无查询参数"
+        },
+        "example_request": {},
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "查询结果。失败时无此字段",
+                    "properties": {
+                        "items": {
+                            "type": "array",
+                            "description": "未绑定费用单的实开发票列表，字段结构同 /saleshub/invoice/list 的 items",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "invoice_id": {
+                                        "type": "string",
+                                        "description": "发票主键 UUID（无连字符，32 位）"
+                                    },
+                                    "tag": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "标签，可能为 null"
+                                    },
+                                    "user_id": {
+                                        "type": "string",
+                                        "description": "识别用户 ID"
+                                    },
+                                    "file_id": {
+                                        "type": "string",
+                                        "description": "原始文件 ID（minio_file.relation_id）"
+                                    },
+                                    "invoice_type": {
+                                        "type": "number",
+                                        "description": "发票类型，见腾讯云 MixedInvoiceOCR 文档（如 16-全电发票）"
+                                    },
+                                    "sub_type": {
+                                        "type": "string",
+                                        "description": "发票详细类型，如 VatElectronicInvoiceFull"
+                                    },
+                                    "sub_type_desc": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "发票详细类型描述，如「电子发票(普通发票)」，可能为 null"
+                                    },
+                                    "title": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "发票名称，可能为 null"
+                                    },
+                                    "invoice_code": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "发票代码，全电发票为 null"
+                                    },
+                                    "invoice_number": {
+                                        "type": "string",
+                                        "description": "发票号码"
+                                    },
+                                    "invoice_date": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "开票日期，ISO 日期时间字符串，可能为 null"
+                                    },
+                                    "pretax_amount": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "税前金额，数字字符串（如 48.51），可能为 null"
+                                    },
+                                    "tax_amount": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "合计税额，数字字符串，可能为 null"
+                                    },
+                                    "total_amount": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "价税合计，数字字符串（如 49.00），可能为 null"
+                                    },
+                                    "seller_name": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "销售方名称，可能为 null"
+                                    },
+                                    "buyer_name": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "购买方名称，可能为 null"
+                                    },
+                                    "invoice_nature": {
+                                        "type": [
+                                            "number",
+                                            "null"
+                                        ],
+                                        "description": "发票性质：本列表恒为 1-实开"
+                                    },
+                                    "invoice_purpose": {
+                                        "type": [
+                                            "number",
+                                            "null"
+                                        ],
+                                        "description": "发票用途：1-办公资产费，2-差旅费，3-成本费，4-接待费，5-快递费，可能为 null"
+                                    },
+                                    "is_tax_filed": {
+                                        "type": "number",
+                                        "description": "是否报税：1-未报税，2-已报税"
+                                    },
+                                    "tax_filed_time": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "报税时间，YYYY-MM-DD HH24:MI:SS 格式字符串，未报税或已取消报税时为 null"
+                                    },
+                                    "tax_filed_by": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "报税操作人用户 ID，未报税或已取消报税时为 null"
+                                    },
+                                    "status": {
+                                        "type": "number",
+                                        "description": "状态：1-正常"
+                                    },
+                                    "create_time": {
+                                        "type": "string",
+                                        "description": "入库时间，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
     "/saleshub/invoice/detail": {
         "method": "GET",
         "summary": "发票详情",
@@ -863,6 +1038,41 @@
                             "description": "实际发生状态变更的发票条数"
                         }
                     }
+                }
+            }
+        }
+    },
+    "/saleshub/invoice/delete": {
+        "method": "POST",
+        "summary": "删除发票",
+        "description": "软删除单张发票：将发票状态置为已作废（status=2），作废后不再出现在列表/详情/报税等查询中，不做物理删除。先校验后删除：发票不存在或已作废时 result=1、msg 为「发票不存在或已作废」；已被正常状态（status=1）支出费用单关联的发票不允许删除，result=1、msg 为「该发票已被支出费用单关联,费用单编号:xxx」，需先删除关联的费用单（发票与费用单 1:1，费用单作废后发票自动释放，届时可删除）。删除成功返回 result=0，无 datas 字段。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "invoice_id": {
+                    "type": "string",
+                    "description": "发票主键 UUID（无连字符，32 位）"
+                }
+            },
+            "required": [
+                "invoice_id"
+            ]
+        },
+        "example_request": {
+            "invoice_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-删除成功，1-发票不存在/已作废、已被费用单关联或删除失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「success」「发票不存在或已作废」「该发票已被支出费用单关联,费用单编号:xxx」「删除失败」"
                 }
             }
         }

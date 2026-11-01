@@ -1,0 +1,611 @@
+{
+    "/saleshub/order/create": {
+        "method": "POST",
+        "summary": "新建销售订单",
+        "description": "新建一条销售订单，仅记整单信息（客户/联系方式/金额/交货日期），不拆产品明细行。订单编号 XS+6位递增数字（如 XS000001）在事务内生成。初始状态固定为：已收金额 received_amount=0.00、收款状态 pay_status=1-未收款、订单状态 order_status=1-待交货。订单金额最多两位小数，交货日期格式 YYYY-MM-DD。合同文件可先调 /saleshub/file/upload 上传后回填 minio_file.relation_id。参数校验失败时 result=1，msg 为具体校验提示（如「客户名称不能为空」「订单金额最多两位小数」「交货日期格式必须为YYYY-MM-DD」）。事务写入失败时 result=1、msg 为「新建失败」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "创建人用户 ID"
+                },
+                "order_title": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "订单名称"
+                },
+                "customer_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "客户名称"
+                },
+                "customer_phone": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "description": "客户联系方式"
+                },
+                "address": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "收货地址（可选）"
+                },
+                "amount": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "订单金额，最多两位小数"
+                },
+                "delivery_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "交货日期，格式 YYYY-MM-DD"
+                },
+                "remark": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "备注（可选）"
+                },
+                "contract_file_id": {
+                    "type": "string",
+                    "description": "合同文件 ID（可选，/saleshub/file/upload 返回的 minio_file.relation_id）"
+                }
+            },
+            "required": [
+                "user_id",
+                "order_title",
+                "customer_name",
+                "customer_phone",
+                "amount",
+                "delivery_date"
+            ]
+        },
+        "example_request": {
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "order_title": "首批采购订单",
+            "customer_name": "XX贸易有限公司",
+            "customer_phone": "13800138000",
+            "address": "广东省深圳市南山区XX路1号",
+            "amount": 12800.00,
+            "delivery_date": "2026-11-20",
+            "remark": "首批订单",
+            "contract_file_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e5a"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-创建成功，1-参数校验失败或事务写入失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「创建成功」「客户名称不能为空」「订单金额最多两位小数」「新建失败」"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "新建结果。失败时无此字段",
+                    "properties": {
+                        "order_id": {
+                            "type": "string",
+                            "description": "销售订单主键 UUID（无连字符，32 位）"
+                        },
+                        "order_no": {
+                            "type": "string",
+                            "description": "订单编号，格式 XS+6位递增数字（如 XS000001）"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/order/update": {
+        "method": "POST",
+        "summary": "修改销售订单",
+        "description": "修改销售订单基本信息，仅正常状态（status=1）订单可修改，不存在或已停用时 result=1、msg 为「销售订单不存在或已停用」。订单编号与创建人不允许修改；交货状态与已收金额不在本接口修改，分别走 /saleshub/order/updateStatus 与 /saleshub/order/receive。全部业务字段可选，仅更新传入的字段。修改订单金额时，服务端按当前已收金额与新金额重新推导收款状态 pay_status 落库（未收/部分/足额）。参数校验失败时 result=1，msg 为具体校验提示；更新失败时 result=1、msg 为「修改失败」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "order_id": {
+                    "type": "string",
+                    "description": "销售订单主键 UUID（无连字符，32 位）"
+                },
+                "order_title": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "订单名称（可选）"
+                },
+                "customer_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "客户名称（可选）"
+                },
+                "customer_phone": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "description": "客户联系方式（可选）"
+                },
+                "address": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "description": "收货地址（可选）"
+                },
+                "amount": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "订单金额，最多两位小数（可选；修改后按已收金额重新推导收款状态）"
+                },
+                "delivery_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "交货日期，格式 YYYY-MM-DD（可选）"
+                },
+                "remark": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "备注（可选）"
+                },
+                "contract_file_id": {
+                    "type": "string",
+                    "description": "合同文件 ID（可选）"
+                }
+            },
+            "required": [
+                "order_id"
+            ]
+        },
+        "example_request": {
+            "order_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e1c",
+            "amount": 13000.00,
+            "remark": "金额与备注调整"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-订单不存在/已停用、参数校验失败或修改失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「success」「销售订单不存在或已停用」「修改失败」"
+                }
+            }
+        }
+    },
+    "/saleshub/order/list": {
+        "method": "GET",
+        "summary": "销售订单列表",
+        "description": "分页查询全部正常状态（status=1）的销售订单，已停用订单不展示。支持筛选：订单状态 order_status（精确：1-待交货，2-已交货，3-已完成，4-已取消）、收款状态 pay_status（精确：1-未收款，2-部分收款，3-已收款）、交货日期区间 start_date/end_date（YYYY-MM-DD，均含当天）、关键字 keyword（对订单编号、客户名称模糊匹配，任一命中即返回）。按 create_time 降序。列表仅返回订单整单字段，不含合同文件预览地址；需要合同文件预览地址请调用 /saleshub/order/detail。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "pageIndex": {
+                    "type": "number",
+                    "description": "页码，从 1 开始（Query 参数）"
+                },
+                "pageSize": {
+                    "type": "number",
+                    "description": "每页条数（Query 参数）"
+                },
+                "order_status": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4
+                    ],
+                    "description": "订单状态：1-待交货，2-已交货，3-已完成，4-已取消（Query 参数，可选）"
+                },
+                "pay_status": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3
+                    ],
+                    "description": "收款状态：1-未收款，2-部分收款，3-已收款（Query 参数，可选）"
+                },
+                "start_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "交货日期起（含当天），格式 YYYY-MM-DD（Query 参数，可选）"
+                },
+                "end_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "交货日期止（含当天），格式 YYYY-MM-DD（Query 参数，可选）"
+                },
+                "keyword": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "关键字，对订单编号/客户名称模糊匹配（Query 参数，可选）"
+                }
+            },
+            "required": [
+                "pageIndex",
+                "pageSize"
+            ]
+        },
+        "example_request": {
+            "pageIndex": 1,
+            "pageSize": 10,
+            "order_status": 1,
+            "pay_status": 2,
+            "start_date": "2026-11-01",
+            "end_date": "2026-11-30",
+            "keyword": "XS000001"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "分页结果",
+                    "properties": {
+                        "total": {
+                            "type": "number",
+                            "description": "符合条件的总条数"
+                        },
+                        "items": {
+                            "type": "array",
+                            "description": "销售订单列表",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "order_id": {
+                                        "type": "string",
+                                        "description": "销售订单主键 UUID（无连字符，32 位）"
+                                    },
+                                    "order_no": {
+                                        "type": "string",
+                                        "description": "订单编号，格式 XS+6位递增数字（如 XS000001）"
+                                    },
+                                    "order_title": {
+                                        "type": "string",
+                                        "description": "订单名称"
+                                    },
+                                    "user_id": {
+                                        "type": "string",
+                                        "description": "创建人用户 ID"
+                                    },
+                                    "customer_name": {
+                                        "type": "string",
+                                        "description": "客户名称"
+                                    },
+                                    "customer_phone": {
+                                        "type": "string",
+                                        "description": "客户联系方式"
+                                    },
+                                    "address": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "收货地址，可能为 null"
+                                    },
+                                    "amount": {
+                                        "type": "string",
+                                        "description": "订单金额，数字字符串（如 12800.00）"
+                                    },
+                                    "received_amount": {
+                                        "type": "string",
+                                        "description": "已收金额，数字字符串（如 5000.00）"
+                                    },
+                                    "pay_status": {
+                                        "type": "number",
+                                        "description": "收款状态：1-未收款，2-部分收款，3-已收款（由已收/订单金额推导落库）"
+                                    },
+                                    "delivery_date": {
+                                        "type": "string",
+                                        "description": "交货日期，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                                    },
+                                    "order_status": {
+                                        "type": "number",
+                                        "description": "订单状态：1-待交货，2-已交货，3-已完成，4-已取消"
+                                    },
+                                    "remark": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "备注，可能为 null"
+                                    },
+                                    "contract_file_id": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "合同文件 ID（minio_file.relation_id），可能为 null"
+                                    },
+                                    "status": {
+                                        "type": "number",
+                                        "description": "状态：1-正常"
+                                    },
+                                    "create_time": {
+                                        "type": "string",
+                                        "description": "创建时间，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/order/detail": {
+        "method": "GET",
+        "summary": "销售订单详情",
+        "description": "按 order_id 查询单个销售订单的完整信息。仅 status=1 的订单可查，不存在或已停用时 result=1、msg 为「销售订单不存在」。返回订单全部业务字段及合同文件预览地址 contract_url（通过 contract_file_id 关联 minio_file 生成，未上传合同或文件缺失时无此字段）。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "order_id": {
+                    "type": "string",
+                    "description": "销售订单主键 UUID（Query 参数）"
+                }
+            },
+            "required": [
+                "order_id"
+            ]
+        },
+        "example_request": {
+            "order_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e1c"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-订单不存在或查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「销售订单不存在」"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "订单详情",
+                    "properties": {
+                        "order_id": {
+                            "type": "string",
+                            "description": "销售订单主键 UUID（无连字符，32 位）"
+                        },
+                        "order_no": {
+                            "type": "string",
+                            "description": "订单编号，格式 XS+6位递增数字（如 XS000001）"
+                        },
+                        "order_title": {
+                            "type": "string",
+                            "description": "订单名称"
+                        },
+                        "user_id": {
+                            "type": "string",
+                            "description": "创建人用户 ID"
+                        },
+                        "customer_name": {
+                            "type": "string",
+                            "description": "客户名称"
+                        },
+                        "customer_phone": {
+                            "type": "string",
+                            "description": "客户联系方式"
+                        },
+                        "address": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "收货地址，可能为 null"
+                        },
+                        "amount": {
+                            "type": "string",
+                            "description": "订单金额，数字字符串（如 12800.00）"
+                        },
+                        "received_amount": {
+                            "type": "string",
+                            "description": "已收金额，数字字符串（如 5000.00）"
+                        },
+                        "pay_status": {
+                            "type": "number",
+                            "description": "收款状态：1-未收款，2-部分收款，3-已收款"
+                        },
+                        "delivery_date": {
+                            "type": "string",
+                            "description": "交货日期，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                        },
+                        "order_status": {
+                            "type": "number",
+                            "description": "订单状态：1-待交货，2-已交货，3-已完成，4-已取消"
+                        },
+                        "remark": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "备注，可能为 null"
+                        },
+                        "contract_file_id": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "合同文件 ID（minio_file.relation_id），可能为 null"
+                        },
+                        "status": {
+                            "type": "number",
+                            "description": "状态：1-正常"
+                        },
+                        "create_time": {
+                            "type": "string",
+                            "description": "创建时间，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                        },
+                        "update_time": {
+                            "type": "string",
+                            "description": "更新时间，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                        },
+                        "contract_url": {
+                            "type": "string",
+                            "description": "合同文件预览地址；未上传合同或原始文件缺失时无此字段"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/order/receive": {
+        "method": "POST",
+        "summary": "销售订单收款",
+        "description": "销售订单收款登记：传入本次收款金额，服务端累加到订单已收金额。校验顺序：订单不存在或已停用（status!=1）时 result=1、msg 为「销售订单不存在或已停用」；订单已取消（order_status=4）时不可收款，msg 为「已取消订单不可收款」；本次收款金额累加后超过订单金额时整单拒绝，msg 为「收款金额超过订单未收金额」。校验通过后累加已收金额并按已收/订单金额自动推导收款状态落库（0-未收→1-未收款，部分→2-部分收款，足额→3-已收款，以分为单位比较避免浮点误差）。成功返回更新后的已收金额与收款状态。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "order_id": {
+                    "type": "string",
+                    "description": "销售订单主键 UUID（无连字符，32 位）"
+                },
+                "received_amount": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "description": "本次收款金额，最多两位小数，必须大于 0"
+                }
+            },
+            "required": [
+                "order_id",
+                "received_amount"
+            ]
+        },
+        "example_request": {
+            "order_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e1c",
+            "received_amount": 5000.00
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-订单不存在/已停用/已取消、收款超额、参数校验失败或操作失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「success」「销售订单不存在或已停用」「已取消订单不可收款」「收款金额超过订单未收金额」「收款金额必须大于0」「操作失败」"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "收款结果。失败时无此字段",
+                    "properties": {
+                        "received_amount": {
+                            "type": "string",
+                            "description": "累加后的已收金额，数字字符串（如 5000.00）"
+                        },
+                        "pay_status": {
+                            "type": "number",
+                            "description": "更新后的收款状态：1-未收款，2-部分收款，3-已收款"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/order/updateStatus": {
+        "method": "POST",
+        "summary": "销售订单状态变更",
+        "description": "变更销售订单的交货状态。仅正常状态（status=1）订单可操作，不存在或已停用时 result=1、msg 为「销售订单不存在或已停用」。已取消（order_status=4）为终态，不可再变更，msg 为「已取消订单为终态,不可变更状态」；其余状态（1-待交货，2-已交货，3-已完成）可自由设置。传入与当前相同的状态视为幂等操作，直接返回成功。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "order_id": {
+                    "type": "string",
+                    "description": "销售订单主键 UUID（无连字符，32 位）"
+                },
+                "order_status": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4
+                    ],
+                    "description": "目标订单状态：1-待交货，2-已交货，3-已完成，4-已取消"
+                }
+            },
+            "required": [
+                "order_id",
+                "order_status"
+            ]
+        },
+        "example_request": {
+            "order_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e1c",
+            "order_status": 2
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功（含同状态幂等成功），1-订单不存在/已停用/已取消、参数校验失败或操作失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「success」「销售订单不存在或已停用」「已取消订单为终态,不可变更状态」「操作失败」"
+                }
+            }
+        }
+    },
+    "/saleshub/order/delete": {
+        "method": "POST",
+        "summary": "删除销售订单",
+        "description": "软删除单个销售订单：将订单状态置为停用（status=2），已停用订单不再出现在列表/详情中，不做物理删除。仅正常状态（status=1）订单可删除，不存在或已停用时 result=1、msg 为「销售订单不存在或已停用」。删除成功返回 result=0，无 datas 字段。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "order_id": {
+                    "type": "string",
+                    "description": "销售订单主键 UUID（无连字符，32 位）"
+                }
+            },
+            "required": [
+                "order_id"
+            ]
+        },
+        "example_request": {
+            "order_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e1c"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-删除成功，1-订单不存在/已停用或删除失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「success」「销售订单不存在或已停用」「删除失败」"
+                }
+            }
+        }
+    }
+}

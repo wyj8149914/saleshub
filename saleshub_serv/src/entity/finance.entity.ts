@@ -184,6 +184,9 @@ export class SalesOrder {
     @Column({ type: 'varchar', length: 50, comment: '订单编号,格式XS+6位递增数字(如XS000001)' })
     order_no: string;
 
+    @Column({ type: 'varchar', length: 100, comment: '订单名称' })
+    order_title: string;
+
     @Column({ type: 'varchar', length: 32, comment: '创建人用户ID' })
     user_id: string;
 
@@ -222,14 +225,6 @@ export class SalesOrder {
     @Column({ type: 'varchar', length: 500, nullable: true, comment: '备注' })
     remark: string | null;
 
-    // ============ 惯例字段 ============
-
-    @Column({ type: 'timestamp', comment: '创建时间' })
-    create_time: Date;
-
-    @Column({ type: 'timestamp', comment: '更新时间' })
-    update_time: Date;
-
     // ============ 关联信息 ============
 
     @Column({
@@ -239,6 +234,17 @@ export class SalesOrder {
         comment: '合同文件ID(minio_file.relation_id)',
     })
     contract_file_id: string | null;
+
+    // ============ 惯例字段 ============
+
+    @Column({ type: 'int', default: 1, comment: '状态:1-正常,2-停用' })
+    status: number;
+
+    @Column({ type: 'timestamp', comment: '创建时间' })
+    create_time: Date;
+
+    @Column({ type: 'timestamp', comment: '更新时间' })
+    update_time: Date;
 }
 
 /**

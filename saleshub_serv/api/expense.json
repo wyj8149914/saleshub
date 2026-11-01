@@ -818,5 +818,40 @@
                 }
             }
         }
+    },
+    "/saleshub/expense/delete": {
+        "method": "POST",
+        "summary": "删除支出费用单",
+        "description": "软删除单个支出费用单：将费用单状态置为作废（status=2），同事务内将其全部正常状态（status=1）的采购明细行置为停用（status=2），作废后不再出现在列表/详情等查询中，不做物理删除。费用单作废后，类型1关联的发票自动释放（发票本身不做任何变更），可再次被其他费用单选择或绑定。仅正常状态费用单可删除，不存在或已作废时 result=1、msg 为「支出费用单不存在或已作废」。事务写入失败时 result=1、msg 为「删除失败」。删除成功返回 result=0，无 datas 字段。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "expense_id": {
+                    "type": "string",
+                    "description": "支出费用单主键 UUID（无连字符，32 位）"
+                }
+            },
+            "required": [
+                "expense_id"
+            ]
+        },
+        "example_request": {
+            "expense_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e1b"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-删除成功，1-费用单不存在/已作废或删除失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「success」「支出费用单不存在或已作废」「删除失败」"
+                }
+            }
+        }
     }
 }
