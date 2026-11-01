@@ -90,6 +90,20 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/system',
+    component: () => import('@/layouts/DefaultLayout.vue'),
+    redirect: '/system/users',
+    meta: { requiresAuth: true, title: '系统管理' },
+    children: [
+      {
+        path: 'users',
+        name: 'UserList',
+        component: () => import('@/views/system/UserList.vue'),
+        meta: { title: '用户管理', requiresAdmin: true },
+      },
+    ],
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('@/views/NotFound.vue'),
@@ -105,6 +119,10 @@ router.beforeEach((to) => {
   const authStore = useAuthStore();
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
     return { name: 'Login', query: { redirect: to.fullPath } };
+  }
+  // admin 专属路由:非管理员访问时重定向回首页
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    return { path: '/inventory/products' };
   }
   // if (to.name === 'Login' && authStore.isLoggedIn) {
   //     return { path: '/inventory/items' }

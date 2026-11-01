@@ -20,7 +20,7 @@
       </div>
 
       <nav class="sidebar-menu">
-        <template v-for="item in menuItems" :key="item.label">
+        <template v-for="item in visibleMenuItems" :key="item.label">
           <template v-if="item.children">
             <button
               type="button"
@@ -133,6 +133,8 @@ import {
   FileDoneOutlined,
   PayCircleOutlined,
   OrderedListOutlined,
+  SettingOutlined,
+  TeamOutlined,
 } from '@ant-design/icons-vue';
 import { useAuthStore } from '@/stores/auth';
 import { APP_VERSION, CHANGELOG_EMBED_URL } from '@/constants/app';
@@ -143,6 +145,8 @@ interface MenuItem {
   label: string;
   icon?: Component;
   children?: MenuItem[];
+  /** 仅管理员可见(如系统管理) */
+  adminOnly?: boolean;
 }
 
 const route = useRoute();
@@ -197,7 +201,18 @@ const menuItems: MenuItem[] = [
       { path: '/finance/sales-order', label: '销售订单', icon: OrderedListOutlined },
     ],
   },
+  {
+    label: '系统管理',
+    icon: SettingOutlined,
+    adminOnly: true,
+    children: [{ path: '/system/users', label: '用户管理', icon: TeamOutlined }],
+  },
 ];
+
+/** 按角色过滤后的菜单:adminOnly 项仅管理员可见 */
+const visibleMenuItems = computed(() =>
+  menuItems.filter((item) => !item.adminOnly || authStore.isAdmin)
+);
 
 // 顶栏标题兜底：部分路由未配置 meta.title，按路由 name 匹配中文名
 const routeTitleMap: Record<string, string> = {
@@ -229,7 +244,7 @@ function toggleExpand(label: string) {
 watch(
   () => route.path,
   () => {
-    menuItems.forEach((item) => {
+    visibleMenuItems.value.forEach((item) => {
       if (item.children && containsActive(item)) {
         expandedMap[item.label] = true;
       }

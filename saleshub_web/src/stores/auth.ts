@@ -23,6 +23,8 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<UserInfo | null>(readUser());
 
   const isLoggedIn = computed(() => !!token.value);
+  /** 是否管理员:控制用户管理等 admin 专属菜单/路由/操作 */
+  const isAdmin = computed(() => user.value?.role === 'admin');
 
   async function login(payload: LoginPayload): Promise<LoginResponseData> {
     const res = await userApi.login(payload);
@@ -51,5 +53,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem(USER_KEY);
   }
 
-  return { token, refreshToken, user, isLoggedIn, login, logout };
+  return { token, refreshToken, user, isLoggedIn, isAdmin, login, logout };
 });

@@ -7,6 +7,7 @@ import type {
   InvoiceUploadBatchResult,
   InvoiceTaxFileParams,
   InvoiceTaxFileResult,
+  UnboundInvoiceListData,
 } from '@/types/invoice';
 import type { PaginatedData } from '@/types/inventory';
 
@@ -26,6 +27,14 @@ export const invoiceApi = {
   /** 查询发票详情(含明细条目 items 与原文件预览地址 file_url) */
   detail(invoice_id: string) {
     return http.get<InvoiceDetail>('/saleshub/invoice/detail', { params: { invoice_id } });
+  },
+
+  /**
+   * 查询未绑定支出费用单的实开发票列表(不分页,无 total)
+   * 供支出费用单关联发票时下拉/表格选择;已作废费用单占用的发票会重新出现在列表中
+   */
+  listUnbound() {
+    return http.get<UnboundInvoiceListData>('/saleshub/invoice/unboundList');
   },
 
   /**

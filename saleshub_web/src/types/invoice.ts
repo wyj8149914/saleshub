@@ -139,6 +139,12 @@ export interface Invoice {
   create_time: string;
 }
 
+/** 未绑定支出费用单的实开发票列表 datas(不分页,无 total) */
+export interface UnboundInvoiceListData {
+  /** 未绑定费用单的实开发票列表,字段结构同 Invoice */
+  items: Invoice[];
+}
+
 /** 发票明细条目,字段随发票类型不同 */
 export type InvoiceItemEntry = Record<string, unknown>;
 
