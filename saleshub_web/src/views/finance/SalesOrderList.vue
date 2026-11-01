@@ -116,7 +116,13 @@
               >
                 变更状态
               </a-button>
-              <a-popconfirm title="确定要删除此订单吗？" ok-text="删除" cancel-text="取消" placement="left" @confirm="handleDelete(record)">
+              <a-popconfirm
+                title="确定要删除此订单吗？"
+                ok-text="删除"
+                cancel-text="取消"
+                placement="left"
+                @confirm="handleDelete(record)"
+              >
                 <a-button type="link" size="small" danger>删除</a-button>
               </a-popconfirm>
             </a-space>
@@ -149,12 +155,7 @@ import { onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { PlusOutlined } from '@ant-design/icons-vue';
 import { salesOrderApi } from '@/api/salesOrder';
-import {
-  ORDER_STATUS_LABELS,
-  PAY_STATUS_LABELS,
-  OrderStatus,
-  PayStatus,
-} from '@/types/salesOrder';
+import { ORDER_STATUS_LABELS, PAY_STATUS_LABELS, OrderStatus, PayStatus } from '@/types/salesOrder';
 import type { SalesOrder, SalesOrderListQuery } from '@/types/salesOrder';
 import SalesOrderFormModal from '@/components/order/SalesOrderFormModal.vue';
 import SalesOrderDetailDrawer from '@/components/order/SalesOrderDetailDrawer.vue';

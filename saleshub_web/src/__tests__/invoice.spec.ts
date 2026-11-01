@@ -190,19 +190,13 @@ describe('发票报税', () => {
   });
 
   it('报税时选中含已报税行拒绝', () => {
-    const records = [
-      makeInvoice(InvoiceTaxStatus.NOT_FILED),
-      makeInvoice(InvoiceTaxStatus.FILED),
-    ];
+    const records = [makeInvoice(InvoiceTaxStatus.NOT_FILED), makeInvoice(InvoiceTaxStatus.FILED)];
     const { valid } = validateTaxSelection(records, InvoiceTaxStatus.FILED);
     expect(valid).toBe(false);
   });
 
   it('取消报税时选中含未报税行拒绝', () => {
-    const records = [
-      makeInvoice(InvoiceTaxStatus.FILED),
-      makeInvoice(InvoiceTaxStatus.NOT_FILED),
-    ];
+    const records = [makeInvoice(InvoiceTaxStatus.FILED), makeInvoice(InvoiceTaxStatus.NOT_FILED)];
     const { valid } = validateTaxSelection(records, InvoiceTaxStatus.NOT_FILED);
     expect(valid).toBe(false);
   });

@@ -23,10 +23,7 @@
     <div v-if="phase === 'form'" class="upload-form">
       <a-form layout="vertical">
         <a-form-item label="发票性质" required>
-          <a-radio-group
-            v-model:value="formState.invoice_nature"
-            :disabled="submitting || fixedNature != null"
-          >
+          <a-radio-group v-model:value="formState.invoice_nature" :disabled="submitting || fixedNature != null">
             <a-radio :value="InvoiceNature.ACTUAL">实开</a-radio>
             <a-radio :value="InvoiceNature.DEDUCTION">进项抵扣</a-radio>
           </a-radio-group>

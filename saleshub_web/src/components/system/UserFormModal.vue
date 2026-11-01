@@ -14,25 +14,50 @@
       <a-form-item
         label="用户名"
         name="username"
-        :rules="[{ required: true, message: '请输入用户名' }, { max: 50, message: '用户名最长50字符' }]"
+        :rules="[
+          { required: true, message: '请输入用户名' },
+          { max: 50, message: '用户名最长50字符' },
+        ]"
       >
         <a-input v-model:value="form.username" placeholder="请输入登录用户名" :disabled="isEdit" />
       </a-form-item>
 
-      <!-- 密码:仅新建时填写,强度校验与后端一致 -->
-      <a-form-item v-if="!isEdit" label="密码" name="password" :rules="[{ validator: validatePasswordStrength }]">
+      <!-- 密码:仅新建时填写,强度校验与后端一致,失去焦点时触发 -->
+      <a-form-item
+        v-if="!isEdit"
+        label="密码"
+        name="password"
+        :rules="[{ validator: validatePassword, trigger: 'blur' }]"
+      >
         <a-input-password v-model:value="form.password" placeholder="至少8位,含大写/小写/数字/特殊符号至少三种" />
+      </a-form-item>
+
+      <!-- 确认密码:仅新建时填写,失去焦点校验两次输入一致 -->
+      <a-form-item
+        v-if="!isEdit"
+        label="确认密码"
+        name="confirmPassword"
+        :rules="[
+          { required: true, message: '请再次输入密码', trigger: 'blur' },
+          { validator: validateConfirm, trigger: 'blur' },
+        ]"
+      >
+        <a-input-password v-model:value="form.confirmPassword" placeholder="请再次输入密码" />
       </a-form-item>
 
       <a-form-item
         label="姓名"
         name="name"
-        :rules="[{ required: true, message: '请输入姓名' }, { max: 100, message: '姓名最长100字符' }]"
+        :rules="[
+          { required: true, message: '请输入姓名' },
+          { max: 100, message: '姓名最长100字符' },
+        ]"
       >
         <a-input v-model:value="form.name" placeholder="请输入姓名/昵称" />
       </a-form-item>
 
-      <a-form-item label="手机号" name="phone" :rules="[{ max: 20, message: '手机号最长20字符' }]">
+      <!-- 手机号:选填,填写时失去焦点校验格式(11位大陆手机号) -->
+      <a-form-item label="手机号" name="phone" :rules="phoneRules">
         <a-input v-model:value="form.phone" placeholder="请输入手机号(可选)" />
       </a-form-item>
 
@@ -80,12 +105,14 @@ const loading = ref(false);
 const form = ref<{
   username: string;
   password: string;
+  confirmPassword: string;
   name: string;
   phone: string;
   role: UserRole;
 }>({
   username: '',
   password: '',
+  confirmPassword: '',
   name: '',
   phone: '',
   role: 'user',
@@ -100,11 +127,41 @@ const roleOptions = Object.entries(USER_ROLE_LABELS).map(([value, label]) => ({
   value,
 }));
 
+/** 适配 a-form validator 签名,复用密码强度校验 */
+const validatePassword = (_rule: unknown, value: string) => validatePasswordStrength(value);
+
+/** 两次密码输入一致性校验(仅新建模式渲染) */
+const validateConfirm = (_rule: unknown, value: string) => {
+  if (!value) {
+    return Promise.resolve();
+  }
+  return value === form.value.password ? Promise.resolve() : Promise.reject('两次输入的密码不一致');
+};
+
+/** 大陆手机号格式 */
+const PHONE_PATTERN = /^1[3-9]\d{9}$/;
+
+/** 手机号校验规则:选填,填写时校验格式,失去焦点触发 */
+const phoneRules = [
+  { max: 20, message: '手机号最长20字符', trigger: 'blur' },
+  {
+    validator: (_rule: unknown, value: string) => {
+      // 未填写时跳过格式校验(选填)
+      if (!value || PHONE_PATTERN.test(value)) {
+        return Promise.resolve();
+      }
+      return Promise.reject('请输入正确的11位手机号');
+    },
+    trigger: 'blur',
+  },
+];
+
 /** 重置表单:编辑时回填目标用户,新建时清空并恢复默认值 */
 const resetForm = () => {
   form.value = {
     username: props.user?.username ?? '',
     password: '',
+    confirmPassword: '',
     name: props.user?.name ?? '',
     phone: props.user?.phone ?? '',
     role: props.user?.role ?? 'user',

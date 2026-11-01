@@ -210,9 +210,7 @@ const menuItems: MenuItem[] = [
 ];
 
 /** 按角色过滤后的菜单:adminOnly 项仅管理员可见 */
-const visibleMenuItems = computed(() =>
-  menuItems.filter((item) => !item.adminOnly || authStore.isAdmin)
-);
+const visibleMenuItems = computed(() => menuItems.filter((item) => !item.adminOnly || authStore.isAdmin));
 
 // 顶栏标题兜底：部分路由未配置 meta.title，按路由 name 匹配中文名
 const routeTitleMap: Record<string, string> = {

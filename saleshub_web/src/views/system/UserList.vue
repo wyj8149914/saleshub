@@ -114,11 +114,7 @@
                 placement="left"
                 @confirm="handleToggleStatus(record)"
               >
-                <a-button
-                  type="link"
-                  size="small"
-                  :danger="record.status === UserStatus.NORMAL"
-                >
+                <a-button type="link" size="small" :danger="record.status === UserStatus.NORMAL">
                   {{ record.status === UserStatus.NORMAL ? '停用' : '启用' }}
                 </a-button>
               </a-popconfirm>

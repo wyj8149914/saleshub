@@ -41,9 +41,7 @@
           <a-descriptions-item label="备注" :span="2">{{ detail.remark || '-' }}</a-descriptions-item>
 
           <a-descriptions-item label="合同文件" :span="2">
-            <a v-if="detail.contract_url" :href="detail.contract_url" target="_blank" rel="noopener">
-              查看合同文件
-            </a>
+            <a v-if="detail.contract_url" :href="detail.contract_url" target="_blank" rel="noopener"> 查看合同文件 </a>
             <span v-else>-</span>
           </a-descriptions-item>
         </a-descriptions>
@@ -60,10 +58,7 @@
  */
 import { ref, watch } from 'vue';
 import { salesOrderApi } from '@/api/salesOrder';
-import {
-  ORDER_STATUS_LABELS,
-  PAY_STATUS_LABELS,
-} from '@/types/salesOrder';
+import { ORDER_STATUS_LABELS, PAY_STATUS_LABELS } from '@/types/salesOrder';
 import type { SalesOrderDetail } from '@/types/salesOrder';
 
 /** 订单状态标签颜色 */

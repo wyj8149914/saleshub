@@ -1,6 +1,15 @@
 <template>
-  <a-modal :open="open" :title="isEdit ? '修改支出费用单' : '新建支出费用单'" :confirm-loading="loading" :mask-closable="false"
-    width="1200px" ok-text="提交" cancel-text="取消" @ok="handleSubmit" @cancel="handleCancel">
+  <a-modal
+    :open="open"
+    :title="isEdit ? '修改支出费用单' : '新建支出费用单'"
+    :confirm-loading="loading"
+    :mask-closable="false"
+    width="1200px"
+    ok-text="提交"
+    cancel-text="取消"
+    @ok="handleSubmit"
+    @cancel="handleCancel"
+  >
     <a-form ref="formRef" :model="form" layout="vertical">
       <!-- 费用类型:编辑时锁定不允许修改 -->
       <a-form-item label="费用类型" name="expense_type" :rules="[{ required: true, message: '请选择费用类型' }]">
@@ -19,14 +28,24 @@
         </a-col>
         <a-col :span="6">
           <a-form-item label="支出金额" name="amount" :rules="amountRules">
-            <a-input-number v-model:value="form.amount" placeholder="支出金额" :min="0" :precision="2"
-              style="width: 100%" />
+            <a-input-number
+              v-model:value="form.amount"
+              placeholder="支出金额"
+              :min="0"
+              :precision="2"
+              style="width: 100%"
+            />
           </a-form-item>
         </a-col>
         <a-col :span="6">
           <a-form-item label="支出日期" name="expense_date" :rules="[{ required: true, message: '请选择支出日期' }]">
-            <a-date-picker v-model:value="form.expense_date" placeholder="请选择日期" style="width: 100%"
-              :format="'YYYY-MM-DD'" :allow-clear="false" />
+            <a-date-picker
+              v-model:value="form.expense_date"
+              placeholder="请选择日期"
+              style="width: 100%"
+              :format="'YYYY-MM-DD'"
+              :allow-clear="false"
+            />
           </a-form-item>
         </a-col>
         <a-col :span="6">
@@ -44,8 +63,12 @@
         </a-col>
         <a-col :span="6">
           <a-form-item label="付款方式" name="payment_method">
-            <a-select v-model:value="form.payment_method" placeholder="请选择付款方式" allow-clear
-              :options="paymentMethodOptions" />
+            <a-select
+              v-model:value="form.payment_method"
+              placeholder="请选择付款方式"
+              allow-clear
+              :options="paymentMethodOptions"
+            />
           </a-form-item>
         </a-col>
         <a-col :span="6">
@@ -68,13 +91,15 @@
             <template #message>
               已关联发票:{{ boundInvoiceNumber }}
               <span v-if="detailInvoice?.sub_type_desc">({{ detailInvoice.sub_type_desc }})</span>
-              <a v-if="detailInvoice?.invoice_url" :href="detailInvoice.invoice_url" target="_blank"
-                class="invoice-link">
+              <a
+                v-if="detailInvoice?.invoice_url"
+                :href="detailInvoice.invoice_url"
+                target="_blank"
+                class="invoice-link"
+              >
                 查看原文件
               </a>
-              <a-button type="link" size="small" @click="openInvoiceUpload">
-                换绑发票
-              </a-button>
+              <a-button type="link" size="small" @click="openInvoiceUpload"> 换绑发票 </a-button>
             </template>
           </a-alert>
 
@@ -98,7 +123,13 @@
 
       <!-- 备注 -->
       <a-form-item label="备注" name="remark">
-        <a-textarea v-model:value="form.remark" placeholder="请输入备注（可选）" :rows="2" :maxlength="500" show-count />
+        <a-textarea
+          v-model:value="form.remark"
+          placeholder="请输入备注（可选）"
+          :rows="2"
+          :maxlength="500"
+          show-count
+        />
       </a-form-item>
 
       <!-- 采购明细 -->
@@ -128,38 +159,80 @@
       </div>
 
       <div v-for="(row, idx) in itemRows" :key="idx" class="batch-row">
-        <a-select class="col-type" :value="row.parentTypeId" placeholder="一级类型" allow-clear :loading="typesLoading"
-          @change="(v: string) => handleRowParentTypeChange(idx, v)">
+        <a-select
+          class="col-type"
+          :value="row.parentTypeId"
+          placeholder="一级类型"
+          allow-clear
+          :loading="typesLoading"
+          @change="(v: string) => handleRowParentTypeChange(idx, v)"
+        >
           <a-select-option v-for="t in parentTypes" :key="t.type_id" :value="t.type_id">
             {{ t.type_name }}
           </a-select-option>
         </a-select>
 
-        <a-select class="col-type-child" :value="row.childTypeId" placeholder="二级类型" allow-clear :loading="typesLoading"
-          @change="(v: string) => handleRowChildTypeChange(idx, v)">
+        <a-select
+          class="col-type-child"
+          :value="row.childTypeId"
+          placeholder="二级类型"
+          allow-clear
+          :loading="typesLoading"
+          @change="(v: string) => handleRowChildTypeChange(idx, v)"
+        >
           <a-select-option v-for="t in row.childTypes" :key="t.type_id" :value="t.type_id">
             {{ t.type_name }}
           </a-select-option>
         </a-select>
 
-        <a-select class="col-item" :value="row.item_id" placeholder="选择零件" show-search :filter-option="filterOption"
-          :loading="itemsLoading" :options="getFilteredItemOptions(row)"
-          @change="(v: string) => handleRowItemChange(idx, v)" />
+        <a-select
+          class="col-item"
+          :value="row.item_id"
+          placeholder="选择零件"
+          show-search
+          :filter-option="filterOption"
+          :loading="itemsLoading"
+          :options="getFilteredItemOptions(row)"
+          @change="(v: string) => handleRowItemChange(idx, v)"
+        />
 
-        <a-select v-if="needsSpec(row)" class="col-spec" :value="row.spec_id" placeholder="规格"
-          :options="specOptionsFor(row)" @change="(v: string) => handleRowSpecChange(idx, v)" />
+        <a-select
+          v-if="needsSpec(row)"
+          class="col-spec"
+          :value="row.spec_id"
+          placeholder="规格"
+          :options="specOptionsFor(row)"
+          @change="(v: string) => handleRowSpecChange(idx, v)"
+        />
         <span v-else class="col-spec spec-empty">默认规格</span>
 
-        <a-input-number class="col-qty" :value="row.quantity" placeholder="数量" :min="1" :precision="0"
-          @change="(v: number | null) => (row.quantity = v ?? 1)" />
+        <a-input-number
+          class="col-qty"
+          :value="row.quantity"
+          placeholder="数量"
+          :min="1"
+          :precision="0"
+          @change="(v: number | null) => (row.quantity = v ?? 1)"
+        />
 
-        <a-input-number class="col-price" :value="row.price" placeholder="单价" :min="0" :precision="2"
-          @change="(v: number | null) => (row.price = v)" />
+        <a-input-number
+          class="col-price"
+          :value="row.price"
+          placeholder="单价"
+          :min="0"
+          :precision="2"
+          @change="(v: number | null) => (row.price = v)"
+        />
 
         <span class="col-amount amount-text">{{ rowAmount(row) || '-' }}</span>
 
-        <a-input class="col-remark" :value="row.remark" placeholder="备注" :maxlength="500"
-          @change="(e: Event) => (row.remark = (e.target as HTMLInputElement).value)" />
+        <a-input
+          class="col-remark"
+          :value="row.remark"
+          placeholder="备注"
+          :maxlength="500"
+          @change="(e: Event) => (row.remark = (e.target as HTMLInputElement).value)"
+        />
 
         <a-button class="col-del" type="link" danger :disabled="itemRows.length === 1" @click="removeItemRow(idx)">
           <DeleteOutlined />
@@ -497,8 +570,7 @@ const fillAmountFromItems = () => {
 };
 
 /** 行是否完全未填写(未选零件/规格/单价且无备注),采购明细为可选项,空行在提交时忽略 */
-const isRowEmpty = (row: ItemRow) =>
-  !row.item_id && !row.spec_id && row.price === null && !row.remark;
+const isRowEmpty = (row: ItemRow) => !row.item_id && !row.spec_id && row.price === null && !row.remark;
 
 /** 过滤掉空行后的有效明细行 */
 const effectiveRows = computed(() => itemRows.value.filter((row) => !isRowEmpty(row)));

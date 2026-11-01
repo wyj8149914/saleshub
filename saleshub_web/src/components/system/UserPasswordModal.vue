@@ -11,17 +11,19 @@
     @cancel="handleCancel"
   >
     <a-form ref="formRef" :model="form" layout="vertical">
-      <a-form-item label="新密码" name="password" :rules="[{ validator: validatePasswordStrength }]">
-        <a-input-password
-          v-model:value="form.password"
-          placeholder="至少8位,含大写/小写/数字/特殊符号至少三种"
-        />
+      <!-- 失去焦点时触发强度校验,错误信息显示在输入框下方 -->
+      <a-form-item label="新密码" name="password" :rules="[{ validator: validatePassword, trigger: 'blur' }]">
+        <a-input-password v-model:value="form.password" placeholder="至少8位,含大写/小写/数字/特殊符号至少三种" />
       </a-form-item>
 
+      <!-- 失去焦点时校验,两次输入必须一致 -->
       <a-form-item
         label="确认新密码"
         name="confirmPassword"
-        :rules="[{ required: true, message: '请再次输入新密码' }, { validator: validateConfirm }]"
+        :rules="[
+          { required: true, message: '请再次输入新密码', trigger: 'blur' },
+          { validator: validateConfirm, trigger: 'blur' },
+        ]"
       >
         <a-input-password v-model:value="form.confirmPassword" placeholder="请再次输入新密码" />
       </a-form-item>
@@ -67,6 +69,9 @@ const validateConfirm = (_rule: unknown, value: string) => {
   }
   return value === form.value.password ? Promise.resolve() : Promise.reject('两次输入的密码不一致');
 };
+
+/** 适配 a-form validator 签名,复用密码强度校验 */
+const validatePassword = (_rule: unknown, value: string) => validatePasswordStrength(value);
 
 /** 提交:调 updateUserPassword 重置目标用户密码 */
 const handleSubmit = async () => {

@@ -1,11 +1,5 @@
 <template>
-  <a-drawer
-    :open="open"
-    title="支出费用单详情"
-    width="720"
-    :mask-closable="true"
-    @close="emit('update:open', false)"
-  >
+  <a-drawer :open="open" title="支出费用单详情" width="720" :mask-closable="true" @close="emit('update:open', false)">
     <a-spin :spinning="loading">
       <template v-if="detail">
         <!-- 基本信息 -->
@@ -84,9 +78,7 @@
               <template v-else-if="column.key === 'spec_name'">
                 {{ specLabel(record.spec_id) }}
               </template>
-              <template v-else-if="column.key === 'price'">
-                ¥{{ record.price }}
-              </template>
+              <template v-else-if="column.key === 'price'"> ¥{{ record.price }} </template>
               <template v-else-if="column.key === 'row_amount'">
                 <span class="amount-text">¥{{ rowAmount(record) }}</span>
               </template>
@@ -179,10 +171,7 @@ const rowAmount = (record: ExpenseDetailItem): string => {
 
 /** 明细合计 */
 const itemsTotal = computed(() => {
-  const total = (detail.value?.items || []).reduce(
-    (sum, item) => sum + item.quantity * Number(item.price),
-    0,
-  );
+  const total = (detail.value?.items || []).reduce((sum, item) => sum + item.quantity * Number(item.price), 0);
   return (Math.round(total * 100) / 100).toFixed(2);
 });
 

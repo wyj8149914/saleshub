@@ -1,10 +1,25 @@
 <template>
-  <a-modal :open="open" title="关联发票" :confirm-loading="loading" :mask-closable="false" width="720px"
-    ok-text="确认关联" cancel-text="取消" @ok="handleSubmit" @cancel="handleCancel">
-    <a-alert :type="expense?.invoice_id ? 'warning' : 'info'" show-icon class="bind-tip" :message="expense?.invoice_id
-      ? `费用单 ${expense?.expense_no} 已关联发票 ${expense?.invoice_number || '-'},确认后将直接换绑(旧发票自动释放)`
-      : `为费用单 ${expense?.expense_no || ''} 关联发票,可选择已有未绑定发票或上传识别新发票`
-      " />
+  <a-modal
+    :open="open"
+    title="关联发票"
+    :confirm-loading="loading"
+    :mask-closable="false"
+    width="720px"
+    ok-text="确认关联"
+    cancel-text="取消"
+    @ok="handleSubmit"
+    @cancel="handleCancel"
+  >
+    <a-alert
+      :type="expense?.invoice_id ? 'warning' : 'info'"
+      show-icon
+      class="bind-tip"
+      :message="
+        expense?.invoice_id
+          ? `费用单 ${expense?.expense_no} 已关联发票 ${expense?.invoice_number || '-'},确认后将直接换绑(旧发票自动释放)`
+          : `为费用单 ${expense?.expense_no || ''} 关联发票,可选择已有未绑定发票或上传识别新发票`
+      "
+    />
 
     <!-- 双页签:选择已有发票 / 上传识别,两条路径产物统一为下方发票摘要 -->
     <a-tabs v-model:activeKey="activeTab">
@@ -49,8 +64,12 @@
           {{ invoice ? '重新上传识别' : '上传发票识别(单个)' }}
         </a-button>
         <!-- 单个发票识别弹窗(与发票列表的单个识别保持一致) -->
-        <InvoiceUploadModal v-model:open="invoiceUploadOpen" mode="single" :fixed-nature="InvoiceNature.ACTUAL"
-          @uploaded="handleInvoiceUploaded" />
+        <InvoiceUploadModal
+          v-model:open="invoiceUploadOpen"
+          mode="single"
+          :fixed-nature="InvoiceNature.ACTUAL"
+          @uploaded="handleInvoiceUploaded"
+        />
       </a-tab-pane>
     </a-tabs>
 
@@ -58,7 +77,8 @@
     <a-descriptions v-if="invoice" :column="1" size="small" bordered class="invoice-summary">
       <a-descriptions-item label="发票号码">{{ invoice.invoice_number }}</a-descriptions-item>
       <a-descriptions-item label="发票类型">{{ invoice.sub_type_desc || '-' }}</a-descriptions-item>
-      <a-descriptions-item label="价税合计">{{ invoice.total_amount ? `¥${invoice.total_amount}` : '-'
+      <a-descriptions-item label="价税合计">{{
+        invoice.total_amount ? `¥${invoice.total_amount}` : '-'
       }}</a-descriptions-item>
       <a-descriptions-item v-if="invoice.is_duplicate" label="提示">
         <a-tag color="orange">该发票已入库,将直接选用</a-tag>
@@ -129,9 +149,7 @@ const filteredInvoices = computed(() => {
     return unboundInvoices.value;
   }
   return unboundInvoices.value.filter(
-    (inv) =>
-      inv.invoice_number.toLowerCase().includes(kw) ||
-      (inv.seller_name ?? '').toLowerCase().includes(kw)
+    (inv) => inv.invoice_number.toLowerCase().includes(kw) || (inv.seller_name ?? '').toLowerCase().includes(kw),
   );
 });
 

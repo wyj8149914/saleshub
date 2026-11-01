@@ -10,12 +10,7 @@
     @ok="handleSubmit"
     @cancel="handleCancel"
   >
-    <a-alert
-      message="已取消为终态,变更后不可再修改订单状态"
-      type="warning"
-      show-icon
-      class="status-tip"
-    />
+    <a-alert message="已取消为终态,变更后不可再修改订单状态" type="warning" show-icon class="status-tip" />
 
     <a-form ref="formRef" :model="form" layout="vertical">
       <a-form-item label="目标状态" name="order_status" :rules="[{ required: true, message: '请选择目标状态' }]">

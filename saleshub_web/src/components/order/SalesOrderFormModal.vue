@@ -14,7 +14,10 @@
       <a-form-item
         label="订单名称"
         name="order_title"
-        :rules="[{ required: true, message: '请输入订单名称' }, { max: 100, message: '订单名称最长100字符' }]"
+        :rules="[
+          { required: true, message: '请输入订单名称' },
+          { max: 100, message: '订单名称最长100字符' },
+        ]"
       >
         <a-input v-model:value="form.order_title" placeholder="请输入订单名称" />
       </a-form-item>
@@ -24,7 +27,10 @@
           <a-form-item
             label="客户名称"
             name="customer_name"
-            :rules="[{ required: true, message: '请输入客户名称' }, { max: 100, message: '客户名称最长100字符' }]"
+            :rules="[
+              { required: true, message: '请输入客户名称' },
+              { max: 100, message: '客户名称最长100字符' },
+            ]"
           >
             <a-input v-model:value="form.customer_name" placeholder="请输入客户名称" />
           </a-form-item>
@@ -33,7 +39,10 @@
           <a-form-item
             label="客户联系方式"
             name="customer_phone"
-            :rules="[{ required: true, message: '请输入客户联系方式' }, { max: 20, message: '联系方式最长20字符' }]"
+            :rules="[
+              { required: true, message: '请输入客户联系方式' },
+              { max: 20, message: '联系方式最长20字符' },
+            ]"
           >
             <a-input v-model:value="form.customer_phone" placeholder="请输入客户联系方式" />
           </a-form-item>
@@ -50,10 +59,7 @@
           <a-form-item
             label="订单金额"
             name="amount"
-            :rules="[
-              { required: true, message: '请输入订单金额' },
-              { validator: validateAmount },
-            ]"
+            :rules="[{ required: true, message: '请输入订单金额' }, { validator: validateAmount }]"
           >
             <a-input-number
               v-model:value="form.amount"
@@ -66,11 +72,7 @@
           </a-form-item>
         </a-col>
         <a-col :span="12">
-          <a-form-item
-            label="交货日期"
-            name="delivery_date"
-            :rules="[{ required: true, message: '请选择交货日期' }]"
-          >
+          <a-form-item label="交货日期" name="delivery_date" :rules="[{ required: true, message: '请选择交货日期' }]">
             <a-date-picker
               v-model:value="deliveryDateValue"
               value-format="YYYY-MM-DD"

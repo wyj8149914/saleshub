@@ -27,10 +27,7 @@
       <a-form-item
         label="本次收款金额"
         name="received_amount"
-        :rules="[
-          { required: true, message: '请输入本次收款金额' },
-          { validator: validateAmount },
-        ]"
+        :rules="[{ required: true, message: '请输入本次收款金额' }, { validator: validateAmount }]"
       >
         <a-input-number
           v-model:value="form.received_amount"
@@ -95,7 +92,8 @@ const validateAmount = (_rule: unknown, value?: number) => {
   if (!props.order) {
     return Promise.resolve();
   }
-  const unreceived = Math.round(Number(props.order.amount) * 100) - Math.round(Number(props.order.received_amount) * 100);
+  const unreceived =
+    Math.round(Number(props.order.amount) * 100) - Math.round(Number(props.order.received_amount) * 100);
   if (Math.round(value * 100) > unreceived) {
     return Promise.reject('收款金额不能超过未收金额');
   }
