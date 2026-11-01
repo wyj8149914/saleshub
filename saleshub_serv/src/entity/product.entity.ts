@@ -83,7 +83,7 @@ export class ProductItem {
         nullable: true,
         comment: '所属模块ID，NULL表示产品直接关联',
     })
-    module_id: string;
+    module_id: string | null;
 
     @Column({ type: 'varchar', length: 32, comment: '零件ID' })
     item_id: string;

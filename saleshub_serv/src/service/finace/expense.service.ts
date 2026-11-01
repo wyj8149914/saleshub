@@ -22,8 +22,6 @@ const EXPENSE_TYPE_WITH_INVOICE = 1;
 const STATUS_NORMAL = 1;
 /** 停用状态(采购明细行整批替换时旧行置为此值) */
 const STATUS_DISABLED = 2;
-/** 费用单编号生成失败时的最大重试次数(并发下 uk_expense_no 唯一冲突重试) */
-const MAX_EXPENSE_NO_RETRY = 3;
 
 /** 新建响应 */
 interface ExpenseCreateResult {
@@ -64,16 +62,6 @@ interface ExpenseListResult {
     result: number;
     msg: string;
     datas?: { total: number; items: ExpenseListItem[] };
-}
-
-/** 关联发票摘要(详情内嵌) */
-interface ExpenseInvoiceInfo {
-    invoice_number: string;
-    sub_type_desc: string | null;
-    invoice_date: Date | null;
-    total_amount: string | null;
-    /** 原始发票文件(图片/PDF)预览地址 */
-    file_url: string;
 }
 
 /** 详情数据(含采购明细行与关联发票摘要) */

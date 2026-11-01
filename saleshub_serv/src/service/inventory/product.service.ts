@@ -1,4 +1,4 @@
-import { EntityManager, Not } from 'typeorm';
+import { EntityManager, IsNull, Not } from 'typeorm';
 import {
     Product,
     ProductItem,
@@ -24,6 +24,24 @@ import { AppDataSource } from '../../config/database.config';
 import { getLogger } from '../../utils/logger.util';
 import { v7 } from 'uuid';
 import { generateFileUrl } from '../../config/minio.config';
+
+/** 产品零件原始行(getRawMany,联查零件/规格/类型信息) */
+interface ProductItemRawRow {
+    relation_id?: string;
+    product_id?: string;
+    module_id: string | null;
+    item_id: string;
+    spec_id: string;
+    quantity_per_product: number;
+    spec: string | null;
+    remark: string | null;
+    item_name: string | null;
+    item_code: string | null;
+    type_id?: string | null;
+    type_name?: string | null;
+    warn_stock?: number | null;
+    current_stock?: number | null;
+}
 
 export class ProductService {
     private productRepository = AppDataSource.getRepository(Product);
@@ -273,7 +291,7 @@ export class ProductService {
                 pi.relation_id = v7().replace(/-/g, '');
                 pi.product_id = dto.product_id;
                 pi.item_id = it.item_id;
-                pi.module_id = null as any; // 确保直接关联时 module_id 为空
+                pi.module_id = null; // 确保直接关联时 module_id 为空
                 pi.quantity_per_product = it.quantity_per_product ?? 1;
                 pi.spec_id = it.spec_id;
                 pi.remark = it.remark ?? null;
@@ -319,7 +337,7 @@ export class ProductService {
                     .getMany();
 
                 const moduleIds = modules.map((m) => m.module_id);
-                let allItems: any[] = [];
+                let allItems: ProductItemRawRow[] = [];
 
                 if (moduleIds.length > 0) {
                     allItems = await this.productItemRepository
@@ -348,7 +366,7 @@ export class ProductService {
                             status: 1,
                         })
                         .orderBy('pi.create_time', 'DESC')
-                        .getRawMany();
+                        .getRawMany<ProductItemRawRow>();
                 }
 
                 // 按模块分组
@@ -399,7 +417,7 @@ export class ProductService {
                         }
                     )
                     .orderBy('pi.create_time', 'DESC')
-                    .getRawMany();
+                    .getRawMany<ProductItemRawRow>();
 
                 return {
                     result: 0,
@@ -431,7 +449,7 @@ export class ProductService {
 
         // 检查是否有直接关联的零件
         const directItemCount = await this.productItemRepository.count({
-            where: { product_id: productId, status: 1, module_id: null as any },
+            where: { product_id: productId, status: 1, module_id: IsNull() },
         });
         if (directItemCount > 0) {
             return 'direct';
@@ -785,26 +803,32 @@ export class ProductService {
                     status: 1,
                 })
                 .orderBy('pi.create_time', 'DESC')
-                .getRawMany();
+                .getRawMany<ProductItemRawRow>();
 
             // 关联模式,合并数据
             let mode = 'none';
-            const returnData: Record<string, any> = { product };
+            const returnData: {
+                product: Product;
+                mode: string;
+                modules?: (ProductModule & { items: ProductItemRawRow[] })[];
+                items?: ProductItemRawRow[];
+            } = { product, mode: 'none' };
             if (modules.length > 0) {
                 // 如果是模块,将零件放到对应的模块下
                 mode = 'module';
-                const moduleMap = new Map();
+                const moduleMap = new Map<string, ProductItemRawRow[]>();
                 items.forEach((item) => {
-                    if (moduleMap.has(item.module_id)) {
-                        moduleMap.get(item.module_id).push(item);
+                    const key = item.module_id ?? '';
+                    if (moduleMap.has(key)) {
+                        moduleMap.get(key)?.push(item);
                     } else {
-                        moduleMap.set(item.module_id, [item]);
+                        moduleMap.set(key, [item]);
                     }
                 });
-                modules.forEach((m: any) => {
-                    m.items = moduleMap.get(m.module_id) || [];
-                });
-                returnData.modules = modules;
+                returnData.modules = modules.map((m) => ({
+                    ...m,
+                    items: moduleMap.get(m.module_id) || [],
+                }));
                 returnData.mode = mode;
             } else if (items.length > 0) {
                 mode = 'direct';

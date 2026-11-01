@@ -228,7 +228,8 @@ export class WarehouseService {
 
             // 计算已分配的库存总和
             const assignedTotal = items.reduce(
-                (sum: number, item: any) => sum + (item.current_stock || 0),
+                (sum: number, item: { current_stock: number | null }) =>
+                    sum + (item.current_stock || 0),
                 0
             );
 

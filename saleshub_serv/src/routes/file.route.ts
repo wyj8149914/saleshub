@@ -28,10 +28,10 @@ router.post(
             next();
             return;
         }
-        let originalName = '';
+        let originalName: string;
         try {
             originalName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
-        } catch (error) {
+        } catch {
             originalName = req.file.originalname;
         }
         const result = await fileService.upload({

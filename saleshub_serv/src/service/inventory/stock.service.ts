@@ -1067,7 +1067,6 @@ export class StockService {
                     });
                 }
                 const specWarehouse = await specQb.getOne();
-                console.log('specWarehouse', specWarehouse);
                 if (!specWarehouse) {
                     throw new Error(`规格 ${itemSpec.spec_id} 在该仓库无库存`);
                 }
@@ -1093,7 +1092,6 @@ export class StockService {
 
                 // 更新仓库库存,如果指定了仓库ID,那么更新仓库库存
                 if (itemSpec.warehouse_id) {
-                    console.log(specWarehouse.current_stock, itemSpec.quantity);
                     await manager.update(
                         InventoryItemSpecWarehouse,
                         { spec_id: itemSpec.spec_id, warehouse_id: itemSpec.warehouse_id },

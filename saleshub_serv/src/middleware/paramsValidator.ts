@@ -1,8 +1,11 @@
-import { plainToInstance } from 'class-transformer';
+import { ClassConstructor, plainToInstance } from 'class-transformer';
 import { validate, ValidationError } from 'class-validator';
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 
-export function validationMiddleware(type: any): RequestHandler {
+/** 校验错误信息对象(constraints 的键为校验规则名,值为提示文案) */
+type ValidationConstraints = Record<string, string>;
+
+export function validationMiddleware(type: ClassConstructor<object>): RequestHandler {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
             const params = req.method === 'GET' ? req.query : req.body;
@@ -10,7 +13,7 @@ export function validationMiddleware(type: any): RequestHandler {
             const errors = await validate(dtoObj);
 
             if (errors.length > 0) {
-                const msg: any[] = [];
+                const msg: ValidationConstraints[] = [];
                 handleErrorRecursive(errors, msg);
                 // const result = { result: 1, msg: msg }
                 const allValues = msg.map((obj) => Object.values(obj)).flat();
@@ -18,7 +21,7 @@ export function validationMiddleware(type: any): RequestHandler {
                 return res.json({ result: 1, msg: allValues.join(',') });
             } else {
                 if (req.method === 'POST') {
-                    req.body = dtoObj as any;
+                    req.body = dtoObj;
                 }
                 next();
             }
@@ -28,7 +31,7 @@ export function validationMiddleware(type: any): RequestHandler {
     };
 }
 
-export function handleErrorRecursive(errors: ValidationError[], msg: any[] = []) {
+export function handleErrorRecursive(errors: ValidationError[], msg: ValidationConstraints[] = []) {
     if (errors.length > 0) {
         errors.forEach((error) => {
             // error.constraints 包含了具体的错误提示

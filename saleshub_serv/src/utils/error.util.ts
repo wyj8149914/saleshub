@@ -65,9 +65,9 @@ export class ConflictError extends AppError {
  * 422 - 验证错误
  */
 export class ValidationError extends AppError {
-    public readonly errors: any[];
+    public readonly errors: unknown[];
 
-    constructor(message: string, errors: any[] = []) {
+    constructor(message: string, errors: unknown[] = []) {
         super(422, 9002, message);
         this.errors = errors;
     }

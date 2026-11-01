@@ -11,7 +11,8 @@ export function errorHandlerMiddleware(
     error: Error,
     req: Request,
     res: Response,
-    next: NextFunction
+    // Express 按参数个数识别错误处理中间件,必须保留第4个参数(_开头表示有意不使用)
+    _next: NextFunction
 ): void {
     // 记录错误
     logger.error('错误发生', {
@@ -78,7 +79,7 @@ export function notFoundMiddleware(req: Request, res: Response): void {
 /**
  * 异步错误包装器
  */
-export function asyncHandler(fn: Function) {
+export function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => unknown) {
     return (req: Request, res: Response, next: NextFunction) => {
         Promise.resolve(fn(req, res, next)).catch(next);
     };

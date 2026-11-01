@@ -8,7 +8,7 @@
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 
-type ArrayItem = { [key: string]: any } | string | number;
+type ArrayItem = { [key: string]: unknown } | string | number;
 
 /** 与 Python backend/app/core/security.py 一致 */
 const BCRYPT_ROUNDS = 12;
@@ -34,7 +34,7 @@ function paddZero(data: string, len: number): string {
  * @param {*} key:加密的密钥,必须为16字节
  * @return {*} buff:加密后的字符串
  */
-export function encryption(data: string, key: string): any {
+export function encryption(data: string, key: string): string {
     const iv = '';
     const cipher = crypto.createCipheriv('aes-128-ecb', key, iv);
     cipher.setAutoPadding(false);
@@ -50,7 +50,7 @@ export function encryption(data: string, key: string): any {
  * @param {*} key:解密的密钥,必须为16字节
  * @return {*} buff:解密后的数据
  */
-export function decrypt(data: string, key: string): any {
+export function decrypt(data: string, key: string): string {
     const iv = '';
     const decpher = crypto.createDecipheriv('aes-128-ecb', key, iv);
     decpher.setAutoPadding(false);
@@ -174,11 +174,7 @@ export async function sleep(time: number): Promise<void> {
  * @param {*} array: 输入数组
  * @return {*}
  */
-export function shuffle(array: ArrayItem[]): ArrayItem {
-    if (!(array instanceof Array)) {
-        return { result: 1, msg: '输入参数必须为数组' };
-    }
-
+export function shuffle(array: ArrayItem[]): ArrayItem[] {
     let len = array.length,
         t,
         i;
@@ -229,20 +225,28 @@ export function encryptPwd(account: string, password: string, salt: string): str
  * @param {*} children: 子栏目 名称
  * @return {*}
  */
-export function arrayToTree(array: any[], id: string, parentKey: string, children: string) {
-    const obj: Record<string, any> = {}; // 临时对象
-    const result: any[] = []; // 返回数组
+export function arrayToTree<T extends Record<string, unknown>>(
+    array: T[],
+    id: string,
+    parentKey: string,
+    children: string
+): T[] {
+    const obj: Record<string, T> = {}; // 临时对象
+    const result: T[] = []; // 返回数组
 
     array.forEach((item) => {
-        obj[item[id]] = item;
+        obj[String(item[id])] = item;
     });
 
     array.forEach((item) => {
         const pid = item[parentKey];
-        const parent = obj[pid]; // 通过临时对象查询数组每一项的父节点
+        const parent = obj[String(pid)]; // 通过临时对象查询数组每一项的父节点
         if (parent) {
-            // 父节点存在,放入父节点的children中
-            (parent[children] || (parent[children] = [])).push(item);
+            // 父节点存在,放入父节点的children中(泛型仅支持读索引,写入需转 Record)
+            const record = parent as Record<string, unknown>;
+            const childList = (record[children] as T[] | undefined) ?? [];
+            childList.push(item);
+            record[children] = childList;
         } else {
             result.push(item); // 父节点不存在,最高一级,直接放入数组中
         }

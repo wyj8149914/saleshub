@@ -21,8 +21,8 @@ export async function jwtValidator(req: Request, res: Response, next: NextFuncti
         const bearerToken = req.headers.authorization;
         const jwt = bearerToken?.split(' ')[1];
         if (jwt) {
-            const verifyData = JwtUtil.verify(jwt);
-            // console.log('jwt数据:', verifyData);
+            // 校验token合法性,失败时抛错进入catch
+            JwtUtil.verify(jwt);
         }
         next();
     } catch (error) {

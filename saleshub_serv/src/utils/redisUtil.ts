@@ -100,8 +100,10 @@ export class RedisManager {
         } catch (error) {
             logger.error('Failed to create Redis connection:', error);
             this.client = null;
+            // cause 保留原始错误,便于排查连接失败根因
             throw new Error(
-                `Redis connection failed: ${error instanceof Error ? error.message : String(error)}`
+                `Redis connection failed: ${error instanceof Error ? error.message : String(error)}`,
+                { cause: error }
             );
         }
     }

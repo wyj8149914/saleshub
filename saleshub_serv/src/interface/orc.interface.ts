@@ -80,7 +80,7 @@ interface VatElectronicItemInfo {
 }
 
 /** 电子发票(普通发票) */
-interface VatElectronicInfo {
+export interface VatElectronicInfo {
     /** 发票名称，示例值：增值税电子普通发票 */
     Title: string | null;
     /** 发票号码，示例值：48576409 */
@@ -130,7 +130,7 @@ interface VatElectronicInfo {
 }
 
 /** 增值税发票项目信息 */
-interface VatInvoiceItemInfo {
+export interface VatInvoiceItemInfo {
     /** 项目名称，示例值：技术服务费 */
     Name: string | null;
     /** 规格型号，示例值：规格型号 */
@@ -160,7 +160,7 @@ interface VatInvoiceItemInfo {
 }
 
 /** 增值税发票 */
-interface VatInvoiceInfo {
+export interface VatInvoiceInfo {
     /** 校验码，示例值：0300708 */
     CheckCode: string | null;
     /** 发票联次，示例值：三 */
@@ -256,7 +256,7 @@ interface VatInvoiceInfo {
 }
 
 /** 机票条目信息 */
-interface FlightItem {
+export interface FlightItem {
     /** 出发航站楼 */
     TerminalGetOn: string | null;
     /** 到达航站楼 */
@@ -282,7 +282,7 @@ interface FlightItem {
 }
 
 /** 机票行程单 */
-interface AirTransport {
+export interface AirTransport {
     /** 发票名称 */
     Title: string | null;
     /** 电子客票号码 */
@@ -348,7 +348,7 @@ interface AirTransport {
 }
 
 /** 电子发票（航空运输电子客票行程单） */
-interface ElectronicFlightTicketFull {
+export interface ElectronicFlightTicketFull {
     /** 旅客姓名 */
     UserName: string | null;
     /** 有效身份证件号码 */
@@ -400,7 +400,7 @@ interface ElectronicFlightTicketFull {
 }
 
 /** 电子发票（铁路电子客票） */
-interface ElectronicTrainTicketFull {
+export interface ElectronicTrainTicketFull {
     /** 电子发票类型 */
     TypeOfVoucher: string | null;
     /** 电子客票号 */

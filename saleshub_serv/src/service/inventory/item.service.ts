@@ -14,6 +14,45 @@ import { MinioFile } from '../../entity/file.entity';
 import { Not } from 'typeorm';
 import { InventoryItemSpecWarehouse } from '../../entity/warehouse.entity';
 
+/** 零件列表原始行(getRawMany,含类型与图片联查字段) */
+interface ItemListRawRow {
+    item_id: string;
+    type_id: string;
+    type_name: string | null;
+    parent_type_name: string | null;
+    name: string | null;
+    code: string | null;
+    warn_stock: number | null;
+    image_id: string | null;
+    remark: string | null;
+    is_custom: number;
+    image_object_name: string | null;
+}
+
+/** 规格原始行(getRawMany) */
+interface SpecRawRow {
+    spec_id: string;
+    item_id: string;
+    spec: string | null;
+    price: string | null;
+    current_stock: number | null;
+}
+
+/** 规格摘要(列表组装用,current_stock 已转为数值) */
+interface SpecSummary {
+    spec_id: string;
+    spec: string | null;
+    price: string | null;
+    current_stock: number;
+}
+
+/** 规格-仓库分配库存原始行(getRawMany) */
+interface SpecWarehouseRawRow {
+    spec_id: string;
+    warehouse_id: string;
+    warehouse_stock: number | null;
+}
+
 export class InventoryItemService {
     private inventoryItemRepository = AppDataSource.getRepository(InventoryItem);
     private inventoryItemSpecRepository = AppDataSource.getRepository(InventoryItemSpec);
@@ -132,10 +171,10 @@ export class InventoryItemService {
                 .orderBy('item.create_time', 'DESC')
                 .limit(dto.pageSize)
                 .offset(start)
-                .getRawMany();
+                .getRawMany<ItemListRawRow>();
 
-            const itemIds = items.map((it: any) => it.item_id);
-            const specRows =
+            const itemIds = items.map((it) => it.item_id);
+            const specRows: SpecRawRow[] =
                 itemIds.length > 0
                     ? await this.inventoryItemSpecRepository
                           .createQueryBuilder('s')
@@ -150,10 +189,10 @@ export class InventoryItemService {
                               ids: itemIds,
                               status: 1,
                           })
-                          .getRawMany()
+                          .getRawMany<SpecRawRow>()
                     : [];
 
-            const specMap = new Map<string, any[]>();
+            const specMap = new Map<string, SpecSummary[]>();
             for (const row of specRows) {
                 if (!specMap.has(row.item_id)) {
                     specMap.set(row.item_id, []);
@@ -166,7 +205,7 @@ export class InventoryItemService {
                 });
             }
 
-            const datas = items.map((it: any) => {
+            const datas = items.map((it) => {
                 // 构建完整类型名称
                 let type_full_name = it.type_name;
                 if (it.parent_type_name) {
@@ -470,13 +509,13 @@ export class InventoryItemService {
                     status: 1,
                 })
                 .orderBy('s.create_time', 'ASC')
-                .getRawMany();
+                .getRawMany<SpecRawRow>();
 
             if (specs.length === 0) {
                 return { result: 0, msg: 'success', datas: [] };
             }
 
-            const specIds = specs.map((s: any) => s.spec_id);
+            const specIds = specs.map((s) => s.spec_id);
 
             // 查询各规格在各仓库的已分配库存
             const warehouseStocks = await this.specWarehouseRepository
@@ -487,7 +526,7 @@ export class InventoryItemService {
                     'sw.current_stock AS warehouse_stock',
                 ])
                 .where('sw.spec_id IN (:...specIds) AND sw.status = 1', { specIds })
-                .getRawMany();
+                .getRawMany<SpecWarehouseRawRow>();
 
             // 按规格分组汇总已分配库存
             const allocatedStockMap = new Map<string, number>();
@@ -497,9 +536,9 @@ export class InventoryItemService {
             }
 
             // 组装返回数据
-            const datas = specs.map((spec: any) => {
+            const datas = specs.map((spec) => {
                 const allocatedStock = allocatedStockMap.get(spec.spec_id) || 0;
-                const unallocatedStock = spec.current_stock - allocatedStock;
+                const unallocatedStock = (spec.current_stock ?? 0) - allocatedStock;
 
                 return {
                     spec_id: spec.spec_id,

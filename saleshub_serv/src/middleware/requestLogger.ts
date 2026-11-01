@@ -69,9 +69,9 @@ export async function requestLogger(
                     req.body.companyId = res.locals.companyId;
                     req.body.employeeId = res.locals.employeeId;
                     logger.info(`开发环境请求头中dev_key正确,Post请求不需要解密`);
-                } catch (error: any) {
+                } catch (error) {
                     logger.error(
-                        `开发环境请求头中dev_key正确,Post请求不需要解密: aesKey: ${aesKey}, error: ${error.message}`
+                        `开发环境请求头中dev_key正确,Post请求不需要解密: aesKey: ${aesKey}, error: ${(error as Error).message}`
                     );
                     encryptError = true;
                 }
@@ -91,8 +91,10 @@ export async function requestLogger(
                     // 加密数据时从res.locals取出companyId和employeeId
                     req.body.companyId = res.locals.companyId;
                     req.body.employeeId = res.locals.employeeId;
-                } catch (error: any) {
-                    logger.error(`参数解密失败: aesKey: ${aesKey}, error: ${error.message}`);
+                } catch (error) {
+                    logger.error(
+                        `参数解密失败: aesKey: ${aesKey}, error: ${(error as Error).message}`
+                    );
                     encryptError = true;
                 }
             } else if (req.method === 'POST' && !req.body.alg) {
@@ -106,14 +108,14 @@ export async function requestLogger(
                 req.query.employeeId = res.locals.employeeId;
                 // Get请求根据参数名称判断是否需要解密
                 const { encryptParams } = appConfig.requestEncrypt;
-                for (let params in req.query) {
+                for (const params in req.query) {
                     if (encryptParams.includes(params) && req.query[params]) {
                         logger.info(`参数需要解密: ${params} - 值: ${req.query[params]}`);
                         try {
                             const decryptData = decrypt(req.query[params] as string, aesKey);
                             req.query[params] = decryptData;
                             logger.info(`参数解密成功: ${params} - 解密后:${decryptData}`);
-                        } catch (error) {
+                        } catch {
                             logger.error(
                                 `参数解密失败: ${params} - 值: ${req.query[params]}, aesKey: ${aesKey}`
                             );
@@ -180,7 +182,7 @@ export async function requestLogger(
  * @param data 需要记录的数据
  * @returns 过滤后的数据
  */
-function filterBase64Data(data: any): any {
+function filterBase64Data(data: unknown): unknown {
     if (typeof data === 'string') {
         // 如果是base64字符串，替换为提示信息
         if (data.length > MAXLOGLENGTH) {
@@ -194,18 +196,20 @@ function filterBase64Data(data: any): any {
     }
 
     if (typeof data === 'object' && data !== null) {
-        const filtered: any = {};
-        for (const key in data) {
+        const source = data as Record<string, unknown>;
+        const filtered: Record<string, unknown> = {};
+        for (const key in source) {
+            const value = source[key];
             // 如果值是字符串且长度大于MAXLOGLENGTH，则替换
-            if (typeof data[key] === 'string' && data[key].length > MAXLOGLENGTH) {
+            if (typeof value === 'string' && value.length > MAXLOGLENGTH) {
                 filtered[key] = '[BASE64_IMAGE]';
-            } else if (Array.isArray(data[key])) {
+            } else if (Array.isArray(value)) {
                 // 如果是数组，检查每个元素
-                filtered[key] = data[key].map((item: any) =>
+                filtered[key] = value.map((item) =>
                     typeof item === 'string' && item.length > MAXLOGLENGTH ? '[BASE64_IMAGE]' : item
                 );
             } else {
-                filtered[key] = filterBase64Data(data[key]);
+                filtered[key] = filterBase64Data(value);
             }
         }
         return filtered;
