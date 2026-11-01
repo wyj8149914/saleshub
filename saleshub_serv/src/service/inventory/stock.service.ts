@@ -763,7 +763,7 @@ export class StockService {
                 return { result: 1, msg: '仓库不存在' };
             }
 
-            const validated = await this.validateStockCheckItems(checkItems, dto.warehouse_id);
+            const validated = await this.validateStockCheckItems(checkItems);
             if (!validated.ok) {
                 return { result: 1, msg: validated.msg };
             }
@@ -1165,7 +1165,7 @@ export class StockService {
     /**
      * 校验盘点明细(零件、规格)
      */
-    private async validateStockCheckItems(checkItems: CheckItem[], warehouseId: string) {
+    private async validateStockCheckItems(checkItems: CheckItem[]) {
         const keys = checkItems.map((l) => `${l.item_id}||${l.spec_id}`);
         if (new Set(keys).size !== keys.length) {
             return { ok: false, msg: '盘点列表存在重复的(零件+规格)' };

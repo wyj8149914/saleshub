@@ -103,4 +103,20 @@ router.post(
     })
 );
 
+/**
+ * POST /delete
+ * 删除支出费用单(软删除):费用单作废,采购明细行同步停用,关联发票自动释放可再绑定
+ * Body: expense_id-费用单ID(必填)
+ */
+router.post(
+    '/delete',
+    validationMiddleware(ExpenseIdDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dto = req.body as ExpenseIdDto;
+        const result = await expenseService.delete(dto);
+        res.locals.datas = result;
+        next();
+    })
+);
+
 export default router;

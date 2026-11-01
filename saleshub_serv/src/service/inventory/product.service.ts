@@ -788,8 +788,8 @@ export class ProductService {
                 .getRawMany();
 
             // 关联模式,合并数据
-            let mode = 'none',
-                returnData: Record<string, any> = { product };
+            let mode = 'none';
+            const returnData: Record<string, any> = { product };
             if (modules.length > 0) {
                 // 如果是模块,将零件放到对应的模块下
                 mode = 'module';

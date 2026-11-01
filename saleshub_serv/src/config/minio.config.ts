@@ -1,6 +1,7 @@
 import * as Minio from 'minio';
 import { appConfig } from './env.config';
 const { minio } = appConfig;
+import { getLogger } from '../utils/logger.util';
 
 // MinIO客户端配置
 export const minioClient = new Minio.Client({
@@ -18,6 +19,8 @@ export const minioConfig = {
     publicUrl: minio.url!,
 };
 
+const logger = getLogger('Minio');
+
 // 初始化MinIO Bucket
 export async function initializeMinIO(): Promise<void> {
     try {
@@ -27,12 +30,12 @@ export async function initializeMinIO(): Promise<void> {
         if (!bucketExists) {
             // 创建bucket
             await minioClient.makeBucket(minioConfig.bucket);
-            console.log(`✅ MinIO Bucket创建成功: ${minioConfig.bucket}`);
+            logger.info(`✅ MinIO Bucket创建成功: ${minioConfig.bucket}`);
         } else {
-            console.log(`✅ MinIO Bucket已存在: ${minioConfig.bucket}`);
+            logger.info(`✅ MinIO Bucket已存在: ${minioConfig.bucket}`);
         }
     } catch (error) {
-        console.error('❌ MinIO初始化失败:', error);
+        logger.error('❌ MinIO初始化失败:', error);
         throw error;
     }
 }

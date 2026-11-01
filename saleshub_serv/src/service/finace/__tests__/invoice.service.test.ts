@@ -124,7 +124,10 @@ describe('InvoiceService', () => {
         test('查询异常:返回 result=1 查询失败', async () => {
             mockQueryBuilder.getCount.mockRejectedValue(new Error('db down'));
 
-            const result = await invoiceService.list({ pageIndex: 1, pageSize: 10 } as ListInvoiceDto);
+            const result = await invoiceService.list({
+                pageIndex: 1,
+                pageSize: 10,
+            } as ListInvoiceDto);
 
             expect(result.result).toBe(1);
             expect(result.msg).toBe('查询失败');

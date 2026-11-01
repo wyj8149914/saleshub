@@ -23,12 +23,8 @@ export class JwtUtil {
      * 验证JWT Token
      */
     static verify(token: string): JwtPayload {
-        try {
-            const decoded = jwt.verify(token, secret) as JwtPayload;
-            return decoded;
-        } catch (error) {
-            throw error;
-        }
+        const decoded = jwt.verify(token, secret) as JwtPayload;
+        return decoded;
     }
 
     /**

@@ -1,4 +1,3 @@
-import log4js from 'log4js';
 import { appConfig } from './env.config';
 
 const categoryLevel = appConfig.logLevel?.trim() || 'INFO';

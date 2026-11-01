@@ -201,13 +201,19 @@ export class ExpenseService {
                     if (items.length !== itemIds.length) {
                         const found = new Set(items.map((i: InventoryItem) => i.item_id));
                         const missing = itemIds.filter((id) => !found.has(id));
-                        throw new BusinessError(9000, `采购明细中零件不存在或已停用: ${missing.join(',')}`);
+                        throw new BusinessError(
+                            9000,
+                            `采购明细中零件不存在或已停用: ${missing.join(',')}`
+                        );
                     }
 
                     const specIds = dto.items.map((it) => it.spec_id);
                     const specRows = await manager
                         .createQueryBuilder(InventoryItemSpec, 's')
-                        .where('s.spec_id IN (:...ids) AND s.status = :status', { ids: specIds, status: 1 })
+                        .where('s.spec_id IN (:...ids) AND s.status = :status', {
+                            ids: specIds,
+                            status: 1,
+                        })
                         .getMany();
                     const specMap = new Map(specRows.map((s) => [s.spec_id, s]));
                     for (const it of dto.items) {
@@ -244,7 +250,11 @@ export class ExpenseService {
                 });
                 return expense;
             });
-            return { result: 0, msg: '创建成功', datas: { expense_id: saved.expense_id, expense_no: saved.expense_no } };
+            return {
+                result: 0,
+                msg: '创建成功',
+                datas: { expense_id: saved.expense_id, expense_no: saved.expense_no },
+            };
         } catch (error) {
             this.logger.error('支出费用单新建失败:', error);
             if (error instanceof BusinessError) {
@@ -334,13 +344,19 @@ export class ExpenseService {
                     if (items.length !== itemIds.length) {
                         const found = new Set(items.map((i: InventoryItem) => i.item_id));
                         const missing = itemIds.filter((id) => !found.has(id));
-                        throw new BusinessError(9000, `采购明细中零件不存在或已停用: ${missing.join(',')}`);
+                        throw new BusinessError(
+                            9000,
+                            `采购明细中零件不存在或已停用: ${missing.join(',')}`
+                        );
                     }
 
                     const specIds = dto.items.map((it) => it.spec_id);
                     const specRows = await manager
                         .createQueryBuilder(InventoryItemSpec, 's')
-                        .where('s.spec_id IN (:...ids) AND s.status = :status', { ids: specIds, status: 1 })
+                        .where('s.spec_id IN (:...ids) AND s.status = :status', {
+                            ids: specIds,
+                            status: 1,
+                        })
                         .getMany();
                     const specMap = new Map(specRows.map((s) => [s.spec_id, s]));
                     for (const it of dto.items) {
@@ -518,7 +534,7 @@ export class ExpenseService {
                     "to_char(expense.update_time, 'YYYY-MM-DD HH24:MI:SS') AS update_time",
                     'invoice.invoice_number AS invoice_number',
                     'invoice.sub_type_desc AS sub_type_desc',
-                    'to_char(invoice.invoice_date, \'YYYY-MM-DD\') AS invoice_date',
+                    "to_char(invoice.invoice_date, 'YYYY-MM-DD') AS invoice_date",
                     'file.object_name AS file_object_name',
                 ])
                 .where('expense.expense_id = :expenseId AND expense.status = :status', {
@@ -532,7 +548,8 @@ export class ExpenseService {
             }
 
             // 采购明细行(仅正常状态,按创建时间升序)
-            const itemRows = await this.expenseItemRepository.createQueryBuilder('ei')
+            const itemRows = await this.expenseItemRepository
+                .createQueryBuilder('ei')
                 .leftJoin(InventoryItem, 'item', 'item.item_id = ei.item_id')
                 .leftJoin(InventoryItemSpec, 'spec', 'spec.spec_id = ei.spec_id')
                 .select([
@@ -551,7 +568,7 @@ export class ExpenseService {
                 .getRawMany();
 
             // 发票联查字段(object_name 仅用于生成预览地址)组装为 invoice
-            const datas = { ...row, items: itemRows, };
+            const datas = { ...row, items: itemRows };
             if (datas.file_object_name) {
                 datas.invoice_url = generateFileUrl(datas.file_object_name);
             }
@@ -618,6 +635,47 @@ export class ExpenseService {
         } catch (error) {
             this.logger.error('支出费用单关联发票失败:', error);
             return { result: 1, msg: '操作失败' };
+        }
+    }
+
+    /**
+     * 删除支出费用单(POST /expense/delete)
+     * - 软删除:费用单 status 置为2(作废),正常状态采购明细行同事务置为停用
+     * - 类型1关联的发票随费用单作废自动释放,可再次被其他费用单选择
+     *
+     * @param dto 费用单ID
+     */
+    async delete(dto: ExpenseIdDto): Promise<ExpenseOpResult> {
+        try {
+            const expense = await this.expenseRepository.findOne({
+                where: { expense_id: dto.expense_id, status: STATUS_NORMAL },
+            });
+            if (!expense) {
+                return { result: 1, msg: '支出费用单不存在或已作废' };
+            }
+
+            // 费用单与采购明细行同事务作废
+            const now = new Date();
+            await AppDataSource.transaction(async (manager) => {
+                await manager.update(
+                    Expense,
+                    { expense_id: dto.expense_id },
+                    { status: STATUS_DISABLED, update_time: now }
+                );
+                await manager.update(
+                    ExpenseItem,
+                    { expense_id: dto.expense_id, status: STATUS_NORMAL },
+                    { status: STATUS_DISABLED, update_time: now }
+                );
+            });
+            this.logger.info('支出费用单删除完成:', {
+                expense_id: dto.expense_id,
+                expense_no: expense.expense_no,
+            });
+            return { result: 0, msg: 'success' };
+        } catch (error) {
+            this.logger.error('支出费用单删除失败:', error);
+            return { result: 1, msg: '删除失败' };
         }
     }
 

@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsOptional, MaxLength, IsInt, Min, IsIn } from 'class-validator';
-import { PageDto } from './base.dto';
+import { IsNotEmpty, IsOptional, MaxLength, IsInt, Min } from 'class-validator';
 
 export class CreateWarehouseDto {
     @IsNotEmpty({ message: '仓库名称不能为空' })

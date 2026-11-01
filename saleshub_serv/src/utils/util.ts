@@ -162,7 +162,7 @@ export function validatePasswordStrength(
  * @return {*}
  */
 export async function sleep(time: number): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         setTimeout(() => {
             resolve();
         }, time * 1000);
@@ -311,27 +311,4 @@ export function aesDecrypt(
     let decrypted = decipher.update(encryptedData, 'base64', 'utf8');
     decrypted += decipher.final('utf8');
     return decrypted;
-}
-
-if (require.main === module) {
-    // const str = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXkiOiI2azYyMXJyM2JmdGRvYXl3IiwidXNlcl9hY2NvdW50IjoianpqeS1hZG1pbiIsImlhdCI6MTczNTU0MTM2OSwiZXhwIjoxNzM1NjI3NzY5fQ.hDR4fcnFl1pvFhbwlu--wnPCI8sRZB1wkLDkOEC91KE';
-    // const jwtResult = exports.verifyJwt(str);
-    // console.log('jwtResult:', jwtResult);
-    // console.log(jwtResult.data.iat, jwtResult.data.exp)
-    // console.log(new Date(jwtResult.data.iat * 1000).toLocaleString());
-    // console.log(new Date(jwtResult.data.exp * 1000).toLocaleString());
-
-    // const encrypted = aesEncrypt('13800138000', 'qhk7T@NDwfbeagI!', 'aes-256-cbc', 'house_serv', '0000000000000000');
-    // console.log(encrypted);
-    // const decrypted = aesDecrypt(encrypted, 'qhk7T@NDwfbeagI!', 'aes-256-cbc', 'house_serv', '0000000000000000');
-    // console.log(decrypted);
-
-    const dataString = {
-        community_id: '16bda66dd3e211ef9da50242c0a8c002',
-        user_name: '临时用户1',
-        phone: '17775026499',
-        expire_date: '2025-05-31',
-    };
-    // const encrypted = encryption(JSON.stringify(dataString), 'CNWxaExyaliEQsAP');
-    // console.log(encrypted);
 }

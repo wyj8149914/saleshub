@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { In } from 'typeorm';
 import { AppDataSource } from '../../config/database.config';
-import { Invoice } from '../../entity/finance.entity';
+import { Expense, Invoice } from '../../entity/finance.entity';
 import { MinioFile } from '../../entity/file.entity';
 import { ListInvoiceDto, InvoiceIdDto, TaxFileInvoiceDto } from '../../dto/invoice.dto';
 import { getLogger } from '../../utils/logger.util';
@@ -40,6 +40,40 @@ interface InvoiceListResult {
     datas?: { total: number; items: InvoiceListItem[] };
 }
 
+/** 未绑定支出费用单的实开发票列表响应(不分页,无total) */
+interface UnboundInvoiceListResult {
+    result: number;
+    msg: string;
+    datas?: { items: InvoiceListItem[] };
+}
+
+/** 发票列表轻量字段查询列(list/listUnbound 共用) */
+const INVOICE_LIST_SELECT = [
+    'invoice.invoice_id AS invoice_id',
+    'invoice.tag AS tag',
+    'invoice.user_id AS user_id',
+    'invoice.file_id AS file_id',
+    'invoice.invoice_type AS invoice_type',
+    'invoice.sub_type AS sub_type',
+    'invoice.sub_type_desc AS sub_type_desc',
+    'invoice.title AS title',
+    'invoice.invoice_code AS invoice_code',
+    'invoice.invoice_number AS invoice_number',
+    'invoice.invoice_date AS invoice_date',
+    'invoice.pretax_amount AS pretax_amount',
+    'invoice.tax_amount AS tax_amount',
+    'invoice.total_amount AS total_amount',
+    'invoice.seller_name AS seller_name',
+    'invoice.buyer_name AS buyer_name',
+    'invoice.invoice_nature AS invoice_nature',
+    'invoice.invoice_purpose AS invoice_purpose',
+    'invoice.is_tax_filed AS is_tax_filed',
+    "to_char(invoice.tax_filed_time, 'YYYY-MM-DD HH24:MI:SS') AS tax_filed_time",
+    'invoice.tax_filed_by AS tax_filed_by',
+    'invoice.status AS status',
+    "to_char(invoice.create_time, 'YYYY-MM-DD HH24:MI:SS') AS create_time",
+];
+
 /** 发票详情数据(含明细 items 与原始文件地址,排除 detail/raw_response/ocr_request_id/ocr_code) */
 interface InvoiceDetailData extends Omit<InvoiceListItem, 'create_time' | 'tax_filed_time'> {
     biz_type: string | null;
@@ -72,8 +106,15 @@ interface TaxFileInvoiceResult {
     datas?: { updated_count: number };
 }
 
+/** 删除发票响应 */
+interface InvoiceOpResult {
+    result: number;
+    msg: string;
+}
+
 export class InvoiceService {
     private invoiceRepository = AppDataSource.getRepository(Invoice);
+    private expenseRepository = AppDataSource.getRepository(Expense);
     private logger = getLogger('INVOICE_SERV');
 
     /**
@@ -90,31 +131,7 @@ export class InvoiceService {
         try {
             const queryBuilder = this.invoiceRepository
                 .createQueryBuilder('invoice')
-                .select([
-                    'invoice.invoice_id AS invoice_id',
-                    'invoice.tag AS tag',
-                    'invoice.user_id AS user_id',
-                    'invoice.file_id AS file_id',
-                    'invoice.invoice_type AS invoice_type',
-                    'invoice.sub_type AS sub_type',
-                    'invoice.sub_type_desc AS sub_type_desc',
-                    'invoice.title AS title',
-                    'invoice.invoice_code AS invoice_code',
-                    'invoice.invoice_number AS invoice_number',
-                    'invoice.invoice_date AS invoice_date',
-                    'invoice.pretax_amount AS pretax_amount',
-                    'invoice.tax_amount AS tax_amount',
-                    'invoice.total_amount AS total_amount',
-                    'invoice.seller_name AS seller_name',
-                    'invoice.buyer_name AS buyer_name',
-                    'invoice.invoice_nature AS invoice_nature',
-                    'invoice.invoice_purpose AS invoice_purpose',
-                    'invoice.is_tax_filed AS is_tax_filed',
-                    "to_char(invoice.tax_filed_time, 'YYYY-MM-DD HH24:MI:SS') AS tax_filed_time",
-                    'invoice.tax_filed_by AS tax_filed_by',
-                    'invoice.status AS status',
-                    "to_char(invoice.create_time, 'YYYY-MM-DD HH24:MI:SS') AS create_time",
-                ])
+                .select(INVOICE_LIST_SELECT)
                 .where('invoice.status = :status', { status: 1 });
 
             if (dto.invoice_nature) {
@@ -166,6 +183,40 @@ export class InvoiceService {
             return { result: 0, msg: 'success', datas: { total, items } };
         } catch (error) {
             this.logger.error('查询发票列表失败:', error);
+            return { result: 1, msg: '查询失败' };
+        }
+    }
+
+    /**
+     * 查询未绑定支出费用单的实开发票列表(GET /invoice/unboundList)
+     * - 只查正常状态(status=1)且发票性质为实开(invoice_nature=1)的发票
+     * - 未绑定:不存在状态正常(status=1)的支出费用单关联该发票,已作废费用单不占用发票
+     * - 不分页,按创建时间降序返回全部轻量字段(不含 items 等大字段),供新建费用单时选择发票
+     */
+    async listUnbound(): Promise<UnboundInvoiceListResult> {
+        try {
+            const items = await this.invoiceRepository
+                .createQueryBuilder('invoice')
+                .select(INVOICE_LIST_SELECT)
+                .where('invoice.status = :status', { status: 1 })
+                .andWhere('invoice.invoice_nature = :invoiceNature', { invoiceNature: 1 })
+                // NOT EXISTS 过滤已被正常状态费用单关联的发票
+                .andWhere((qb) => {
+                    const subQuery = qb
+                        .subQuery()
+                        .select('1')
+                        .from(Expense, 'expense')
+                        .where('expense.invoice_id = invoice.invoice_id')
+                        .andWhere('expense.status = :expenseStatus', { expenseStatus: 1 })
+                        .getQuery();
+                    return `NOT EXISTS (${subQuery})`;
+                })
+                .orderBy('invoice.create_time', 'DESC')
+                .getRawMany<InvoiceListItem>();
+
+            return { result: 0, msg: 'success', datas: { items } };
+        } catch (error) {
+            this.logger.error('查询未绑定实开发票列表失败:', error);
             return { result: 1, msg: '查询失败' };
         }
     }
@@ -317,6 +368,46 @@ export class InvoiceService {
         } catch (error) {
             this.logger.error('发票报税操作失败:', error);
             return { result: 1, msg: '操作失败' };
+        }
+    }
+
+    /**
+     * 删除发票(POST /invoice/delete)
+     * - 软删除:status 置为2(作废),列表/详情等查询均只查正常状态,删除后不再展示
+     * - 已被正常状态支出费用单关联的发票不允许删除(1:1占用),需先删除费用单释放
+     *
+     * @param dto 发票ID
+     */
+    async delete(dto: InvoiceIdDto): Promise<InvoiceOpResult> {
+        try {
+            const invoice = await this.invoiceRepository.findOne({
+                where: { invoice_id: dto.invoice_id, status: 1 },
+            });
+            if (!invoice) {
+                return { result: 1, msg: '发票不存在或已作废' };
+            }
+
+            // 已被正常状态费用单关联:拒绝删除,提示费用单编号
+            const bound = await this.expenseRepository.findOne({
+                where: { invoice_id: dto.invoice_id, status: 1 },
+                select: ['expense_no'],
+            });
+            if (bound) {
+                return {
+                    result: 1,
+                    msg: '该发票已被支出费用单关联,费用单编号:' + bound.expense_no,
+                };
+            }
+
+            await this.invoiceRepository.update(
+                { invoice_id: dto.invoice_id },
+                { status: 2, update_time: new Date() }
+            );
+            this.logger.info('发票删除完成:', { invoice_id: dto.invoice_id });
+            return { result: 0, msg: 'success' };
+        } catch (error) {
+            this.logger.error('发票删除失败:', error);
+            return { result: 1, msg: '删除失败' };
         }
     }
 }

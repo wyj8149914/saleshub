@@ -34,8 +34,8 @@ function wrapMulter(middleware: RequestHandler, unexpectedFileMsg: string): Requ
                     err.code === 'LIMIT_FILE_SIZE'
                         ? `单个文件大小不能超过5MB`
                         : err.code === 'LIMIT_UNEXPECTED_FILE'
-                            ? unexpectedFileMsg
-                            : `文件上传失败:${err.code}`;
+                          ? unexpectedFileMsg
+                          : `文件上传失败:${err.code}`;
                 res.locals.datas = { result: 1, msg };
                 res.json(res.locals.datas);
                 return;
@@ -195,6 +195,21 @@ router.get(
 );
 
 /**
+ * GET /unboundList
+ * 查询未绑定支出费用单的实开发票列表:只查正常状态且发票性质为实开(invoice_nature=1)的发票,
+ * 排除已被正常状态费用单关联的发票(已作废费用单不占用),不分页,按创建时间降序
+ * 供新建支出费用单(有发票采购)时下拉选择发票,无查询参数
+ */
+router.get(
+    '/unboundList',
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const result = await invoiceService.listUnbound();
+        res.locals.datas = result;
+        next();
+    })
+);
+
+/**
  * GET /detail
  * 发票详情:返回票面字段与明细 items 及原始文件预览地址(不含 detail/raw_response 等大字段)
  * Query: invoice_id-发票ID(必填)
@@ -223,6 +238,23 @@ router.post(
         // validationMiddleware 已将校验通过的 DTO 回写到 req.body
         const dto = req.body as TaxFileInvoiceDto;
         const result = await invoiceService.taxFile(dto);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+/**
+ * POST /delete
+ * 删除发票(软删除,作废后不再展示):已被支出费用单关联的发票不允许删除,需先删除费用单
+ * Body: invoice_id-发票ID(必填)
+ */
+router.post(
+    '/delete',
+    validationMiddleware(InvoiceIdDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        // validationMiddleware 已将校验通过的 DTO 回写到 req.body
+        const dto = req.body as InvoiceIdDto;
+        const result = await invoiceService.delete(dto);
         res.locals.datas = result;
         next();
     })
