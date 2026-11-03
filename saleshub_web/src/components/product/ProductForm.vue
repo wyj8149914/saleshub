@@ -170,7 +170,9 @@ const beforeUpload = (file: File) => {
  * 自定义图片上传
  * 调用 uploadImage 获取 relationId 与预览 URL，写入 form.image_id
  */
-const handleUpload = async (file: File) => {
+const handleUpload = async (options: { file: File }) => {
+  // customRequest 接收的是上传配置对象，真正的文件在 options.file 中
+  const { file } = options;
   uploading.value = true;
   try {
     const result = await uploadImage(file);

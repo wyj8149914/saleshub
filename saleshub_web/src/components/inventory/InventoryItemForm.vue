@@ -294,7 +294,9 @@ const beforeUpload = (file: File) => {
   return true;
 };
 
-const handleUpload = async (file: File) => {
+const handleUpload = async (options: { file: File }) => {
+  // customRequest 接收的是上传配置对象，真正的文件在 options.file 中
+  const { file } = options;
   uploading.value = true;
   try {
     const result = await uploadImage(file);

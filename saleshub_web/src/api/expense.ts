@@ -4,6 +4,7 @@ import type {
   ExpenseCreatePayload,
   ExpenseUpdatePayload,
   ExpenseBindInvoicePayload,
+  ExpenseStockInPayload,
   ExpensePageData,
   ExpenseDetail,
   ExpenseCreateResult,
@@ -52,6 +53,14 @@ export const expenseApi = {
    */
   delete(expense_id: string) {
     return http.post('/saleshub/expense/delete', { expense_id });
+  },
+
+  /**
+   * 支出费用单入库:按费用单采购明细整单入库(后端事务内批量入库并回写入库状态)
+   * 已入库/无明细/作废费用单会被后端拒绝
+   */
+  stockIn(payload: ExpenseStockInPayload) {
+    return http.post('/saleshub/expense/stockIn', payload);
   },
 };
 

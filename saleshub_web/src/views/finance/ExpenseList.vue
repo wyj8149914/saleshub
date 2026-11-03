@@ -56,7 +56,9 @@
       <!-- 第二行:新建入口 -->
       <a-space :size="12" wrap class="action-buttons">
         <a-button type="primary" @click="openForm(null)">
-          <template #icon><PlusOutlined /></template>
+          <template #icon>
+            <PlusOutlined />
+          </template>
           新建费用单
         </a-button>
       </a-space>
@@ -137,6 +139,16 @@
             <a-space :size="0">
               <a-button type="link" size="small" @click="openDetail(record)">详情</a-button>
               <a-button type="link" size="small" @click="openForm(record)">修改</a-button>
+              <!-- 入库:仅有零件明细且未入库的展示;已入库展示灰色标签 -->
+              <a-button
+                v-if="record.has_items && record.stock_in_status === ExpenseStockInStatus.NOT_IN"
+                type="link"
+                size="small"
+                @click="openStockIn(record)"
+              >
+                入库
+              </a-button>
+              <a-tag v-else-if="record.stock_in_status === ExpenseStockInStatus.IN" color="green">已入库</a-tag>
               <!-- 关联发票:仅类型1-有发票采购展示(已绑定时为换绑) -->
               <a-button
                 v-if="record.expense_type === ExpenseType.WITH_INVOICE"
@@ -170,13 +182,17 @@
 
     <!-- 关联/换绑发票弹窗 -->
     <ExpenseBindInvoiceModal v-model:open="bindOpen" :expense="bindTarget" @success="loadList" />
+
+    <!-- 费用单入库弹窗(按采购明细整单入库) -->
+    <ExpenseStockInModal v-model:open="stockInOpen" :expense="stockInTarget" @success="loadList" />
   </div>
 </template>
 
 <script setup lang="ts">
 /**
  * 支出费用列表页:分页查询 + 筛选(费用类型/渠道/分类/付款方式/日期区间/关键字)
- * 入口:新建/修改(弹窗)、详情(抽屉)、类型1费用单关联/换绑发票(弹窗)
+ * 入口:新建/修改(弹窗)、详情(抽屉)、类型1费用单关联/换绑发票(弹窗)、
+ * 有零件明细的费用单整单入库(弹窗)
  */
 import { onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
@@ -188,15 +204,17 @@ import {
   EXPENSE_PAYMENT_METHOD_LABELS,
   EXPENSE_TYPE_LABELS,
   ExpenseType,
+  ExpenseStockInStatus,
 } from '@/types/expense';
 import type { Expense, ExpenseListQuery } from '@/types/expense';
 import ExpenseFormModal from '@/components/expense/ExpenseFormModal.vue';
 import ExpenseDetailDrawer from '@/components/expense/ExpenseDetailDrawer.vue';
 import ExpenseBindInvoiceModal from '@/components/expense/ExpenseBindInvoiceModal.vue';
+import ExpenseStockInModal from '@/components/expense/ExpenseStockInModal.vue';
 
 const columns = [
   { title: '费用单编号', dataIndex: 'expense_no', key: 'expense_no', width: 110, fixed: 'left' as const },
-  { title: '费用名称', dataIndex: 'expense_title', key: 'expense_title', width: 140, ellipsis: true },
+  { title: '费用名称', dataIndex: 'expense_title', key: 'expense_title', width: 140, fixed: 'left', ellipsis: true },
   { title: '费用类型', dataIndex: 'expense_type', key: 'expense_type', width: 110 },
   { title: '发票号码', key: 'invoice_number', width: 190 },
   { title: '渠道', key: 'channel', width: 80 },
@@ -207,7 +225,7 @@ const columns = [
   { title: '收款方', key: 'payee', width: 140, ellipsis: true },
   { title: '付款方式', key: 'payment_method', width: 100 },
   { title: '备注', key: 'remark', ellipsis: true },
-  { title: '操作', key: 'action', width: 230, fixed: 'right' as const },
+  { title: '操作', key: 'action', width: 300, fixed: 'right' as const },
 ];
 
 // ============ 列表状态 ============
@@ -335,6 +353,15 @@ const bindTarget = ref<Expense | null>(null);
 const openBind = (record: Expense) => {
   bindTarget.value = record;
   bindOpen.value = true;
+};
+
+// ============ 入库弹窗(有零件明细且未入库的费用单) ============
+const stockInOpen = ref(false);
+const stockInTarget = ref<Expense | null>(null);
+
+const openStockIn = (record: Expense) => {
+  stockInTarget.value = record;
+  stockInOpen.value = true;
 };
 
 /**

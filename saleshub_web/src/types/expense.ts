@@ -16,6 +16,14 @@ export const EXPENSE_TYPE_LABELS: Record<number, string> = {
   [ExpenseType.WITHOUT_INVOICE]: '无发票支出',
 };
 
+/** 费用单入库状态 */
+export enum ExpenseStockInStatus {
+  /** 未入库 */
+  NOT_IN = 1,
+  /** 已入库 */
+  IN = 2,
+}
+
 /** 采购来源渠道中文标签 */
 export const EXPENSE_CHANNEL_LABELS: Record<number, string> = {
   1: '淘宝',
@@ -150,6 +158,20 @@ export interface ExpenseBindInvoicePayload {
   invoice_id: string;
 }
 
+/** 支出费用单入库参数(按采购明细整单入库,明细由后端读取) */
+export interface ExpenseStockInPayload {
+  /** 支出费用单 ID */
+  expense_id: string;
+  /** 入库日期,YYYY-MM-DD */
+  date: string;
+  /** 入库仓库 ID(可选,不传则仅入总库存) */
+  warehouse_id?: string;
+  /** 入库照片 file.relation_id(可选) */
+  photo_id?: string;
+  /** 备注(可选) */
+  remark?: string;
+}
+
 // ============ 响应类型 ============
 
 /** 支出费用单列表行 */
@@ -188,6 +210,10 @@ export interface Expense {
   remark: string | null;
   /** 状态:1-正常 */
   status: number;
+  /** 入库状态:1-未入库,2-已入库 */
+  stock_in_status: number;
+  /** 是否存在正常状态采购明细行(用于决定是否展示入库操作) */
+  has_items: boolean;
   /** 创建时间,YYYY-MM-DD HH24:MI:SS */
   create_time: string;
 }
@@ -206,6 +232,10 @@ export interface ExpenseDetailItem {
   quantity: number;
   /** 采购单价,数字字符串 */
   price: string;
+  /** 零件名称(联查零件表),可能为 null */
+  item_name: string | null;
+  /** 规格名称(联查规格表),可能为 null */
+  spec_name: string | null;
   /** 备注,可能为 null */
   remark: string | null;
   /** 状态:1-正常 */
