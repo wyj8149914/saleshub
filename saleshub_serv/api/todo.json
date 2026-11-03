@@ -1,0 +1,865 @@
+{
+    "/saleshub/todo/type/create": {
+        "method": "POST",
+        "summary": "新建待办类型",
+        "description": "新建一个待办类型，类型由用户自行创建，创建成功后在待办事项中选择。类型名称全局唯一（uk_todo_type_name），重名时 result=1、msg 为「类型名称已存在」。参数校验失败时 result=1，msg 为具体校验提示（如「类型名称不能为空」「类型名称长度不能超过50」）。事务写入失败时 result=1、msg 为「新建失败」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "创建人用户 ID"
+                },
+                "type_name": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "类型名称，全局唯一"
+                }
+            },
+            "required": [
+                "user_id",
+                "type_name"
+            ]
+        },
+        "example_request": {
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "type_name": "日常巡检"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-创建成功，1-参数校验失败、类型名重复或事务写入失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「创建成功」「类型名称已存在」「新建失败」"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "新建结果。失败时无此字段",
+                    "properties": {
+                        "type_id": {
+                            "type": "string",
+                            "description": "待办类型主键 UUID（无连字符，32 位）"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/todo/type/list": {
+        "method": "GET",
+        "summary": "待办类型列表",
+        "description": "查询全部正常状态（status=1）的待办类型，不分页（类型数量少）。支持按类型名称关键字模糊匹配筛选。按创建时间降序排列。参数校验失败时 result=1，msg 为具体校验提示；查询失败时 result=1、msg 为「查询失败」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "keyword": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "关键字，对类型名称模糊匹配（Query 参数，可选）"
+                }
+            }
+        },
+        "example_request": {
+            "keyword": "巡检"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "类型列表",
+                    "properties": {
+                        "total": {
+                            "type": "number",
+                            "description": "类型总数"
+                        },
+                        "items": {
+                            "type": "array",
+                            "description": "待办类型列表",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "type_id": {
+                                        "type": "string",
+                                        "description": "待办类型主键 UUID（无连字符，32 位）"
+                                    },
+                                    "type_name": {
+                                        "type": "string",
+                                        "description": "类型名称"
+                                    },
+                                    "user_id": {
+                                        "type": "string",
+                                        "description": "创建人用户 ID"
+                                    },
+                                    "status": {
+                                        "type": "number",
+                                        "description": "状态：1-正常，2-停用"
+                                    },
+                                    "create_time": {
+                                        "type": "string",
+                                        "description": "创建时间，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/todo/type/delete": {
+        "method": "POST",
+        "summary": "删除待办类型",
+        "description": "软删除待办类型：类型 status 置为 2（停用），删除后不再出现在类型列表中。类型不存在或已删除时 result=1、msg 为「待办类型不存在或已删除」。已被待办事项引用的类型删除后不影响既有待办的类型名展示。参数校验失败时 result=1，msg 为具体校验提示；删除失败时 result=1、msg 为「删除失败」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "type_id": {
+                    "type": "string",
+                    "description": "待办类型主键 UUID（无连字符，32 位）"
+                }
+            },
+            "required": [
+                "type_id"
+            ]
+        },
+        "example_request": {
+            "type_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e6a"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-参数校验失败、类型不存在或删除失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「success」「待办类型不存在或已删除」「删除失败」"
+                }
+            }
+        }
+    },
+    "/saleshub/todo/create": {
+        "method": "POST",
+        "summary": "新建待办事项",
+        "description": "新建一条待办事项，执行人多选（至少 1 个、最多 20 个）。事务内写入主表与执行人关联表。初始状态固定为：是否完成 is_completed=1-否、完成时间 completed_time 为空。剩余天数不落库，由 截止日期-当前日期 查询时计算。重要程度 priority 为 1-重要紧急，2-重要不紧急，3-不重要紧急，4-不重要不紧急，默认 4。附件为 minio_file.relation_id 列表，文件可先调 /saleshub/file/upload 上传后回填。传入 type_id 时校验类型存在且未停用，否则 result=1、msg 为「待办类型不存在或已停用」。参数校验失败时 result=1，msg 为具体校验提示（如「待办名称不能为空」「执行人至少选择1个」「截止日期格式必须为YYYY-MM-DD」）。事务写入失败时 result=1、msg 为「新建失败」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "待办事项名称"
+                },
+                "type_id": {
+                    "type": "string",
+                    "description": "待办类型 ID（可选，/saleshub/todo/type/create 返回的 type_id）"
+                },
+                "priority": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4
+                    ],
+                    "description": "重要程度：1-重要紧急，2-重要不紧急，3-不重要紧急，4-不重要不紧急"
+                },
+                "deadline": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "截止日期，格式 YYYY-MM-DD"
+                },
+                "executor_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "description": "执行人用户 ID 列表（至少 1 个，最多 20 个）"
+                },
+                "attachments": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "附件 relation_id 列表（可选，每项为 /saleshub/file/upload 返回的 minio_file.relation_id）"
+                },
+                "remark": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "备注（可选）"
+                },
+                "user_id": {
+                    "type": "string",
+                    "description": "创建人用户 ID"
+                }
+            },
+            "required": [
+                "title",
+                "priority",
+                "deadline",
+                "executor_ids",
+                "user_id"
+            ]
+        },
+        "example_request": {
+            "title": "月底库存盘点",
+            "type_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e6a",
+            "priority": 1,
+            "deadline": "2026-11-30",
+            "executor_ids": [
+                "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+                "0194a8f0e1b27c4a9d0e8f7b6c5d4e4b"
+            ],
+            "attachments": [
+                "0194a8f0e1b27c4a9d0e8f7b6c5d4e5a"
+            ],
+            "remark": "含 A 区与 B 区仓库",
+            "user_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-创建成功，1-参数校验失败、类型不存在或事务写入失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「创建成功」「待办类型不存在或已停用」「执行人至少选择1个」「新建失败」"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "新建结果。失败时无此字段",
+                    "properties": {
+                        "todo_id": {
+                            "type": "string",
+                            "description": "待办事项主键 UUID（无连字符，32 位）"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/todo/update": {
+        "method": "POST",
+        "summary": "修改待办事项",
+        "description": "修改待办事项，仅正常状态（status=1）待办可修改，不存在或已删除时 result=1、msg 为「待办事项不存在或已删除」。创建人不允许修改。全部业务字段可选，仅更新传入的字段。传入 executor_ids 时整体替换执行人列表；传入 attachments 时整体替换附件列表。直接修改截止日期不产生延期记录，延期请走 /saleshub/todo/postpone。传入 type_id 时校验类型存在且未停用。参数校验失败时 result=1，msg 为具体校验提示；更新失败时 result=1、msg 为「修改失败」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "todo_id": {
+                    "type": "string",
+                    "description": "待办事项主键 UUID（无连字符，32 位）"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "待办事项名称（可选）"
+                },
+                "type_id": {
+                    "type": "string",
+                    "description": "待办类型 ID（可选）"
+                },
+                "priority": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4
+                    ],
+                    "description": "重要程度：1-重要紧急，2-重要不紧急，3-不重要紧急，4-不重要不紧急（可选）"
+                },
+                "deadline": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "截止日期，格式 YYYY-MM-DD（可选，直接修改不产生延期记录）"
+                },
+                "executor_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "description": "执行人用户 ID 列表（可选，传入时整体替换，至少 1 个）"
+                },
+                "attachments": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "附件 relation_id 列表（可选，传入时整体替换）"
+                },
+                "remark": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "备注（可选）"
+                }
+            },
+            "required": [
+                "todo_id"
+            ]
+        },
+        "example_request": {
+            "todo_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e7c",
+            "title": "月底库存盘点（含 C 区）",
+            "priority": 2,
+            "executor_ids": [
+                "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+            ]
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-参数校验失败、待办不存在或修改失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「success」「待办事项不存在或已删除」「待办类型不存在或已停用」「修改失败」"
+                }
+            }
+        }
+    },
+    "/saleshub/todo/list": {
+        "method": "GET",
+        "summary": "待办事项列表",
+        "description": "分页查询全部正常状态（status=1）的待办事项，已删除待办不展示。支持筛选：执行人 executor_id（查询「我的待办」）、类型 type_id、重要程度 priority、完成状态 is_completed、截止日期区间 start_date/end_date（YYYY-MM-DD，含起止当天）、关键字 keyword（对名称模糊匹配）。排序字段 sort：1-创建时间降序（默认），2-截止日期升序，3-重要程度升序（重要紧急优先）。列表项包含执行人列表 executors、剩余天数 remaining_days（截止日期-当前日期，负数表示已过期 N 天）、延期次数 postpone_count 与累计延期天数 total_delay_days。参数校验失败时 result=1，msg 为具体校验提示；查询失败时 result=1、msg 为「查询失败」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "pageIndex": {
+                    "type": "number",
+                    "description": "页码，从 1 开始。Query 参数（必填）"
+                },
+                "pageSize": {
+                    "type": "number",
+                    "description": "每页数量。Query 参数（必填）"
+                },
+                "executor_id": {
+                    "type": "string",
+                    "description": "执行人用户 ID，传入时查询该用户的「我的待办」（Query 参数，可选）"
+                },
+                "type_id": {
+                    "type": "string",
+                    "description": "待办类型 ID（Query 参数，可选）"
+                },
+                "priority": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4
+                    ],
+                    "description": "重要程度：1-重要紧急，2-重要不紧急，3-不重要紧急，4-不重要不紧急（Query 参数，可选）"
+                },
+                "is_completed": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "description": "是否完成：1-否，2-是（Query 参数，可选）"
+                },
+                "start_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "截止日期起（含当天），格式 YYYY-MM-DD（Query 参数，可选）"
+                },
+                "end_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "截止日期止（含当天），格式 YYYY-MM-DD（Query 参数，可选）"
+                },
+                "keyword": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "关键字，对待办名称模糊匹配（Query 参数，可选）"
+                },
+                "sort": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2,
+                        3
+                    ],
+                    "description": "排序字段：1-创建时间降序（默认），2-截止日期升序，3-重要程度升序（Query 参数，可选）"
+                }
+            },
+            "required": [
+                "pageIndex",
+                "pageSize"
+            ]
+        },
+        "example_request": {
+            "pageIndex": 1,
+            "pageSize": 10,
+            "executor_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f",
+            "is_completed": 1,
+            "sort": 2
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "分页结果",
+                    "properties": {
+                        "total": {
+                            "type": "number",
+                            "description": "待办事项总数"
+                        },
+                        "items": {
+                            "type": "array",
+                            "description": "待办事项列表",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "todo_id": {
+                                        "type": "string",
+                                        "description": "待办事项主键 UUID（无连字符，32 位）"
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "description": "待办事项名称"
+                                    },
+                                    "type_id": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "待办类型 ID，可为 null"
+                                    },
+                                    "type_name": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "待办类型名称（按 type_id 联查），可为 null"
+                                    },
+                                    "priority": {
+                                        "type": "number",
+                                        "description": "重要程度：1-重要紧急，2-重要不紧急，3-不重要紧急，4-不重要不紧急"
+                                    },
+                                    "deadline": {
+                                        "type": "string",
+                                        "description": "截止日期，YYYY-MM-DD 格式字符串"
+                                    },
+                                    "remaining_days": {
+                                        "type": "number",
+                                        "description": "剩余天数（截止日期-当前日期），负数表示已过期 N 天，0 表示今天截止"
+                                    },
+                                    "is_completed": {
+                                        "type": "number",
+                                        "description": "是否完成：1-否，2-是（整条待办的总体状态）"
+                                    },
+                                    "completed_time": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "完成时间，YYYY-MM-DD HH24:MI:SS 格式字符串，未完成为 null"
+                                    },
+                                    "attachments": {
+                                        "type": [
+                                            "array",
+                                            "null"
+                                        ],
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "description": "附件 relation_id 列表（minio_file.relation_id），可为 null"
+                                    },
+                                    "remark": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "备注，可为 null"
+                                    },
+                                    "user_id": {
+                                        "type": "string",
+                                        "description": "创建人用户 ID"
+                                    },
+                                    "executors": {
+                                        "type": "array",
+                                        "description": "执行人列表",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "user_id": {
+                                                    "type": "string",
+                                                    "description": "执行人用户 ID"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "postpone_count": {
+                                        "type": "number",
+                                        "description": "延期次数"
+                                    },
+                                    "total_delay_days": {
+                                        "type": "number",
+                                        "description": "累计延期天数（各次延期 delay_days 求和）"
+                                    },
+                                    "status": {
+                                        "type": "number",
+                                        "description": "状态：1-正常，2-删除"
+                                    },
+                                    "create_time": {
+                                        "type": "string",
+                                        "description": "创建时间，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/todo/detail": {
+        "method": "GET",
+        "summary": "待办事项详情",
+        "description": "查询待办事项详情，仅正常状态（status=1）待办可查，不存在或已删除时 result=1、msg 为「待办事项不存在或已删除」。返回待办全部业务字段、执行人列表 executors、延期记录列表 postpone_records（按延期时间降序）与剩余天数 remaining_days。参数校验失败时 result=1，msg 为具体校验提示；查询失败时 result=1、msg 为「查询失败」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "todo_id": {
+                    "type": "string",
+                    "description": "待办事项主键 UUID（无连字符，32 位）。Query 参数（必填）"
+                }
+            },
+            "required": [
+                "todo_id"
+            ]
+        },
+        "example_request": {
+            "todo_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e7c"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-参数校验失败、待办不存在或查询失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「success」「待办事项不存在或已删除」「查询失败」"
+                },
+                "datas": {
+                    "type": "object",
+                    "description": "待办详情",
+                    "properties": {
+                        "todo_id": {
+                            "type": "string",
+                            "description": "待办事项主键 UUID（无连字符，32 位）"
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "待办事项名称"
+                        },
+                        "type_id": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "待办类型 ID，可为 null"
+                        },
+                        "type_name": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "待办类型名称（按 type_id 联查），可为 null"
+                        },
+                        "priority": {
+                            "type": "number",
+                            "description": "重要程度：1-重要紧急，2-重要不紧急，3-不重要紧急，4-不重要不紧急"
+                        },
+                        "deadline": {
+                            "type": "string",
+                            "description": "截止日期，YYYY-MM-DD 格式字符串（延期后的最新截止日期）"
+                        },
+                        "remaining_days": {
+                            "type": "number",
+                            "description": "剩余天数（截止日期-当前日期），负数表示已过期 N 天，0 表示今天截止"
+                        },
+                        "is_completed": {
+                            "type": "number",
+                            "description": "是否完成：1-否，2-是"
+                        },
+                        "completed_time": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "完成时间，YYYY-MM-DD HH24:MI:SS 格式字符串，未完成为 null"
+                        },
+                        "attachments": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "items": {
+                                "type": "string"
+                            },
+                            "description": "附件 relation_id 列表（minio_file.relation_id），可为 null"
+                        },
+                        "remark": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "备注，可为 null"
+                        },
+                        "user_id": {
+                            "type": "string",
+                            "description": "创建人用户 ID"
+                        },
+                        "executors": {
+                            "type": "array",
+                            "description": "执行人列表（按关联时间升序）",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "user_id": {
+                                        "type": "string",
+                                        "description": "执行人用户 ID"
+                                    }
+                                }
+                            }
+                        },
+                        "postpone_records": {
+                            "type": "array",
+                            "description": "延期记录列表（按延期时间降序，只增不改）",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "postpone_id": {
+                                        "type": "string",
+                                        "description": "延期记录主键 UUID（无连字符，32 位）"
+                                    },
+                                    "old_deadline": {
+                                        "type": "string",
+                                        "description": "延期前截止日期，YYYY-MM-DD 格式字符串"
+                                    },
+                                    "new_deadline": {
+                                        "type": "string",
+                                        "description": "延期后截止日期，YYYY-MM-DD 格式字符串"
+                                    },
+                                    "delay_days": {
+                                        "type": "number",
+                                        "description": "本次延期天数（new_deadline - old_deadline）"
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "description": "延期原因"
+                                    },
+                                    "operator_id": {
+                                        "type": "string",
+                                        "description": "延期操作人用户 ID（处理人或管理员）"
+                                    },
+                                    "create_time": {
+                                        "type": "string",
+                                        "description": "延期操作时间，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                                    }
+                                }
+                            }
+                        },
+                        "status": {
+                            "type": "number",
+                            "description": "状态：1-正常，2-删除"
+                        },
+                        "create_time": {
+                            "type": "string",
+                            "description": "创建时间，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                        },
+                        "update_time": {
+                            "type": "string",
+                            "description": "更新时间，YYYY-MM-DD HH24:MI:SS 格式字符串"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "/saleshub/todo/complete": {
+        "method": "POST",
+        "summary": "待办完成状态变更",
+        "description": "变更待办事项的完成状态，是否完成是整条待办的总体状态（不按执行人拆分），任意执行人或管理员均可操作。仅正常状态（status=1）待办可操作，不存在或已删除时 result=1、msg 为「待办事项不存在或已删除」。标记完成（is_completed=2）时写入完成时间 completed_time；取消完成（is_completed=1）时清空完成时间。传入与当前相同的状态视为幂等操作，直接返回成功。参数校验失败时 result=1，msg 为具体校验提示；操作失败时 result=1、msg 为「操作失败」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "todo_id": {
+                    "type": "string",
+                    "description": "待办事项主键 UUID（无连字符，32 位）"
+                },
+                "is_completed": {
+                    "type": "number",
+                    "enum": [
+                        1,
+                        2
+                    ],
+                    "description": "是否完成：1-否，2-是"
+                }
+            },
+            "required": [
+                "todo_id",
+                "is_completed"
+            ]
+        },
+        "example_request": {
+            "todo_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e7c",
+            "is_completed": 2
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-参数校验失败、待办不存在或操作失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「success」「待办事项不存在或已删除」「操作失败」"
+                }
+            }
+        }
+    },
+    "/saleshub/todo/postpone": {
+        "method": "POST",
+        "summary": "待办延期",
+        "description": "待办事项延期，处理人和管理员均可操作，需填写延期后截止日期与延期原因。仅正常状态（status=1）待办可操作。新截止日期必须晚于当前截止日期，否则 result=1、msg 为「延期后截止日期必须晚于当前截止日期」。事务内更新 todo.deadline 的同时插入一条延期记录（记录只增不改），本次延期天数 delay_days 由服务端按 新截止日期-当前截止日期 计算。行级锁（pessimistic_write）防止并发延期。参数校验失败时 result=1，msg 为具体校验提示（如「延期原因不能为空」「延期后截止日期格式必须为YYYY-MM-DD」）。事务写入失败时 result=1、msg 为「操作失败」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "todo_id": {
+                    "type": "string",
+                    "description": "待办事项主键 UUID（无连字符，32 位）"
+                },
+                "new_deadline": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "description": "延期后截止日期，格式 YYYY-MM-DD，必须晚于当前截止日期"
+                },
+                "reason": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 200,
+                    "description": "延期原因，2~200 字符"
+                },
+                "operator_id": {
+                    "type": "string",
+                    "description": "延期操作人用户 ID（处理人或管理员）"
+                }
+            },
+            "required": [
+                "todo_id",
+                "new_deadline",
+                "reason",
+                "operator_id"
+            ]
+        },
+        "example_request": {
+            "todo_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e7c",
+            "new_deadline": "2026-12-10",
+            "reason": "C 区仓库盘点设备未到位，需顺延",
+            "operator_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e3f"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-参数校验失败、待办不存在、新日期不晚于当前截止日期或事务写入失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「success」「待办事项不存在或已删除」「延期后截止日期必须晚于当前截止日期」「操作失败」"
+                }
+            }
+        }
+    },
+    "/saleshub/todo/delete": {
+        "method": "POST",
+        "summary": "删除待办事项",
+        "description": "软删除待办事项：主表 status 置为 2（删除），删除后不再出现在列表/详情中。仅正常状态（status=1）待办可删除，不存在或已删除时 result=1、msg 为「待办事项不存在或已删除」。参数校验失败时 result=1，msg 为具体校验提示；删除失败时 result=1、msg 为「删除失败」。",
+        "request_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "todo_id": {
+                    "type": "string",
+                    "description": "待办事项主键 UUID（无连字符，32 位）"
+                }
+            },
+            "required": [
+                "todo_id"
+            ]
+        },
+        "example_request": {
+            "todo_id": "0194a8f0e1b27c4a9d0e8f7b6c5d4e7c"
+        },
+        "response_body": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "number",
+                    "description": "结果码：0-成功，1-参数校验失败、待办不存在或删除失败"
+                },
+                "msg": {
+                    "type": "string",
+                    "description": "提示信息，如「success」「待办事项不存在或已删除」「删除失败」"
+                }
+            }
+        }
+    }
+}

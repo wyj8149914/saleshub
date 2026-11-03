@@ -2,6 +2,7 @@ import { Application, Router } from 'express';
 import invoiceRouter from './invoice.route';
 import expenseRouter from './expense.route';
 import salesOrderRouter from './salesOrder.route';
+import todoRouter from './todo.route';
 import fileRouter from './file.route';
 import userRouter from './user.route';
 import inventoryRouter from './inventory.route';
@@ -32,6 +33,7 @@ export function initializeRoutes(app: Application): void {
     app.use(`${apiPrefix}/invoice`, invoiceRouter);
     app.use(`${apiPrefix}/expense`, expenseRouter);
     app.use(`${apiPrefix}/order`, salesOrderRouter);
+    app.use(`${apiPrefix}/todo`, todoRouter);
 
     logger.info('✅ 路由初始化完成');
 }
