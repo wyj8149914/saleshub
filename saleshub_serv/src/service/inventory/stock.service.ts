@@ -27,6 +27,8 @@ import {
     RevertStockOutDto,
 } from '../../dto/stock.dto';
 import { AppDataSource } from '../../config/database.config';
+import { EntityManager } from 'typeorm';
+import { BusinessError } from '../../utils/error.util';
 import { getLogger } from '../../utils/logger.util';
 import { v7 } from 'uuid';
 import { MinioFile } from '../../entity/file.entity';
@@ -174,13 +176,16 @@ export class StockService {
                 }
             }
 
-            await this.executeStockIn(
-                itemSpecs,
-                dto.date,
-                dto.warehouse_id,
-                dto.photo_id,
-                dto.remark
-            );
+            await this.stockInRepository.manager.transaction(async (manager) => {
+                await this.executeStockIn(
+                    manager,
+                    itemSpecs,
+                    dto.date,
+                    dto.warehouse_id,
+                    dto.photo_id,
+                    dto.remark
+                );
+            });
             return { result: 0, msg: '入库成功' };
         } catch (error) {
             this.logger.error('批量入库失败:', error);
@@ -822,14 +827,50 @@ export class StockService {
     }
 
     /**
-     * 执行入库(同一批次共用 record_no,事务原子)
+     * 费用单批量入库(供费用模块调用)
+     * 在调用方传入的事务内执行:校验明细与仓库后按明细批量入库,
+     * 入库记录写入 expense_id,与费用单入库状态回写同事务提交
+     * 校验失败抛出 BusinessError,由调用方捕获并使事务回滚
+     */
+    async executeExpenseStockIn(
+        manager: EntityManager,
+        items: StockItem[],
+        date: string,
+        warehouseId?: string,
+        photoId?: string,
+        remark?: string,
+        expenseId?: string
+    ) {
+        const validated = await this.validateStockInItems(items);
+        if (!validated.ok) {
+            throw new BusinessError(9000, validated.msg || '入库明细校验未通过');
+        }
+
+        if (warehouseId) {
+            const warehouse = await manager.findOne(Warehouse, {
+                where: { warehouse_id: warehouseId, status: 1 },
+            });
+            if (!warehouse) {
+                throw new BusinessError(9000, '仓库不存在');
+            }
+        }
+
+        await this.executeStockIn(manager, items, date, warehouseId, photoId, remark, expenseId);
+    }
+
+    /**
+     * 执行入库(同一批次共用 record_no)
+     * 须在调用方事务内执行:manager 由调用方传入,保证入库记录、仓库明细与库存更新原子,
+     * 也支持与业务单据状态回写(如费用单入库 /expense/stockIn)同事务提交
      */
     private async executeStockIn(
+        manager: EntityManager,
         itemSpecs: StockItem[],
         date: string,
         warehouseId?: string,
         photoId?: string,
-        remark?: string
+        remark?: string,
+        expenseId?: string
     ) {
         const recordNo = await this.generateStockInRecordNo();
         const now = new Date();
@@ -842,8 +883,8 @@ export class StockService {
         }
 
         const specIds = [...stockDelta.keys()];
-        const specs = await this.inventoryItemSpecRepository
-            .createQueryBuilder('s')
+        const specs = await manager
+            .createQueryBuilder(InventoryItemSpec, 's')
             .where('s.spec_id IN (:...ids) AND s.status = :status', { ids: specIds, status: 1 })
             .getMany();
         const specById = new Map(specs.map((s) => [s.spec_id, s]));
@@ -851,8 +892,8 @@ export class StockService {
         // 获取该仓库的库存明细（仅当指定了仓库时）
         let specWarehouseBySpec = new Map<string, InventoryItemSpecWarehouse>();
         if (warehouseId) {
-            const specWarehouses = await this.specWarehouseRepository
-                .createQueryBuilder('sw')
+            const specWarehouses = await manager
+                .createQueryBuilder(InventoryItemSpecWarehouse, 'sw')
                 .where(
                     'sw.spec_id IN (:...specIds) AND sw.warehouse_id = :warehouseId AND sw.status = 1',
                     {
@@ -864,73 +905,74 @@ export class StockService {
             specWarehouseBySpec = new Map(specWarehouses.map((sw) => [sw.spec_id, sw]));
         }
 
-        await this.stockInRepository.manager.transaction(async (manager) => {
-            for (const itemSpec of itemSpecs) {
-                const spec = specById.get(itemSpec.spec_id);
-                if (!spec) {
-                    throw new Error(`规格 ${itemSpec.spec_id} 未找到`);
-                }
-                const record = new StockInRecord();
-                record.record_id = v7().replace(/-/g, '');
-                record.record_no = recordNo;
-                record.item_id = itemSpec.item_id;
-                record.spec_id = itemSpec.spec_id;
-                if (warehouseId) {
-                    record.warehouse_id = warehouseId;
-                }
-                record.quantity = itemSpec.quantity;
-                record.before_stock = spec.current_stock;
-                record.after_stock = spec.current_stock + itemSpec.quantity;
-                record.date = inDate;
-                if (photoId) {
-                    record.photo_id = photoId;
-                }
-                if (remark) {
-                    record.remark = remark;
-                }
-                record.create_time = now;
-                await manager.save(StockInRecord, record);
+        for (const itemSpec of itemSpecs) {
+            const spec = specById.get(itemSpec.spec_id);
+            if (!spec) {
+                throw new Error(`规格 ${itemSpec.spec_id} 未找到`);
             }
-
-            // 如果指定了仓库，更新库存明细
+            const record = new StockInRecord();
+            record.record_id = v7().replace(/-/g, '');
+            record.record_no = recordNo;
+            record.item_id = itemSpec.item_id;
+            record.spec_id = itemSpec.spec_id;
             if (warehouseId) {
-                for (const [specId, add] of stockDelta) {
-                    const spec = specById.get(specId);
-                    if (!spec) {
-                        throw new Error(`规格 ${specId} 未找到`);
-                    }
-
-                    let specWarehouse = specWarehouseBySpec.get(specId);
-                    if (specWarehouse) {
-                        specWarehouse.current_stock += add;
-                        specWarehouse.update_time = now;
-                        await manager.save(InventoryItemSpecWarehouse, specWarehouse);
-                    } else {
-                        specWarehouse = new InventoryItemSpecWarehouse();
-                        specWarehouse.id = v7().replace(/-/g, '');
-                        specWarehouse.spec_id = specId;
-                        specWarehouse.warehouse_id = warehouseId;
-                        specWarehouse.current_stock = add;
-                        specWarehouse.status = 1;
-                        specWarehouse.create_time = now;
-                        await manager.save(InventoryItemSpecWarehouse, specWarehouse);
-                    }
-                }
+                record.warehouse_id = warehouseId;
             }
+            if (expenseId) {
+                record.expense_id = expenseId;
+            }
+            record.quantity = itemSpec.quantity;
+            record.before_stock = spec.current_stock;
+            record.after_stock = spec.current_stock + itemSpec.quantity;
+            record.date = inDate;
+            if (photoId) {
+                record.photo_id = photoId;
+            }
+            if (remark) {
+                record.remark = remark;
+            }
+            record.create_time = now;
+            await manager.save(StockInRecord, record);
+        }
 
-            // 更新总库存
+        // 如果指定了仓库，更新库存明细
+        if (warehouseId) {
             for (const [specId, add] of stockDelta) {
                 const spec = specById.get(specId);
                 if (!spec) {
                     throw new Error(`规格 ${specId} 未找到`);
                 }
-                await manager.update(
-                    InventoryItemSpec,
-                    { spec_id: specId },
-                    { current_stock: spec.current_stock + add, update_time: now }
-                );
+
+                let specWarehouse = specWarehouseBySpec.get(specId);
+                if (specWarehouse) {
+                    specWarehouse.current_stock += add;
+                    specWarehouse.update_time = now;
+                    await manager.save(InventoryItemSpecWarehouse, specWarehouse);
+                } else {
+                    specWarehouse = new InventoryItemSpecWarehouse();
+                    specWarehouse.id = v7().replace(/-/g, '');
+                    specWarehouse.spec_id = specId;
+                    specWarehouse.warehouse_id = warehouseId;
+                    specWarehouse.current_stock = add;
+                    specWarehouse.status = 1;
+                    specWarehouse.create_time = now;
+                    await manager.save(InventoryItemSpecWarehouse, specWarehouse);
+                }
             }
-        });
+        }
+
+        // 更新总库存
+        for (const [specId, add] of stockDelta) {
+            const spec = specById.get(specId);
+            if (!spec) {
+                throw new Error(`规格 ${specId} 未找到`);
+            }
+            await manager.update(
+                InventoryItemSpec,
+                { spec_id: specId },
+                { current_stock: spec.current_stock + add, update_time: now }
+            );
+        }
     }
 
     /**

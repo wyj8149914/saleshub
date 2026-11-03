@@ -46,6 +46,14 @@ export class StockInRecord {
 
     @Column({ type: 'varchar', length: 32, nullable: true, comment: '入库仓库ID' })
     warehouse_id: string;
+
+    @Column({
+        type: 'varchar',
+        length: 32,
+        nullable: true,
+        comment: '关联支出费用单ID(expense.expense_id,费用单入库时写入)',
+    })
+    expense_id: string;
 }
 
 /**

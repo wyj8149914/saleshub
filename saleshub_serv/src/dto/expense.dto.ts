@@ -323,3 +323,37 @@ export class BindInvoiceDto {
     @IsNotEmpty({ message: '发票ID不能为空' })
     invoice_id: string;
 }
+
+/**
+ * 支出费用单入库请求DTO(POST /expense/stockIn)
+ *
+ * 按费用单采购明细整单入库:后端事务内读取明细批量入库并回写入库状态,
+ * 明细不经过前端传入,防止篡改
+ */
+export class StockInExpenseDto {
+    /** 支出费用单ID */
+    @IsString()
+    @IsNotEmpty({ message: '费用单ID不能为空' })
+    expense_id: string;
+
+    /** 入库仓库ID(可选,不传则仅入总库存) */
+    @IsString()
+    @IsOptional()
+    warehouse_id?: string;
+
+    /** 入库日期,格式 YYYY-MM-DD */
+    @IsString()
+    @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '入库日期格式必须为YYYY-MM-DD' })
+    date: string;
+
+    /** 入库照片 file.relation_id(可选,经 /file/upload 上传后回填) */
+    @IsString()
+    @IsOptional()
+    photo_id?: string;
+
+    /** 备注(可选,本批次共用) */
+    @IsString()
+    @MaxLength(500, { message: '备注长度不能超过500' })
+    @IsOptional()
+    remark?: string;
+}

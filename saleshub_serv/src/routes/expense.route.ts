@@ -7,6 +7,7 @@ import {
     CreateExpenseDto,
     ExpenseIdDto,
     ListExpenseDto,
+    StockInExpenseDto,
     UpdateExpenseDto,
 } from '../dto/expense.dto';
 import { expenseService } from '../service/finace';
@@ -114,6 +115,24 @@ router.post(
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dto = req.body as ExpenseIdDto;
         const result = await expenseService.delete(dto);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+/**
+ * POST /stockIn
+ * 支出费用单入库:按费用单采购明细整单入库,后端事务内批量入库
+ * (入库记录关联费用单)并回写入库状态 stock_in_status=2,已入库/无明细/作废单均拒绝
+ * Body: expense_id-费用单ID(必填), date-入库日期YYYY-MM-DD(必填),
+ *       warehouse_id-入库仓库(可选), photo_id-入库照片(可选), remark-备注(可选)
+ */
+router.post(
+    '/stockIn',
+    validationMiddleware(StockInExpenseDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        const dto = req.body as StockInExpenseDto;
+        const result = await expenseService.stockIn(dto);
         res.locals.datas = result;
         next();
     })

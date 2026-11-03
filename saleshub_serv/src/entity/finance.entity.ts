@@ -334,6 +334,13 @@ export class Expense {
     @Column({ type: 'varchar', length: 500, nullable: true, comment: '备注' })
     remark: string | null;
 
+    @Column({
+        type: 'int',
+        default: 1,
+        comment: '入库状态:1-未入库,2-已入库(通过/expense/stockIn 按采购明细整单入库后回写)',
+    })
+    stock_in_status: number;
+
     // ============ 惯例字段 ============
 
     @Column({ type: 'int', default: 1, comment: '状态:1-正常,2-作废' })

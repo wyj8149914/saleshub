@@ -9,11 +9,13 @@ import {
     CreateExpenseDto,
     ExpenseIdDto,
     ListExpenseDto,
+    StockInExpenseDto,
     UpdateExpenseDto,
 } from '../../dto/expense.dto';
 import { getLogger } from '../../utils/logger.util';
 import { generateFileUrl } from '../../config/minio.config';
 import { InventoryItem, InventoryItemSpec } from '../../entity/product.entity';
+import { StockService } from '../inventory/stock.service';
 import { BusinessError } from '../../utils/error.util';
 
 /** 费用类型:1-有发票采购 */
@@ -22,6 +24,8 @@ const EXPENSE_TYPE_WITH_INVOICE = 1;
 const STATUS_NORMAL = 1;
 /** 停用状态(采购明细行整批替换时旧行置为此值) */
 const STATUS_DISABLED = 2;
+/** 已入库 */
+const STOCK_IN_STATUS_DONE = 2;
 
 /** 新建响应 */
 interface ExpenseCreateResult {
@@ -30,7 +34,7 @@ interface ExpenseCreateResult {
     datas?: { expense_id: string; expense_no: string };
 }
 
-/** 修改/关联发票响应 */
+/** 修改/关联发票/入库响应 */
 interface ExpenseOpResult {
     result: number;
     msg: string;
@@ -54,6 +58,10 @@ interface ExpenseListItem {
     payment_method: number | null;
     remark: string | null;
     status: number;
+    /** 入库状态:1-未入库,2-已入库 */
+    stock_in_status: number;
+    /** 是否存在正常状态采购明细行(用于前端决定是否展示入库操作) */
+    has_items: boolean;
     create_time: string;
 }
 
@@ -81,6 +89,8 @@ interface ExpenseDetailData {
     payment_method: number | null;
     remark: string | null;
     status: number;
+    /** 入库状态:1-未入库,2-已入库 */
+    stock_in_status: number;
     create_time: string;
     update_time: string;
     /** 采购明细行(仅正常状态,类型1专有;类型2为空数组) */
@@ -109,6 +119,7 @@ interface ExpenseDetailResult {
 export class ExpenseService {
     private expenseRepository = AppDataSource.getRepository(Expense);
     private expenseItemRepository = AppDataSource.getRepository(ExpenseItem);
+    private stockService = new StockService();
     private logger = getLogger('EXPENSE_SERV');
 
     /**
@@ -428,6 +439,9 @@ export class ExpenseService {
                     'expense.payment_method AS payment_method',
                     'expense.remark AS remark',
                     'expense.status AS status',
+                    'expense.stock_in_status AS stock_in_status',
+                    // 是否存在正常状态采购明细行(供前端决定是否展示入库操作)
+                    'EXISTS (SELECT 1 FROM inventory.expense_item ei WHERE ei.expense_id = expense.expense_id AND ei.status = 1) AS has_items',
                     "to_char(expense.create_time, 'YYYY-MM-DD HH24:MI:SS') AS create_time",
                 ])
                 .where('expense.status = :status', { status: STATUS_NORMAL });
@@ -518,6 +532,7 @@ export class ExpenseService {
                     'expense.payment_method AS payment_method',
                     'expense.remark AS remark',
                     'expense.status AS status',
+                    'expense.stock_in_status AS stock_in_status',
                     "to_char(expense.create_time, 'YYYY-MM-DD HH24:MI:SS') AS create_time",
                     "to_char(expense.update_time, 'YYYY-MM-DD HH24:MI:SS') AS update_time",
                     'invoice.invoice_number AS invoice_number',
@@ -623,6 +638,75 @@ export class ExpenseService {
         } catch (error) {
             this.logger.error('支出费用单关联发票失败:', error);
             return { result: 1, msg: '操作失败' };
+        }
+    }
+
+    /**
+     * 支出费用单入库(POST /expense/stockIn)
+     * - 按费用单采购明细整单入库:明细由后端读取,不经过前端传入,防止篡改
+     * - 单事务内完成:行锁读取费用单(防并发重复入库)→ 校验入库状态与明细 →
+     *   复用库存批量入库逻辑(入库记录写入 expense_id)→ 回写 stock_in_status=2
+     * - 任何一步失败整体回滚,库存与入库状态保持一致
+     *
+     * @param dto 入库参数(expense_id/date 必填,仓库/照片/备注可选)
+     */
+    async stockIn(dto: StockInExpenseDto): Promise<ExpenseOpResult> {
+        try {
+            await AppDataSource.transaction(async (manager) => {
+                // 1. 行锁读取费用单,防并发重复入库
+                const expense = await manager.findOne(Expense, {
+                    where: { expense_id: dto.expense_id, status: STATUS_NORMAL },
+                    lock: { mode: 'pessimistic_read' },
+                });
+                if (!expense) {
+                    throw new BusinessError(9000, '支出费用单不存在或已作废');
+                }
+                if (expense.stock_in_status === STOCK_IN_STATUS_DONE) {
+                    throw new BusinessError(9000, '该费用单已入库,请勿重复操作');
+                }
+
+                // 2. 读取正常状态采购明细行
+                const itemRows = await manager.find(ExpenseItem, {
+                    where: { expense_id: dto.expense_id, status: STATUS_NORMAL },
+                });
+                if (!itemRows.length) {
+                    throw new BusinessError(9000, '该费用单无零件明细,无法入库');
+                }
+
+                // 3. 同事务批量入库(校验明细/仓库,入库记录关联费用单)
+                await this.stockService.executeExpenseStockIn(
+                    manager,
+                    itemRows.map((row) => ({
+                        item_id: row.item_id,
+                        spec_id: row.spec_id,
+                        quantity: row.quantity,
+                    })),
+                    dto.date,
+                    dto.warehouse_id,
+                    dto.photo_id,
+                    dto.remark,
+                    expense.expense_id
+                );
+
+                // 4. 回写入库状态
+                await manager.update(
+                    Expense,
+                    { expense_id: expense.expense_id },
+                    { stock_in_status: STOCK_IN_STATUS_DONE, update_time: new Date() }
+                );
+                this.logger.info('支出费用单入库完成:', {
+                    expense_id: expense.expense_id,
+                    expense_no: expense.expense_no,
+                    items: itemRows.length,
+                });
+            });
+            return { result: 0, msg: '入库成功' };
+        } catch (error) {
+            this.logger.error('支出费用单入库失败:', error);
+            if (error instanceof BusinessError) {
+                return { result: 1, msg: error.message };
+            }
+            return { result: 1, msg: '入库失败' };
         }
     }
 
