@@ -135,6 +135,8 @@ import {
   OrderedListOutlined,
   SettingOutlined,
   TeamOutlined,
+  CheckSquareOutlined,
+  TagsOutlined,
 } from '@ant-design/icons-vue';
 import { useAuthStore } from '@/stores/auth';
 import { APP_VERSION, CHANGELOG_EMBED_URL } from '@/constants/app';
@@ -199,6 +201,14 @@ const menuItems: MenuItem[] = [
       { path: '/finance/invoice', label: '发票管理', icon: FileDoneOutlined },
       { path: '/finance/expense', label: '支出费用', icon: PayCircleOutlined },
       { path: '/finance/sales-order', label: '销售订单', icon: OrderedListOutlined },
+    ],
+  },
+  {
+    label: '待办管理',
+    icon: CheckSquareOutlined,
+    children: [
+      { path: '/todo/list', label: '待办事项', icon: CheckSquareOutlined },
+      { path: '/todo/type', label: '待办类型', icon: TagsOutlined },
     ],
   },
   {

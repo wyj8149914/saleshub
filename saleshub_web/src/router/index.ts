@@ -90,6 +90,26 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/todo',
+    component: () => import('@/layouts/DefaultLayout.vue'),
+    redirect: '/todo/list',
+    meta: { requiresAuth: true, title: '待办管理' },
+    children: [
+      {
+        path: 'list',
+        name: 'TodoList',
+        component: () => import('@/views/todo/TodoList.vue'),
+        meta: { title: '待办事项' },
+      },
+      {
+        path: 'type',
+        name: 'TodoTypeList',
+        component: () => import('@/views/todo/TodoTypeList.vue'),
+        meta: { title: '待办类型' },
+      },
+    ],
+  },
+  {
     path: '/system',
     component: () => import('@/layouts/DefaultLayout.vue'),
     redirect: '/system/users',
