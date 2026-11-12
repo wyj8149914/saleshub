@@ -32,3 +32,6 @@ build/
 Thumbs.db
 
 .deploy/
+
+settings.local.json
+settings.json

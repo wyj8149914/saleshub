@@ -20,7 +20,13 @@
       "Bash(xxd)",
       "Bash(printf \"const x: MixedInvoiceItem | null = null;\\\\n\")",
       "Bash(grep -E '\"\"\\(axios|node-fetch|got|undici\\)\"\"' package.json)",
-      "Bash(grep -rn \"user_id\" src/middleware/*.ts)"
+      "Bash(grep -rn \"user_id\" src/middleware/*.ts)",
+      "Bash(npx prettier:*)",
+      "Bash(node -e \"console.log\\(require.resolve\\(''@eslint/js''\\)\\)\")",
+      "Bash(node -e \"console.log\\(require.resolve\\(''globals''\\)\\)\")",
+      "Bash(node -e \"console.log\\(require.resolve\\(''eslint-plugin-prettier/recommended''\\)\\)\")",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm exec:*)"
     ]
   }
 }
