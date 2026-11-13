@@ -4,15 +4,6 @@
       <!-- 第一行:搜索条件与查询/重置 -->
       <a-space :size="12" wrap>
         <a-select
-          v-model:value="filterNature"
-          placeholder="发票性质"
-          allow-clear
-          style="width: 120px"
-          :options="natureOptions"
-          @change="handleSearch"
-        />
-
-        <a-select
           v-model:value="filterPurpose"
           placeholder="发票用途"
           allow-clear
@@ -27,6 +18,15 @@
           allow-clear
           style="width: 110px"
           :options="taxStatusOptions"
+          @change="handleSearch"
+        />
+
+        <a-select
+          v-model:value="filterReimburseStatus"
+          placeholder="报销状态"
+          allow-clear
+          style="width: 110px"
+          :options="reimburseStatusOptions"
           @change="handleSearch"
         />
 
@@ -46,7 +46,7 @@
         <a-button @click="handleReset">重置</a-button>
       </a-space>
 
-      <!-- 第二行:批量报税/取消报税(需先勾选发票)与单个/批量识别 -->
+      <!-- 第二行:批量报税/取消报税、批量报销/取消报销(需先勾选发票)与单个/批量识别 -->
       <a-space :size="12" wrap class="action-buttons">
         <a-button type="primary" @click="openUpload('single')">
           <template #icon><FileAddOutlined /></template>
@@ -64,6 +64,18 @@
           <template #icon><CloseCircleOutlined /></template>
           取消报税
         </a-button>
+        <a-button type="primary" :disabled="!hasSelection" @click="handleReimburse(InvoiceReimburseStatus.REIMBURSED)">
+          <template #icon><MoneyCollectOutlined /></template>
+          批量报销
+        </a-button>
+        <a-button
+          type="primary"
+          :disabled="!hasSelection"
+          @click="handleReimburse(InvoiceReimburseStatus.NOT_REIMBURSED)"
+        >
+          <template #icon><CloseCircleOutlined /></template>
+          取消报销
+        </a-button>
 
         <!-- 勾选发票后的合计提示 -->
         <span v-if="hasSelection" class="selected-summary">
@@ -73,6 +85,12 @@
     </div>
 
     <a-card :bordered="false" class="table-card">
+      <!-- 发票性质 tab 切换(默认全部) -->
+      <a-tabs v-model:active-key="natureTabKey" class="list-tabs" @change="handleSearch">
+        <a-tab-pane key="all" tab="全部" />
+        <a-tab-pane v-for="opt in natureOptions" :key="String(opt.value)" :tab="opt.label" />
+      </a-tabs>
+
       <a-table
         :columns="columns"
         :data-source="records"
@@ -133,6 +151,15 @@
             {{ formatDateTime(record.tax_filed_time) }}
           </template>
 
+          <template v-else-if="column.key === 'is_reimbursed'">
+            <a-tag v-if="record.is_reimbursed === InvoiceReimburseStatus.REIMBURSED" color="green">已报销</a-tag>
+            <a-tag v-else>未报销</a-tag>
+          </template>
+
+          <template v-else-if="column.key === 'reimbursed_time'">
+            {{ formatDateTime(record.reimbursed_time) }}
+          </template>
+
           <template v-else-if="column.key === 'create_time'">
             {{ formatDateTime(record.create_time) }}
           </template>
@@ -164,23 +191,31 @@
 
 <script setup lang="ts">
 /**
- * 发票列表页:分页查询 + 筛选(性质/用途/报税状态/开票日期区间/关键字)
- * 入口:单个识别、批量识别(弹窗),发票详情(抽屉),多选批量报税/取消报税
+ * 发票列表页:分页查询 + 性质 tab 切换 + 筛选(用途/报税状态/报销状态/开票日期区间/关键字)
+ * 入口:单个识别、批量识别(弹窗),发票详情(抽屉),多选批量报税/取消报税、批量报销/取消报销
  */
 import { computed, onMounted, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { CheckCircleOutlined, CloseCircleOutlined, FileAddOutlined, FolderAddOutlined } from '@ant-design/icons-vue';
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  FileAddOutlined,
+  FolderAddOutlined,
+  MoneyCollectOutlined,
+} from '@ant-design/icons-vue';
 import { invoiceApi } from '@/api/invoice';
 import { useAuthStore } from '@/stores/auth';
 import {
   INVOICE_NATURE_LABELS,
   INVOICE_PURPOSE_LABELS,
+  INVOICE_REIMBURSE_STATUS_LABELS,
   INVOICE_TAX_STATUS_LABELS,
   InvoiceNature,
+  InvoiceReimburseStatus,
   InvoiceTaxStatus,
 } from '@/types/invoice';
 import type { Invoice, InvoiceListQuery } from '@/types/invoice';
-import { sumInvoiceTotalAmount, validateTaxSelection } from '@/utils/invoice';
+import { sumInvoiceTotalAmount, validateReimburseSelection, validateTaxSelection } from '@/utils/invoice';
 import InvoiceUploadModal from '@/components/invoice/InvoiceUploadModal.vue';
 import InvoiceDetailDrawer from '@/components/invoice/InvoiceDetailDrawer.vue';
 
@@ -189,11 +224,13 @@ const columns = [
   { title: '销售方', dataIndex: 'seller_name', key: 'seller_name', ellipsis: true },
   { title: '价税合计', dataIndex: 'total_amount', key: 'total_amount', align: 'right' as const },
   { title: '报税状态', dataIndex: 'is_tax_filed', key: 'is_tax_filed' },
+  { title: '报销状态', dataIndex: 'is_reimbursed', key: 'is_reimbursed' },
   { title: '性质', dataIndex: 'invoice_nature', key: 'invoice_nature' },
   { title: '用途', dataIndex: 'invoice_purpose', key: 'invoice_purpose' },
   { title: '发票类型', dataIndex: 'sub_type_desc', key: 'sub_type_desc' },
   { title: '开票日期', dataIndex: 'invoice_date', key: 'invoice_date' },
   { title: '报税时间', dataIndex: 'tax_filed_time', key: 'tax_filed_time' },
+  { title: '报销时间', dataIndex: 'reimbursed_time', key: 'reimbursed_time' },
   { title: '购买方', dataIndex: 'buyer_name', key: 'buyer_name', ellipsis: true },
   { title: '税额', dataIndex: 'tax_amount', key: 'tax_amount', align: 'right' as const },
   { title: '入库时间', dataIndex: 'create_time', key: 'create_time' },
@@ -237,16 +274,27 @@ const clearSelection = () => {
 };
 
 // ============ 筛选状态 ============
+/** 发票性质筛选:undefined-全部,数值-对应性质 */
 const filterNature = ref<number | undefined>(undefined);
+
+/** 发票性质 tab 的 activeKey('all'-全部),与 filterNature 双向同步 */
+const natureTabKey = computed<string | number>({
+  get: () => (filterNature.value === undefined ? 'all' : String(filterNature.value)),
+  set: (key) => {
+    filterNature.value = key === 'all' ? undefined : Number(key);
+  },
+});
 const filterPurpose = ref<number | undefined>(undefined);
 /** 报税状态筛选:1-未报税,2-已报税 */
 const filterTaxStatus = ref<number | undefined>(undefined);
+/** 报销状态筛选:1-未报销,2-已报销 */
+const filterReimburseStatus = ref<number | undefined>(undefined);
 const filterKeyword = ref('');
 /** 开票日期区间,[start_date, end_date],YYYY-MM-DD */
 const filterDateRange = ref<[string, string]>();
 const filterTag = ref('');
 
-// 筛选下拉选项
+// 发票性质 tab 选项与其余筛选下拉选项
 const natureOptions = Object.entries(INVOICE_NATURE_LABELS).map(([value, label]) => ({
   label,
   value: Number(value),
@@ -256,6 +304,10 @@ const purposeOptions = Object.entries(INVOICE_PURPOSE_LABELS).map(([value, label
   value: Number(value),
 }));
 const taxStatusOptions = Object.entries(INVOICE_TAX_STATUS_LABELS).map(([value, label]) => ({
+  label,
+  value: Number(value),
+}));
+const reimburseStatusOptions = Object.entries(INVOICE_REIMBURSE_STATUS_LABELS).map(([value, label]) => ({
   label,
   value: Number(value),
 }));
@@ -277,6 +329,9 @@ const loadList = async () => {
     }
     if (filterTaxStatus.value !== undefined) {
       query.is_tax_filed = filterTaxStatus.value;
+    }
+    if (filterReimburseStatus.value !== undefined) {
+      query.is_reimbursed = filterReimburseStatus.value;
     }
     if (filterDateRange.value?.[0]) {
       query.start_date = filterDateRange.value[0];
@@ -313,6 +368,7 @@ const handleReset = () => {
   filterNature.value = undefined;
   filterPurpose.value = undefined;
   filterTaxStatus.value = undefined;
+  filterReimburseStatus.value = undefined;
   filterKeyword.value = '';
   filterDateRange.value = undefined;
   pageIndex.value = 1;
@@ -404,6 +460,50 @@ const handleTaxFile = (targetStatus: number) => {
   });
 };
 
+/**
+ * 批量报销/取消报销:前端预校验 → 二次确认 → 调接口 → 刷新列表
+ * 服务端为整批校验(任一不符合条件整批拒绝),预校验可拦截无效请求
+ * @param targetStatus 目标报销状态:1-取消报销,2-报销
+ */
+const handleReimburse = (targetStatus: number) => {
+  // 操作人自动取当前登录用户
+  const userId = authStore.user?.user_id;
+  if (!userId) {
+    message.error('用户信息缺失,请重新登录后再试');
+    return;
+  }
+  // 已勾选行数据用于前端预校验(与服务端整批校验规则一致)
+  const recordsToReimburse = selectedRecords.value;
+  const check = validateReimburseSelection(recordsToReimburse, targetStatus);
+  if (!check.valid) {
+    message.warning(check.msg);
+    return;
+  }
+  const isReimbursing = targetStatus === InvoiceReimburseStatus.REIMBURSED;
+  Modal.confirm({
+    title: isReimbursing ? '确认批量报销？' : '确认取消报销？',
+    content: isReimbursing
+      ? `将对选中的 ${recordsToReimburse.length} 张发票标记为已报销,价税合计 ${sumInvoiceTotalAmount(recordsToReimburse)} 元,并记录报销时间与操作人。`
+      : `将对选中的 ${recordsToReimburse.length} 张发票恢复为未报销,价税合计 ${sumInvoiceTotalAmount(recordsToReimburse)} 元,并清空其报销时间与操作人。`,
+    okText: isReimbursing ? '报销' : '取消报销',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        const res = await invoiceApi.reimburse({
+          invoice_ids: recordsToReimburse.map((record) => record.invoice_id),
+          is_reimbursed: targetStatus,
+          user_id: userId,
+        });
+        message.success(`${isReimbursing ? '报销' : '取消报销'}成功,共更新 ${res.datas.updated_count} 张发票`);
+        clearSelection();
+        loadList();
+      } catch {
+        // 失败已由全局拦截器提示(如整批不符合条件),关闭确认框由用户重新选择
+      }
+    },
+  });
+};
+
 /** 开票日期仅展示日期部分 */
 const formatDatePart = (date: string | null): string => {
   if (!date) return '-';
@@ -440,6 +540,11 @@ onMounted(() => {
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
+}
+
+/* 性质 tab:去掉默认下边距,由 .page 的 gap 控制间距 */
+.list-tabs :deep(.ant-tabs-nav) {
+  margin-bottom: 0;
 }
 
 /* 已选发票合计提示:金额加粗等宽 */

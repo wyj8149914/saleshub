@@ -70,6 +70,16 @@
           <a-descriptions-item label="报税操作人">
             {{ detail.tax_filed_by || '-' }}
           </a-descriptions-item>
+          <a-descriptions-item label="报销状态">
+            <a-tag v-if="detail.is_reimbursed === InvoiceReimburseStatus.REIMBURSED" color="green">已报销</a-tag>
+            <a-tag v-else>未报销</a-tag>
+          </a-descriptions-item>
+          <a-descriptions-item label="报销时间">
+            {{ formatDateTime(detail.reimbursed_time) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="报销操作人">
+            {{ detail.reimbursed_by || '-' }}
+          </a-descriptions-item>
           <a-descriptions-item label="开票人">
             {{ detail.issuer || '-' }}
           </a-descriptions-item>
@@ -124,7 +134,7 @@
 import { computed, ref, watch } from 'vue';
 import { EyeOutlined } from '@ant-design/icons-vue';
 import { invoiceApi } from '@/api/invoice';
-import { INVOICE_NATURE_LABELS, INVOICE_PURPOSE_LABELS, InvoiceTaxStatus } from '@/types/invoice';
+import { INVOICE_NATURE_LABELS, INVOICE_PURPOSE_LABELS, InvoiceReimburseStatus, InvoiceTaxStatus } from '@/types/invoice';
 import type { InvoiceDetail, InvoiceItemEntry } from '@/types/invoice';
 import { invoiceItemFieldLabel } from '@/utils/invoice';
 

@@ -4,16 +4,6 @@
       <!-- 第一行:筛选条件与查询/重置 -->
       <a-space :size="12" wrap>
         <a-select
-          v-model:value="filterTypeId"
-          placeholder="待办类型"
-          allow-clear
-          style="width: 140px"
-          :loading="typesLoading"
-          :options="typeOptions"
-          @change="handleSearch"
-        />
-
-        <a-select
           v-model:value="filterPriority"
           placeholder="重要程度"
           allow-clear
@@ -55,10 +45,6 @@
 
         <a-button type="primary" @click="handleSearch">查询</a-button>
         <a-button @click="handleReset">重置</a-button>
-      </a-space>
-
-      <!-- 第二行:新建入口 -->
-      <a-space :size="12" wrap class="action-buttons">
         <a-button type="primary" @click="openForm(null)">
           <template #icon>
             <PlusOutlined />
@@ -69,6 +55,12 @@
     </div>
 
     <a-card :bordered="false" class="table-card">
+      <!-- 待办类型 tab 切换(默认全部,选项由接口加载) -->
+      <a-tabs v-model:active-key="typeTabKey" class="list-tabs" @change="handleSearch">
+        <a-tab-pane key="all" tab="全部" />
+        <a-tab-pane v-for="opt in typeOptions" :key="opt.value" :tab="opt.label" />
+      </a-tabs>
+
       <a-table
         :columns="columns"
         :data-source="records"
@@ -191,11 +183,11 @@
 
 <script setup lang="ts">
 /**
- * 待办事项列表页:分页查询 + 筛选(类型/重要程度/完成状态/截止日期区间/关键字/仅我的待办/排序)
+ * 待办事项列表页:分页查询 + 类型 tab 切换 + 筛选(重要程度/完成状态/截止日期区间/关键字/仅我的待办/排序)
  * 入口:新建/编辑(弹窗)、详情(抽屉,内含完成状态变更/延期/编辑入口)、延期(弹窗)、
  * 完成状态切换(popconfirm)、删除(popconfirm 软删除)
  */
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { PlusOutlined } from '@ant-design/icons-vue';
 import { todoApi, todoTypeApi } from '@/api/todo';
@@ -237,7 +229,16 @@ const pageSize = ref(10);
 const total = ref(0);
 
 // ============ 筛选状态 ============
+/** 待办类型筛选:undefined-全部,字符串-类型 ID */
 const filterTypeId = ref<string | undefined>(undefined);
+
+/** 待办类型 tab 的 activeKey('all'-全部),与 filterTypeId 双向同步 */
+const typeTabKey = computed<string | number>({
+  get: () => filterTypeId.value ?? 'all',
+  set: (key) => {
+    filterTypeId.value = key === 'all' ? undefined : String(key);
+  },
+});
 const filterPriority = ref<number | undefined>(undefined);
 const filterCompleted = ref<number | undefined>(undefined);
 const filterSort = ref<number | undefined>(undefined);
@@ -267,13 +268,11 @@ const handleMineOnlyChange = () => {
   handleSearch();
 };
 
-// ============ 待办类型选项(筛选下拉) ============
-const typesLoading = ref(false);
+// ============ 待办类型选项(列表 tab) ============
 const typeOptions = ref<{ label: string; value: string }[]>([]);
 
-/** 加载待办类型下拉选项 */
+/** 加载待办类型选项(筛选 tab 使用) */
 const loadTypes = async () => {
-  typesLoading.value = true;
   try {
     const res = await todoTypeApi.list();
     typeOptions.value = (res.datas.items || []).map((t: TodoType) => ({
@@ -282,8 +281,6 @@ const loadTypes = async () => {
     }));
   } catch {
     typeOptions.value = [];
-  } finally {
-    typesLoading.value = false;
   }
 };
 
@@ -520,6 +517,11 @@ onMounted(() => {
 
 .action-buttons {
   margin-top: 12px;
+}
+
+/* 待办类型 tab:去掉默认下边距,由 .page 的 gap 控制间距 */
+.list-tabs :deep(.ant-tabs-nav) {
+  margin-bottom: 0;
 }
 
 .executor-tag {

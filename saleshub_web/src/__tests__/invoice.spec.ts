@@ -4,9 +4,11 @@ import {
   INVOICE_ITEM_FIELD_LABELS,
   INVOICE_NATURE_LABELS,
   INVOICE_PURPOSE_LABELS,
+  INVOICE_REIMBURSE_STATUS_LABELS,
   INVOICE_TAX_STATUS_LABELS,
   InvoiceNature,
   InvoicePurpose,
+  InvoiceReimburseStatus,
   InvoiceTaxStatus,
 } from '@/types/invoice';
 import type { Invoice } from '@/types/invoice';
@@ -18,12 +20,44 @@ import {
   formatFileSize,
   invoiceItemFieldLabel,
   sumInvoiceTotalAmount,
+  validateReimburseSelection,
   validateTaxSelection,
 } from '@/utils/invoice';
 
 /** 构造指定名称、类型与大小的测试文件 */
 function makeFile(name: string, sizeBytes: number, type = 'image/jpeg'): File {
   return new File([new Uint8Array(sizeBytes)], name, { type });
+}
+
+/** 构造仅报税/报销状态不同的最小发票对象 */
+function makeInvoice(isTaxFiled: number, isReimbursed = 1): Invoice {
+  return {
+    invoice_id: `id-${isTaxFiled}-${Math.random().toString(36).slice(2, 8)}`,
+    user_id: 'u1',
+    file_id: 'f1',
+    invoice_type: 16,
+    sub_type: 'VatElectronicInvoiceFull',
+    sub_type_desc: null,
+    title: null,
+    invoice_code: null,
+    invoice_number: '12345678',
+    invoice_date: null,
+    pretax_amount: null,
+    tax_amount: null,
+    total_amount: null,
+    seller_name: null,
+    buyer_name: null,
+    invoice_nature: null,
+    invoice_purpose: null,
+    is_tax_filed: isTaxFiled,
+    tax_filed_time: null,
+    tax_filed_by: null,
+    is_reimbursed: isReimbursed,
+    reimbursed_time: null,
+    reimbursed_by: null,
+    status: 1,
+    create_time: '2026-01-01 00:00:00',
+  };
 }
 
 describe('发票标签映射', () => {
@@ -140,34 +174,6 @@ describe('文件大小格式化', () => {
 });
 
 describe('发票报税', () => {
-  /** 构造仅报税状态不同的最小发票对象 */
-  function makeInvoice(isTaxFiled: number): Invoice {
-    return {
-      invoice_id: `id-${isTaxFiled}-${Math.random().toString(36).slice(2, 8)}`,
-      user_id: 'u1',
-      file_id: 'f1',
-      invoice_type: 16,
-      sub_type: 'VatElectronicInvoiceFull',
-      sub_type_desc: null,
-      title: null,
-      invoice_code: null,
-      invoice_number: '12345678',
-      invoice_date: null,
-      pretax_amount: null,
-      tax_amount: null,
-      total_amount: null,
-      seller_name: null,
-      buyer_name: null,
-      invoice_nature: null,
-      invoice_purpose: null,
-      is_tax_filed: isTaxFiled,
-      tax_filed_time: null,
-      tax_filed_by: null,
-      status: 1,
-      create_time: '2026-01-01 00:00:00',
-    };
-  }
-
   it('报税状态标签覆盖全部枚举值', () => {
     [InvoiceTaxStatus.NOT_FILED, InvoiceTaxStatus.FILED].forEach((v) => {
       expect(INVOICE_TAX_STATUS_LABELS[v]).toBeTruthy();
@@ -225,5 +231,63 @@ describe('发票报税', () => {
       { ...makeInvoice(InvoiceTaxStatus.NOT_FILED), total_amount: '0.2' },
     ];
     expect(sumInvoiceTotalAmount(records)).toBe('0.30');
+  });
+});
+
+describe('发票报销', () => {
+  it('报销状态标签覆盖全部枚举值', () => {
+    [InvoiceReimburseStatus.NOT_REIMBURSED, InvoiceReimburseStatus.REIMBURSED].forEach((v) => {
+      expect(INVOICE_REIMBURSE_STATUS_LABELS[v]).toBeTruthy();
+    });
+    expect(INVOICE_REIMBURSE_STATUS_LABELS[InvoiceReimburseStatus.NOT_REIMBURSED]).toBe('未报销');
+    expect(INVOICE_REIMBURSE_STATUS_LABELS[InvoiceReimburseStatus.REIMBURSED]).toBe('已报销');
+  });
+
+  it('报销选择校验:空选中拒绝', () => {
+    const { valid, msg } = validateReimburseSelection([], InvoiceReimburseStatus.REIMBURSED);
+    expect(valid).toBe(false);
+    expect(msg).toBeTruthy();
+  });
+
+  it('报销选择校验:超过 200 条拒绝', () => {
+    const records = Array.from({ length: INVOICE_MAX_TAX_COUNT + 1 }, () =>
+      makeInvoice(InvoiceTaxStatus.NOT_FILED)
+    );
+    const { valid, msg } = validateReimburseSelection(records, InvoiceReimburseStatus.REIMBURSED);
+    expect(valid).toBe(false);
+    expect(msg).toContain('200');
+  });
+
+  it('报销时选中含已报销行拒绝', () => {
+    const records = [
+      makeInvoice(InvoiceTaxStatus.NOT_FILED, InvoiceReimburseStatus.NOT_REIMBURSED),
+      makeInvoice(InvoiceTaxStatus.NOT_FILED, InvoiceReimburseStatus.REIMBURSED),
+    ];
+    const { valid } = validateReimburseSelection(records, InvoiceReimburseStatus.REIMBURSED);
+    expect(valid).toBe(false);
+  });
+
+  it('取消报销时选中含未报销行拒绝', () => {
+    const records = [
+      makeInvoice(InvoiceTaxStatus.NOT_FILED, InvoiceReimburseStatus.REIMBURSED),
+      makeInvoice(InvoiceTaxStatus.NOT_FILED, InvoiceReimburseStatus.NOT_REIMBURSED),
+    ];
+    const { valid } = validateReimburseSelection(records, InvoiceReimburseStatus.NOT_REIMBURSED);
+    expect(valid).toBe(false);
+  });
+
+  it('报销状态一致的合法选中通过,且不受报税状态影响', () => {
+    // 报销与报税状态字段相互独立,报税状态混合不影响报销操作校验
+    const notReimbursed = [
+      makeInvoice(InvoiceTaxStatus.NOT_FILED, InvoiceReimburseStatus.NOT_REIMBURSED),
+      makeInvoice(InvoiceTaxStatus.FILED, InvoiceReimburseStatus.NOT_REIMBURSED),
+    ];
+    expect(validateReimburseSelection(notReimbursed, InvoiceReimburseStatus.REIMBURSED).valid).toBe(true);
+
+    const reimbursed = [
+      makeInvoice(InvoiceTaxStatus.NOT_FILED, InvoiceReimburseStatus.REIMBURSED),
+      makeInvoice(InvoiceTaxStatus.FILED, InvoiceReimburseStatus.REIMBURSED),
+    ];
+    expect(validateReimburseSelection(reimbursed, InvoiceReimburseStatus.NOT_REIMBURSED).valid).toBe(true);
   });
 });

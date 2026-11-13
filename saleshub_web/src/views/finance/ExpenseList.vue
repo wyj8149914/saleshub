@@ -4,15 +4,6 @@
       <!-- 第一行:筛选条件与查询/重置 -->
       <a-space :size="12" wrap>
         <a-select
-          v-model:value="filterExpenseType"
-          placeholder="费用类型"
-          allow-clear
-          style="width: 130px"
-          :options="expenseTypeOptions"
-          @change="handleSearch"
-        />
-
-        <a-select
           v-model:value="filterChannel"
           placeholder="采购渠道"
           allow-clear
@@ -51,10 +42,6 @@
 
         <a-button type="primary" @click="handleSearch">查询</a-button>
         <a-button @click="handleReset">重置</a-button>
-      </a-space>
-
-      <!-- 第二行:新建入口 -->
-      <a-space :size="12" wrap class="action-buttons">
         <a-button type="primary" @click="openForm(null)">
           <template #icon>
             <PlusOutlined />
@@ -65,6 +52,12 @@
     </div>
 
     <a-card :bordered="false" class="table-card">
+      <!-- 费用类型 tab 切换(默认全部) -->
+      <a-tabs v-model:active-key="expenseTypeTabKey" class="list-tabs" @change="handleSearch">
+        <a-tab-pane key="all" tab="全部" />
+        <a-tab-pane v-for="opt in expenseTypeOptions" :key="String(opt.value)" :tab="opt.label" />
+      </a-tabs>
+
       <a-table
         :columns="columns"
         :data-source="records"
@@ -190,11 +183,11 @@
 
 <script setup lang="ts">
 /**
- * 支出费用列表页:分页查询 + 筛选(费用类型/渠道/分类/付款方式/日期区间/关键字)
+ * 支出费用列表页:分页查询 + 费用类型 tab 切换 + 筛选(渠道/分类/付款方式/日期区间/关键字)
  * 入口:新建/修改(弹窗)、详情(抽屉)、类型1费用单关联/换绑发票(弹窗)、
  * 有零件明细的费用单整单入库(弹窗)
  */
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { PlusOutlined } from '@ant-design/icons-vue';
 import { expenseApi } from '@/api/expense';
@@ -236,7 +229,16 @@ const pageSize = ref(10);
 const total = ref(0);
 
 // ============ 筛选状态 ============
+/** 费用类型筛选:undefined-全部,数值-对应类型 */
 const filterExpenseType = ref<number | undefined>(undefined);
+
+/** 费用类型 tab 的 activeKey('all'-全部),与 filterExpenseType 双向同步 */
+const expenseTypeTabKey = computed<string | number>({
+  get: () => (filterExpenseType.value === undefined ? 'all' : String(filterExpenseType.value)),
+  set: (key) => {
+    filterExpenseType.value = key === 'all' ? undefined : Number(key);
+  },
+});
 const filterChannel = ref<number | undefined>(undefined);
 const filterCategory = ref<number | undefined>(undefined);
 const filterPaymentMethod = ref<number | undefined>(undefined);
@@ -244,7 +246,7 @@ const filterKeyword = ref('');
 /** 支出日期区间,[start_date, end_date],YYYY-MM-DD */
 const filterDateRange = ref<[string, string]>();
 
-// 筛选下拉选项(由枚举 label map 生成)
+// 费用类型 tab 选项与其余筛选下拉选项(由枚举 label map 生成)
 const expenseTypeOptions = Object.entries(EXPENSE_TYPE_LABELS).map(([value, label]) => ({
   label,
   value: Number(value),
@@ -407,8 +409,9 @@ onMounted(() => {
   gap: 12px;
 }
 
-.action-buttons {
-  margin-top: 12px;
+/* 费用类型 tab:去掉默认下边距,由 .page 的 gap 控制间距 */
+.list-tabs :deep(.ant-tabs-nav) {
+  margin-bottom: 0;
 }
 
 .amount-text {

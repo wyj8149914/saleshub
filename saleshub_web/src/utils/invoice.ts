@@ -104,25 +104,50 @@ export function sumInvoiceTotalAmount(invoices: Invoice[]): string {
 }
 
 /**
- * 校验多选发票是否满足批量报税/取消报税的前置条件
+ * 校验多选发票状态字段是否满足批量操作前置条件(报税/报销共用核心逻辑)
  * 服务端为整批校验(任一发票不符合条件即整批拒绝),前端预校验可避免无效请求
  * @param records 选中行记录(按选中 key 过滤后的完整行数据)
- * @param targetStatus 目标报税状态:1-未报税(取消报税),2-已报税
+ * @param targetStatus 目标状态:1-未操作(取消),2-已操作
+ * @param field 状态字段名:is_tax_filed-报税,is_reimbursed-报销
  * @returns 校验结果,未通过时带提示文案
  */
-export function validateTaxSelection(records: Invoice[], targetStatus: number): TaxSelectionCheck {
+function validateStatusSelection(
+  records: Invoice[],
+  targetStatus: number,
+  field: 'is_tax_filed' | 'is_reimbursed'
+): TaxSelectionCheck {
   if (records.length === 0) {
     return { valid: false, msg: '请先选择要操作的发票' };
   }
   if (records.length > INVOICE_MAX_TAX_COUNT) {
     return { valid: false, msg: `单次最多操作${INVOICE_MAX_TAX_COUNT}张发票` };
   }
-  // 报税要求全部为未报税,取消报税要求全部为已报税;混合选中或含已符合目标状态的行即整批拒绝
-  const mismatched = records.some((record) => record.is_tax_filed === targetStatus);
+  // 目标为已操作时要求全部为未操作,目标为取消时要求全部为已操作;混合选中或含已符合目标状态的行即整批拒绝
+  const mismatched = records.some((record) => record[field] === targetStatus);
   if (mismatched) {
     return { valid: false, msg: '选中发票中存在状态不一致的发票,请重新选择' };
   }
   return { valid: true };
+}
+
+/**
+ * 校验多选发票是否满足批量报税/取消报税的前置条件
+ * @param records 选中行记录(按选中 key 过滤后的完整行数据)
+ * @param targetStatus 目标报税状态:1-未报税(取消报税),2-已报税
+ * @returns 校验结果,未通过时带提示文案
+ */
+export function validateTaxSelection(records: Invoice[], targetStatus: number): TaxSelectionCheck {
+  return validateStatusSelection(records, targetStatus, 'is_tax_filed');
+}
+
+/**
+ * 校验多选发票是否满足批量报销/取消报销的前置条件
+ * @param records 选中行记录(按选中 key 过滤后的完整行数据)
+ * @param targetStatus 目标报销状态:1-未报销(取消报销),2-已报销
+ * @returns 校验结果,未通过时带提示文案
+ */
+export function validateReimburseSelection(records: Invoice[], targetStatus: number): TaxSelectionCheck {
+  return validateStatusSelection(records, targetStatus, 'is_reimbursed');
 }
 
 /**

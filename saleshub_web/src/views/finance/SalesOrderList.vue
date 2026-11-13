@@ -4,15 +4,6 @@
       <!-- 筛选条件与查询/重置 -->
       <a-space :size="12" wrap>
         <a-select
-          v-model:value="filterOrderStatus"
-          placeholder="订单状态"
-          allow-clear
-          style="width: 120px"
-          :options="orderStatusOptions"
-          @change="handleSearch"
-        />
-
-        <a-select
           v-model:value="filterPayStatus"
           placeholder="收款状态"
           allow-clear
@@ -33,10 +24,7 @@
 
         <a-button type="primary" @click="handleSearch">查询</a-button>
         <a-button @click="handleReset">重置</a-button>
-      </a-space>
-
-      <!-- 新建订单入口 -->
-      <a-space :size="12" wrap class="action-buttons">
+        <!-- 新建订单入口 -->
         <a-button type="primary" @click="openForm(null)">
           <template #icon><PlusOutlined /></template>
           新建订单
@@ -45,6 +33,12 @@
     </div>
 
     <a-card :bordered="false" class="table-card">
+      <!-- 订单状态 tab 切换(默认全部) -->
+      <a-tabs v-model:active-key="orderStatusTabKey" class="list-tabs" @change="handleSearch">
+        <a-tab-pane key="all" tab="全部" />
+        <a-tab-pane v-for="opt in orderStatusOptions" :key="String(opt.value)" :tab="opt.label" />
+      </a-tabs>
+
       <a-table
         :columns="columns"
         :data-source="records"
@@ -147,11 +141,11 @@
 
 <script setup lang="ts">
 /**
- * 销售订单列表页:分页查询 + 筛选(订单状态/收款状态/交货日期区间/关键字)
+ * 销售订单列表页:分页查询 + 订单状态 tab 切换 + 筛选(收款状态/交货日期区间/关键字)
  * 入口:新建/修改(弹窗,合同文件上传)、详情(抽屉,合同预览)、收款、变更状态、删除
  * 业务规则:已取消订单为终态(不可收款/变更状态);已收款订单隐藏收款入口
  */
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { PlusOutlined } from '@ant-design/icons-vue';
 import { salesOrderApi } from '@/api/salesOrder';
@@ -199,13 +193,22 @@ const pageSize = ref(10);
 const total = ref(0);
 
 // ============ 筛选状态 ============
+/** 订单状态筛选:undefined-全部,数值-对应状态 */
 const filterOrderStatus = ref<number | undefined>(undefined);
+
+/** 订单状态 tab 的 activeKey('all'-全部),与 filterOrderStatus 双向同步 */
+const orderStatusTabKey = computed<string | number>({
+  get: () => (filterOrderStatus.value === undefined ? 'all' : String(filterOrderStatus.value)),
+  set: (key) => {
+    filterOrderStatus.value = key === 'all' ? undefined : Number(key);
+  },
+});
 const filterPayStatus = ref<number | undefined>(undefined);
 const filterKeyword = ref('');
 /** 交货日期区间,[start_date, end_date],YYYY-MM-DD */
 const filterDateRange = ref<[string, string]>();
 
-// 筛选下拉选项
+// 订单状态 tab 选项与其余筛选下拉选项
 const orderStatusOptions = Object.entries(ORDER_STATUS_LABELS).map(([value, label]) => ({
   label,
   value: Number(value),
@@ -351,8 +354,9 @@ onMounted(() => {
   gap: 12px;
 }
 
-.action-buttons {
-  margin-top: 12px;
+/* 订单状态 tab:去掉默认下边距,由 .page 的 gap 控制间距 */
+.list-tabs :deep(.ant-tabs-nav) {
+  margin-bottom: 0;
 }
 
 .amount-text {

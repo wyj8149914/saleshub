@@ -30,6 +30,14 @@ export enum InvoiceTaxStatus {
   FILED = 2,
 }
 
+/** 发票报销状态:1-未报销,2-已报销 */
+export enum InvoiceReimburseStatus {
+  /** 未报销 */
+  NOT_REIMBURSED = 1,
+  /** 已报销 */
+  REIMBURSED = 2,
+}
+
 // ============ 标签映射 ============
 
 /** 发票性质中文标签映射 */
@@ -69,6 +77,12 @@ export const INVOICE_TAX_STATUS_LABELS: Record<number, string> = {
   [InvoiceTaxStatus.FILED]: '已报税',
 };
 
+/** 报销状态中文标签映射 */
+export const INVOICE_REIMBURSE_STATUS_LABELS: Record<number, string> = {
+  [InvoiceReimburseStatus.NOT_REIMBURSED]: '未报销',
+  [InvoiceReimburseStatus.REIMBURSED]: '已报销',
+};
+
 // ============ 列表与详情 ============
 
 /** 发票列表查询参数 */
@@ -81,6 +95,8 @@ export interface InvoiceListQuery {
   invoice_purpose?: number;
   /** 报税状态:1-未报税,2-已报税(可选) */
   is_tax_filed?: number;
+  /** 报销状态:1-未报销,2-已报销(可选) */
+  is_reimbursed?: number;
   /** 开票日期起(含当天),YYYY-MM-DD(可选) */
   start_date?: string;
   /** 开票日期止(含当天),YYYY-MM-DD(可选) */
@@ -133,6 +149,12 @@ export interface Invoice {
   tax_filed_time: string | null;
   /** 报税操作人用户 ID,未报税或已取消报税时为 null */
   tax_filed_by: string | null;
+  /** 是否报销:1-未报销,2-已报销 */
+  is_reimbursed: number;
+  /** 报销时间,未报销或已取消报销时为 null */
+  reimbursed_time: string | null;
+  /** 报销操作人用户 ID,未报销或已取消报销时为 null */
+  reimbursed_by: string | null;
   /** 状态:1-正常 */
   status: number;
   /** 入库时间,ISO 日期时间字符串 */
@@ -259,6 +281,24 @@ export interface InvoiceTaxFileParams {
 
 /** 批量报税/取消报税结果 datas */
 export interface InvoiceTaxFileResult {
+  /** 实际发生状态变更的发票条数 */
+  updated_count: number;
+}
+
+// ============ 批量报销 ============
+
+/** 批量报销/取消报销请求参数 */
+export interface InvoiceReimburseParams {
+  /** 发票主键 UUID 列表(无连字符,32 位),1~200 个 */
+  invoice_ids: string[];
+  /** 目标报销状态:1-未报销(取消报销),2-已报销 */
+  is_reimbursed: number;
+  /** 操作人用户 ID */
+  user_id: string;
+}
+
+/** 批量报销/取消报销结果 datas */
+export interface InvoiceReimburseResult {
   /** 实际发生状态变更的发票条数 */
   updated_count: number;
 }

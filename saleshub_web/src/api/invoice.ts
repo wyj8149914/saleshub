@@ -7,6 +7,8 @@ import type {
   InvoiceUploadBatchResult,
   InvoiceTaxFileParams,
   InvoiceTaxFileResult,
+  InvoiceReimburseParams,
+  InvoiceReimburseResult,
   UnboundInvoiceListData,
 } from '@/types/invoice';
 import type { PaginatedData } from '@/types/inventory';
@@ -89,6 +91,15 @@ export const invoiceApi = {
    */
   taxFile(params: InvoiceTaxFileParams) {
     return http.post<InvoiceTaxFileResult>('/saleshub/invoice/taxFile', params);
+  },
+
+  /**
+   * 批量报销/取消报销(1~200 条)
+   * 服务端整批校验:任一发票不存在/已作废/状态已符合目标时整批拒绝,不做任何更新
+   * @param params 发票 ID 列表 + 目标报销状态(1-取消报销,2-报销) + 操作人用户 ID
+   */
+  reimburse(params: InvoiceReimburseParams) {
+    return http.post<InvoiceReimburseResult>('/saleshub/invoice/reimburse', params);
   },
 
   /**
