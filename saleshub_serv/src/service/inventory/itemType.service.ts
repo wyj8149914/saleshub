@@ -11,6 +11,7 @@ import { v7 } from 'uuid';
 import { InventoryItem } from '../../entity/product.entity';
 import { Not } from 'typeorm';
 import { arrayToTree } from '../../utils/util';
+import { recordOperation } from '../log';
 
 export interface ItemTypeTree {
     type_id: string;
@@ -69,9 +70,31 @@ export class ItemTypeService {
 
             await this.itemTypeRepo.save(itemType);
             this.logger.info(`创建类型成功: ${typeId} - ${dto.type_name}`);
+            // 记录创建类型操作日志
+            await recordOperation({
+                operationType: 'ITEM_TYPE',
+                operationCode: 'create_item_type',
+                operationDesc: `创建零件类型「${dto.type_name}」`,
+                targetType: 'item_type',
+                targetId: typeId,
+                targetName: dto.type_name,
+                newValue: JSON.stringify({
+                    type_name: dto.type_name,
+                    parent_id: dto.parent_id ?? null,
+                    sort_order: itemType.sort_order,
+                    remark: dto.remark ?? null,
+                }),
+            });
             return { result: 0, msg: '创建成功', alg: '', datas: { type_id: typeId } };
         } catch (error) {
             this.logger.error(`创建类型失败: ${error}`);
+            await recordOperation({
+                operationType: 'ITEM_TYPE',
+                operationCode: 'create_item_type',
+                operationDesc: '创建类型失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+            });
             return { result: 1, msg: '创建失败' };
         }
     }
@@ -113,6 +136,14 @@ export class ItemTypeService {
                 return { result: 1, msg: '类型名称已存在' };
             }
 
+            // 记录变更前值(用于操作日志)
+            const oldValue = JSON.stringify({
+                type_name: itemType.type_name,
+                parent_id: itemType.parent_id ?? null,
+                sort_order: itemType.sort_order,
+                remark: itemType.remark ?? null,
+            });
+
             itemType.type_name = dto.type_name;
             if (dto.sort_order) {
                 itemType.sort_order = dto.sort_order;
@@ -127,9 +158,33 @@ export class ItemTypeService {
 
             await this.itemTypeRepo.save(itemType);
             this.logger.info(`更新类型成功: ${dto.type_id}`);
+            // 记录更新类型操作日志
+            await recordOperation({
+                operationType: 'ITEM_TYPE',
+                operationCode: 'update_item_type',
+                operationDesc: `更新零件类型「${itemType.type_name}」`,
+                targetType: 'item_type',
+                targetId: dto.type_id,
+                targetName: itemType.type_name,
+                oldValue: oldValue,
+                newValue: JSON.stringify({
+                    type_name: itemType.type_name,
+                    parent_id: itemType.parent_id ?? null,
+                    sort_order: itemType.sort_order,
+                    remark: itemType.remark ?? null,
+                }),
+            });
             return { result: 0, msg: '更新成功' };
         } catch (error) {
             this.logger.error(`更新类型失败: ${error}`);
+            await recordOperation({
+                operationType: 'ITEM_TYPE',
+                operationCode: 'update_item_type',
+                operationDesc: '更新类型失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.type_id,
+            });
             return { result: 1, msg: '更新失败' };
         }
     }
@@ -177,9 +232,32 @@ export class ItemTypeService {
             itemType.update_time = new Date();
             await this.itemTypeRepo.save(itemType);
             this.logger.info(`删除类型成功: ${dto.type_id}`);
+            // 记录删除类型操作日志
+            await recordOperation({
+                operationType: 'ITEM_TYPE',
+                operationCode: 'delete_item_type',
+                operationDesc: `删除零件类型「${itemType.type_name}」`,
+                targetType: 'item_type',
+                targetId: dto.type_id,
+                targetName: itemType.type_name,
+                oldValue: JSON.stringify({
+                    type_name: itemType.type_name,
+                    parent_id: itemType.parent_id ?? null,
+                    sort_order: itemType.sort_order,
+                    status: 1,
+                }),
+            });
             return { result: 0, msg: '删除成功' };
         } catch (error) {
             this.logger.error(`删除类型失败: ${error}`);
+            await recordOperation({
+                operationType: 'ITEM_TYPE',
+                operationCode: 'delete_item_type',
+                operationDesc: '删除类型失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.type_id,
+            });
             return { result: 1, msg: '删除失败' };
         }
     }

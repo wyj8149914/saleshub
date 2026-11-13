@@ -24,6 +24,7 @@ import { AppDataSource } from '../../config/database.config';
 import { getLogger } from '../../utils/logger.util';
 import { v7 } from 'uuid';
 import { generateFileUrl } from '../../config/minio.config';
+import { recordOperation } from '../log';
 
 /** 产品零件原始行(getRawMany,联查零件/规格/类型信息) */
 interface ProductItemRawRow {
@@ -89,9 +90,32 @@ export class ProductService {
             product.update_time = now;
 
             const saved = await this.productRepository.save(product);
+            // 记录创建产品操作日志
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'create_product',
+                operationDesc: `创建产品「${dto.name}」(${code})`,
+                targetType: 'product',
+                targetId: saved.product_id,
+                targetName: dto.name,
+                newValue: JSON.stringify({
+                    name: dto.name,
+                    code: code,
+                    description: dto.description ?? null,
+                    price: dto.price ?? null,
+                    remark: dto.remark ?? null,
+                }),
+            });
             return { result: 0, msg: '创建成功', datas: { product_id: saved.product_id } };
         } catch (error) {
             this.logger.error('创建产品失败:', error);
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'create_product',
+                operationDesc: '创建产品失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+            });
             return { result: 1, msg: '创建失败' };
         }
     }
@@ -163,6 +187,14 @@ export class ProductService {
                 return { result: 1, msg: '产品不存在' };
             }
 
+            // 记录变更前值(用于操作日志)
+            const oldValue = JSON.stringify({
+                name: product.name,
+                description: product.description ?? null,
+                price: product.price ?? null,
+                remark: product.remark ?? null,
+            });
+
             product.name = dto.name;
             if (dto.description !== undefined) {
                 product.description = dto.description;
@@ -179,9 +211,33 @@ export class ProductService {
             product.update_time = new Date();
 
             await this.productRepository.save(product);
+            // 记录更新产品操作日志
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'update_product',
+                operationDesc: `更新产品「${product.name}」(${product.code})`,
+                targetType: 'product',
+                targetId: dto.product_id,
+                targetName: product.name,
+                oldValue: oldValue,
+                newValue: JSON.stringify({
+                    name: product.name,
+                    description: product.description ?? null,
+                    price: product.price ?? null,
+                    remark: product.remark ?? null,
+                }),
+            });
             return { result: 0, msg: '更新成功' };
         } catch (error) {
             this.logger.error('更新产品失败:', error);
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'update_product',
+                operationDesc: '更新产品失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.product_id,
+            });
             return { result: 1, msg: '更新失败' };
         }
     }
@@ -212,9 +268,31 @@ export class ProductService {
                 );
             });
 
+            // 记录删除产品操作日志
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'delete_product',
+                operationDesc: `删除产品「${product.name}」(${product.code})`,
+                targetType: 'product',
+                targetId: dto.product_id,
+                targetName: product.name,
+                oldValue: JSON.stringify({
+                    name: product.name,
+                    code: product.code,
+                    status: product.status,
+                }),
+            });
             return { result: 0, msg: '删除成功' };
         } catch (error) {
             this.logger.error('删除产品失败:', error);
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'delete_product',
+                operationDesc: '删除产品失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.product_id,
+            });
             return { result: 1, msg: '删除失败' };
         }
     }
@@ -245,6 +323,16 @@ export class ProductService {
                     { product_id: dto.product_id },
                     { status: 2, update_time: new Date() }
                 );
+                // 记录清空产品零件操作日志
+                await recordOperation({
+                    operationType: 'PRODUCT',
+                    operationCode: 'set_product_items',
+                    operationDesc: `设置产品「${product.name}」零件,清空全部明细`,
+                    targetType: 'product',
+                    targetId: dto.product_id,
+                    targetName: product.name,
+                    attachData: { itemCount: 0 },
+                });
                 return { result: 0, msg: '设置成功' };
             }
 
@@ -310,9 +398,27 @@ export class ProductService {
                 await manager.save(ProductItem, productItems);
             });
 
+            // 记录设置产品零件操作日志
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'set_product_items',
+                operationDesc: `设置产品「${product.name}」零件,共 ${dto.items.length} 项明细`,
+                targetType: 'product',
+                targetId: dto.product_id,
+                targetName: product.name,
+                attachData: { itemCount: dto.items.length },
+            });
             return { result: 0, msg: '设置成功' };
         } catch (error) {
             this.logger.error('设置产品零件失败:', error);
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'set_product_items',
+                operationDesc: '设置产品零件失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.product_id,
+            });
             return { result: 1, msg: '设置失败' };
         }
     }
@@ -503,9 +609,31 @@ export class ProductService {
             module.update_time = now;
 
             await this.productModuleRepository.save(module);
+            // 记录创建模块操作日志
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'create_product_module',
+                operationDesc: `创建产品模块「${dto.name}」(产品: ${product.name})`,
+                targetType: 'product_module',
+                targetId: moduleId,
+                targetName: dto.name,
+                newValue: JSON.stringify({
+                    name: dto.name,
+                    product_id: dto.product_id,
+                    sort_order: module.sort_order ?? null,
+                    remark: module.remark ?? null,
+                }),
+            });
             return { result: 0, msg: '创建成功', datas: { module_id: moduleId } };
         } catch (error) {
             this.logger.error('创建模块失败:', error);
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'create_product_module',
+                operationDesc: '创建模块失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+            });
             return { result: 1, msg: '创建失败' };
         }
     }
@@ -550,6 +678,13 @@ export class ProductService {
                 return { result: 1, msg: '模块不存在' };
             }
 
+            // 记录变更前值(用于操作日志)
+            const oldValue = JSON.stringify({
+                name: module.name,
+                sort_order: module.sort_order ?? null,
+                remark: module.remark ?? null,
+            });
+
             // 如果修改名称，检查是否重复
             if (dto.name && dto.name !== module.name) {
                 const existing = await this.productModuleRepository.findOne({
@@ -574,9 +709,32 @@ export class ProductService {
             module.update_time = new Date();
 
             await this.productModuleRepository.save(module);
+            // 记录更新模块操作日志
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'update_product_module',
+                operationDesc: `更新产品模块「${module.name}」`,
+                targetType: 'product_module',
+                targetId: dto.module_id,
+                targetName: module.name,
+                oldValue: oldValue,
+                newValue: JSON.stringify({
+                    name: module.name,
+                    sort_order: module.sort_order ?? null,
+                    remark: module.remark ?? null,
+                }),
+            });
             return { result: 0, msg: '更新成功' };
         } catch (error) {
             this.logger.error('更新模块失败:', error);
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'update_product_module',
+                operationDesc: '更新模块失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.module_id,
+            });
             return { result: 1, msg: '更新失败' };
         }
     }
@@ -607,9 +765,32 @@ export class ProductService {
                 { status: 2, update_time: now }
             );
 
+            // 记录删除模块操作日志
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'delete_product_module',
+                operationDesc: `删除产品模块「${module.name}」`,
+                targetType: 'product_module',
+                targetId: dto.module_id,
+                targetName: module.name,
+                oldValue: JSON.stringify({
+                    name: module.name,
+                    product_id: module.product_id,
+                    sort_order: module.sort_order,
+                    status: module.status,
+                }),
+            });
             return { result: 0, msg: '删除成功' };
         } catch (error) {
             this.logger.error('删除模块失败:', error);
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'delete_product_module',
+                operationDesc: '删除模块失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.module_id,
+            });
             return { result: 1, msg: '删除失败' };
         }
     }
@@ -631,6 +812,16 @@ export class ProductService {
                     { module_id: dto.module_id },
                     { status: 2, update_time: new Date() }
                 );
+                // 记录清空模块零件操作日志
+                await recordOperation({
+                    operationType: 'PRODUCT',
+                    operationCode: 'set_module_items',
+                    operationDesc: `设置模块「${module.name}」零件,清空全部明细`,
+                    targetType: 'product_module',
+                    targetId: dto.module_id,
+                    targetName: module.name,
+                    attachData: { itemCount: 0 },
+                });
                 return { result: 0, msg: '设置成功' };
             }
 
@@ -704,9 +895,27 @@ export class ProductService {
                 await manager.save(ProductItem, productItems);
             });
 
+            // 记录设置模块零件操作日志
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'set_module_items',
+                operationDesc: `设置模块「${module.name}」零件,共 ${dto.items.length} 项明细`,
+                targetType: 'product_module',
+                targetId: dto.module_id,
+                targetName: module.name,
+                attachData: { itemCount: dto.items.length },
+            });
             return { result: 0, msg: '设置成功' };
         } catch (error) {
             this.logger.error('设置模块零件失败:', error);
+            await recordOperation({
+                operationType: 'PRODUCT',
+                operationCode: 'set_module_items',
+                operationDesc: '设置模块零件失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.module_id,
+            });
             return { result: 1, msg: '设置失败' };
         }
     }

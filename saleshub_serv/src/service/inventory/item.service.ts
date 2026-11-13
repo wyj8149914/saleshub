@@ -13,6 +13,7 @@ import { generateFileUrl } from '../../config/minio.config';
 import { MinioFile } from '../../entity/file.entity';
 import { Not } from 'typeorm';
 import { InventoryItemSpecWarehouse } from '../../entity/warehouse.entity';
+import { recordOperation } from '../log';
 
 /** 零件列表原始行(getRawMany,含类型与图片联查字段) */
 interface ItemListRawRow {
@@ -120,9 +121,32 @@ export class InventoryItemService {
                 await manager.save(InventoryItemSpec, specRows);
             });
 
+            // 记录创建零件操作日志
+            await recordOperation({
+                operationType: 'ITEM',
+                operationCode: 'create_item',
+                operationDesc: `创建零件「${dto.name}」(${code})`,
+                targetType: 'item',
+                targetId: itemId,
+                targetName: dto.name,
+                newValue: JSON.stringify({
+                    name: dto.name,
+                    code: code,
+                    type_id: dto.type_id,
+                    warn_stock: dto.warnStock ?? null,
+                    spec_count: specRows.length,
+                }),
+            });
             return { result: 0, msg: '创建成功', datas: { item_id: itemId } };
         } catch (error) {
             this.logger.error('创建零件失败:', error);
+            await recordOperation({
+                operationType: 'ITEM',
+                operationCode: 'create_item',
+                operationDesc: '创建零件失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+            });
             return { result: 1, msg: '创建失败' };
         }
     }
@@ -266,6 +290,14 @@ export class InventoryItemService {
                 return { result: 1, msg: '零件不存在' };
             }
 
+            // 记录变更前值(用于操作日志)
+            const oldValue = JSON.stringify({
+                name: item.name,
+                type_id: item.type_id,
+                warn_stock: item.warn_stock ?? null,
+                remark: item.remark ?? null,
+            });
+
             // 验证 type_id 存在且状态正常
             if (dto.type_id) {
                 const itemType = await this.itemTypeRepository.findOne({
@@ -295,6 +327,22 @@ export class InventoryItemService {
             // 规格未传则保持不变,只更新零件主表
             if (dto.specs === undefined) {
                 await this.inventoryItemRepository.save(item);
+                // 记录更新零件操作日志(规格未变更)
+                await recordOperation({
+                    operationType: 'ITEM',
+                    operationCode: 'update_item',
+                    operationDesc: `更新零件「${item.name}」(${item.code})`,
+                    targetType: 'item',
+                    targetId: dto.item_id,
+                    targetName: item.name,
+                    oldValue: oldValue,
+                    newValue: JSON.stringify({
+                        name: item.name,
+                        type_id: item.type_id,
+                        warn_stock: item.warn_stock ?? null,
+                        remark: item.remark ?? null,
+                    }),
+                });
                 return { result: 0, msg: '更新成功' };
             }
 
@@ -380,9 +428,36 @@ export class InventoryItemService {
                 }
             });
 
+            // 记录更新零件操作日志
+            await recordOperation({
+                operationType: 'ITEM',
+                operationCode: 'update_item',
+                operationDesc: `更新零件「${item.name}」(${item.code})`,
+                targetType: 'item',
+                targetId: dto.item_id,
+                targetName: item.name,
+                oldValue: oldValue,
+                newValue: JSON.stringify({
+                    name: item.name,
+                    type_id: item.type_id,
+                    warn_stock: item.warn_stock ?? null,
+                    remark: item.remark ?? null,
+                    spec_add_count: addRows.length,
+                    spec_update_count: toUpdateEntries.length,
+                    spec_remove_count: toRemove.length,
+                }),
+            });
             return { result: 0, msg: '更新成功' };
         } catch (error) {
             this.logger.error('更新零件失败:', error);
+            await recordOperation({
+                operationType: 'ITEM',
+                operationCode: 'update_item',
+                operationDesc: '更新零件失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.item_id,
+            });
             return { result: 1, msg: '更新失败' };
         }
     }
@@ -428,9 +503,32 @@ export class InventoryItemService {
                 );
             });
 
+            // 记录删除零件操作日志
+            await recordOperation({
+                operationType: 'ITEM',
+                operationCode: 'delete_item',
+                operationDesc: `删除零件「${item.name}」(${item.code})`,
+                targetType: 'item',
+                targetId: dto.item_id,
+                targetName: item.name,
+                oldValue: JSON.stringify({
+                    name: item.name,
+                    code: item.code,
+                    type_id: item.type_id,
+                    status: item.status,
+                }),
+            });
             return { result: 0, msg: '删除成功' };
         } catch (error) {
             this.logger.error('删除零件失败:', error);
+            await recordOperation({
+                operationType: 'ITEM',
+                operationCode: 'delete_item',
+                operationDesc: '删除零件失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.item_id,
+            });
             return { result: 1, msg: '删除失败' };
         }
     }

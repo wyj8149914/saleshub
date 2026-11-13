@@ -15,6 +15,7 @@ import {
 import { getLogger } from '../../utils/logger.util';
 import { generateFileUrl } from '../../config/minio.config';
 import { BusinessError } from '../../utils/error.util';
+import { recordOperation } from '../log';
 
 /** 正常状态 */
 const STATUS_NORMAL = 1;
@@ -130,6 +131,22 @@ export class SalesOrderService {
                 });
                 return order;
             });
+            await recordOperation({
+                operationType: 'ORDER',
+                operationCode: 'create_order',
+                operationDesc: `新建销售订单「${saved.order_no}」`,
+                operatorId: dto.user_id,
+                targetType: 'sales_order',
+                targetId: saved.order_id,
+                targetName: saved.order_no,
+                newValue: JSON.stringify({
+                    order_no: saved.order_no,
+                    order_title: dto.order_title,
+                    customer_name: dto.customer_name,
+                    amount: dto.amount,
+                    delivery_date: dto.delivery_date,
+                }),
+            });
             return {
                 result: 0,
                 msg: '创建成功',
@@ -137,6 +154,14 @@ export class SalesOrderService {
             };
         } catch (error) {
             this.logger.error('销售订单新建失败:', error);
+            await recordOperation({
+                operationType: 'ORDER',
+                operationCode: 'create_order',
+                operationDesc: '新建销售订单失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                operatorId: dto.user_id,
+            });
             if (error instanceof BusinessError) {
                 return { result: 1, msg: error.message };
             }
@@ -184,9 +209,40 @@ export class SalesOrderService {
                 }
             );
             this.logger.info('销售订单修改完成:', { order_id: dto.order_id });
+
+            await recordOperation({
+                operationType: 'ORDER',
+                operationCode: 'update_order',
+                operationDesc: `修改销售订单「${order.order_no}」`,
+                targetType: 'sales_order',
+                targetId: order.order_id,
+                targetName: order.order_no,
+                oldValue: JSON.stringify({
+                    order_title: order.order_title,
+                    customer_name: order.customer_name,
+                    customer_phone: order.customer_phone,
+                    amount: order.amount,
+                    delivery_date: order.delivery_date,
+                }),
+                newValue: JSON.stringify({
+                    order_title: dto.order_title ?? order.order_title,
+                    customer_name: dto.customer_name ?? order.customer_name,
+                    customer_phone: dto.customer_phone ?? order.customer_phone,
+                    amount: newAmount,
+                    delivery_date: dto.delivery_date ?? order.delivery_date,
+                }),
+            });
             return { result: 0, msg: 'success' };
         } catch (error) {
             this.logger.error('销售订单修改失败:', error);
+            await recordOperation({
+                operationType: 'ORDER',
+                operationCode: 'update_order',
+                operationDesc: '修改销售订单失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.order_id,
+            });
             return { result: 1, msg: '修改失败' };
         }
     }
@@ -346,9 +402,33 @@ export class SalesOrderService {
                 order_id: dto.order_id,
                 order_no: order.order_no,
             });
+
+            await recordOperation({
+                operationType: 'ORDER',
+                operationCode: 'delete_order',
+                operationDesc: `删除销售订单「${order.order_no}」`,
+                targetType: 'sales_order',
+                targetId: order.order_id,
+                targetName: order.order_no,
+                oldValue: JSON.stringify({
+                    order_no: order.order_no,
+                    order_title: order.order_title,
+                    customer_name: order.customer_name,
+                    amount: order.amount,
+                    status: order.status,
+                }),
+            });
             return { result: 0, msg: 'success' };
         } catch (error) {
             this.logger.error('销售订单删除失败:', error);
+            await recordOperation({
+                operationType: 'ORDER',
+                operationCode: 'delete_order',
+                operationDesc: '删除销售订单失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.order_id,
+            });
             return { result: 1, msg: '删除失败' };
         }
     }
@@ -395,6 +475,20 @@ export class SalesOrderService {
                 received_amount: newReceivedStr,
                 pay_status: payStatus,
             });
+
+            await recordOperation({
+                operationType: 'ORDER',
+                operationCode: 'receive_order',
+                operationDesc: `销售订单「${order.order_no}」收款 ${dto.received_amount} 元`,
+                targetType: 'sales_order',
+                targetId: order.order_id,
+                targetName: order.order_no,
+                oldValue: JSON.stringify({
+                    received_amount: order.received_amount,
+                    pay_status: order.pay_status,
+                }),
+                newValue: JSON.stringify({ received_amount: newReceivedStr, pay_status: payStatus }),
+            });
             return {
                 result: 0,
                 msg: 'success',
@@ -402,6 +496,14 @@ export class SalesOrderService {
             };
         } catch (error) {
             this.logger.error('销售订单收款失败:', error);
+            await recordOperation({
+                operationType: 'ORDER',
+                operationCode: 'receive_order',
+                operationDesc: '销售订单收款失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.order_id,
+            });
             return { result: 1, msg: '操作失败' };
         }
     }
@@ -436,9 +538,28 @@ export class SalesOrderService {
                 order_id: dto.order_id,
                 order_status: dto.order_status,
             });
+
+            await recordOperation({
+                operationType: 'ORDER',
+                operationCode: 'update_order_status',
+                operationDesc: `销售订单「${order.order_no}」状态变更为${dto.order_status}`,
+                targetType: 'sales_order',
+                targetId: order.order_id,
+                targetName: order.order_no,
+                oldValue: JSON.stringify({ order_status: order.order_status }),
+                newValue: JSON.stringify({ order_status: dto.order_status }),
+            });
             return { result: 0, msg: 'success' };
         } catch (error) {
             this.logger.error('销售订单状态变更失败:', error);
+            await recordOperation({
+                operationType: 'ORDER',
+                operationCode: 'update_order_status',
+                operationDesc: '销售订单状态变更失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.order_id,
+            });
             return { result: 1, msg: '操作失败' };
         }
     }

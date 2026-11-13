@@ -13,6 +13,7 @@ import {
 } from '../../dto/todo.dto';
 import { getLogger } from '../../utils/logger.util';
 import { BusinessError } from '../../utils/error.util';
+import { recordOperation } from '../log';
 
 /** 正常状态 */
 const STATUS_NORMAL = 1;
@@ -151,9 +152,33 @@ export class TodoService {
                 this.logger.info('待办事项新建完成:', { todo_id: todo.todo_id, title: todo.title });
                 return todo.todo_id;
             });
+            await recordOperation({
+                operationType: 'TODO',
+                operationCode: 'create_todo',
+                operationDesc: `新建待办事项「${dto.title}」`,
+                operatorId: dto.user_id,
+                targetType: 'todo',
+                targetId: todoId,
+                targetName: dto.title,
+                newValue: JSON.stringify({
+                    title: dto.title,
+                    priority: dto.priority,
+                    deadline: dto.deadline,
+                    executor_count: dto.executor_ids.length,
+                }),
+            });
             return { result: 0, msg: '创建成功', datas: { todo_id: todoId } };
         } catch (error) {
             this.logger.error('待办事项新建失败:', error);
+            await recordOperation({
+                operationType: 'TODO',
+                operationCode: 'create_todo',
+                operationDesc: '新建待办事项失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                operatorId: dto.user_id,
+                targetName: dto.title,
+            });
             if (error instanceof BusinessError) {
                 return { result: 1, msg: error.message };
             }
@@ -221,9 +246,39 @@ export class TodoService {
             });
 
             this.logger.info('待办事项修改完成:', { todo_id: dto.todo_id });
+
+            await recordOperation({
+                operationType: 'TODO',
+                operationCode: 'update_todo',
+                operationDesc: `修改待办事项「${todo.title}」`,
+                targetType: 'todo',
+                targetId: todo.todo_id,
+                targetName: todo.title,
+                oldValue: JSON.stringify({
+                    title: todo.title,
+                    priority: todo.priority,
+                    deadline: dayjs(todo.deadline).format('YYYY-MM-DD'),
+                    remark: todo.remark,
+                }),
+                newValue: JSON.stringify({
+                    title: dto.title ?? todo.title,
+                    priority: dto.priority ?? todo.priority,
+                    deadline: dto.deadline ?? dayjs(todo.deadline).format('YYYY-MM-DD'),
+                    remark: dto.remark ?? todo.remark,
+                    executor_ids: dto.executor_ids,
+                }),
+            });
             return { result: 0, msg: 'success' };
         } catch (error) {
             this.logger.error('待办事项修改失败:', error);
+            await recordOperation({
+                operationType: 'TODO',
+                operationCode: 'update_todo',
+                operationDesc: '修改待办事项失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.todo_id,
+            });
             if (error instanceof BusinessError) {
                 return { result: 1, msg: error.message };
             }
@@ -429,9 +484,26 @@ export class TodoService {
                 { status: STATUS_DELETED, update_time: new Date() }
             );
             this.logger.info('待办事项删除完成:', { todo_id: dto.todo_id });
+
+            await recordOperation({
+                operationType: 'TODO',
+                operationCode: 'delete_todo',
+                operationDesc: `删除待办事项「${todo.title}」`,
+                targetType: 'todo',
+                targetId: todo.todo_id,
+                targetName: todo.title,
+            });
             return { result: 0, msg: 'success' };
         } catch (error) {
             this.logger.error('待办事项删除失败:', error);
+            await recordOperation({
+                operationType: 'TODO',
+                operationCode: 'delete_todo',
+                operationDesc: '删除待办事项失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.todo_id,
+            });
             return { result: 1, msg: '删除失败' };
         }
     }
@@ -468,9 +540,28 @@ export class TodoService {
                 todo_id: dto.todo_id,
                 is_completed: dto.is_completed,
             });
+
+            await recordOperation({
+                operationType: 'TODO',
+                operationCode: 'complete_todo',
+                operationDesc: `待办事项「${todo.title}」标记为${dto.is_completed === TODO_COMPLETED ? '已完成' : '未完成'}`,
+                targetType: 'todo',
+                targetId: todo.todo_id,
+                targetName: todo.title,
+                oldValue: JSON.stringify({ is_completed: todo.is_completed }),
+                newValue: JSON.stringify({ is_completed: dto.is_completed }),
+            });
             return { result: 0, msg: 'success' };
         } catch (error) {
             this.logger.error('待办事项完成状态变更失败:', error);
+            await recordOperation({
+                operationType: 'TODO',
+                operationCode: 'complete_todo',
+                operationDesc: '待办事项完成状态变更失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.todo_id,
+            });
             return { result: 1, msg: '操作失败' };
         }
     }
@@ -527,10 +618,31 @@ export class TodoService {
                     new_deadline: dto.new_deadline,
                     delay_days: delayDays,
                 });
+
+                await recordOperation({
+                    operationType: 'TODO',
+                    operationCode: 'postpone_todo',
+                    operationDesc: `待办事项「${todo.title}」延期 ${delayDays} 天`,
+                    operatorId: dto.operator_id,
+                    targetType: 'todo',
+                    targetId: todo.todo_id,
+                    targetName: todo.title,
+                    oldValue: JSON.stringify({ deadline: oldDeadline }),
+                    newValue: JSON.stringify({ deadline: dto.new_deadline, reason: dto.reason }),
+                });
             });
             return { result: 0, msg: 'success' };
         } catch (error) {
             this.logger.error('待办事项延期失败:', error);
+            await recordOperation({
+                operationType: 'TODO',
+                operationCode: 'postpone_todo',
+                operationDesc: '待办事项延期失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                operatorId: dto.operator_id,
+                targetId: dto.todo_id,
+            });
             if (error instanceof BusinessError) {
                 return { result: 1, msg: error.message };
             }

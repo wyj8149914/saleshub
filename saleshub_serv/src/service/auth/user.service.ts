@@ -12,6 +12,7 @@ import { getLogger } from '../../utils/logger.util';
 import { hashPassword, validatePasswordStrength, verifyPassword } from '../../utils/util';
 import { JwtUtil } from '../../utils/jwt.util';
 import { v7 } from 'uuid';
+import { recordOperation } from '../log';
 
 export class UserService {
     private userRepository = AppDataSource.getRepository(User);
@@ -93,9 +94,32 @@ export class UserService {
             }
 
             const saved = await this.userRepository.save(user);
+
+            await recordOperation({
+                operationType: 'USER',
+                operationCode: 'create_user',
+                operationDesc: `创建用户「${saved.username}」`,
+                targetType: 'user',
+                targetId: saved.user_id,
+                targetName: saved.name,
+                newValue: JSON.stringify({
+                    user_id: saved.user_id,
+                    username: saved.username,
+                    name: saved.name,
+                    role: saved.role,
+                }),
+            });
             return { result: 0, msg: '创建成功', datas: { user_id: saved.user_id } };
         } catch (error) {
             this.logger.error('创建用户失败:', error);
+            await recordOperation({
+                operationType: 'USER',
+                operationCode: 'create_user',
+                operationDesc: '创建用户失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetName: dto.username,
+            });
             return { result: 1, msg: '创建失败' };
         }
     }
@@ -172,9 +196,32 @@ export class UserService {
             }
 
             await this.userRepository.save(user);
+
+            await recordOperation({
+                operationType: 'USER',
+                operationCode: 'update_user',
+                operationDesc: `修改用户「${user.username}」信息`,
+                targetType: 'user',
+                targetId: user.user_id,
+                targetName: user.name,
+                oldValue: JSON.stringify({ name: user.name, phone: user.phone, role: user.role }),
+                newValue: JSON.stringify({
+                    name: user.name,
+                    phone: dto.phone !== undefined ? dto.phone : user.phone,
+                    role: dto.role ?? user.role,
+                }),
+            });
             return { result: 0, msg: '更新成功' };
         } catch (error) {
             this.logger.error('更新用户失败:', error);
+            await recordOperation({
+                operationType: 'USER',
+                operationCode: 'update_user',
+                operationDesc: '修改用户信息失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.user_id,
+            });
             return { result: 1, msg: '更新失败' };
         }
     }
@@ -192,9 +239,28 @@ export class UserService {
             }
 
             await this.userRepository.update({ user_id: dto.user_id }, { status: dto.status });
+
+            await recordOperation({
+                operationType: 'USER',
+                operationCode: 'update_user_status',
+                operationDesc: `设置用户「${user.username}」状态为${dto.status === 1 ? '正常' : '停用'}`,
+                targetType: 'user',
+                targetId: user.user_id,
+                targetName: user.name,
+                oldValue: JSON.stringify({ status: user.status }),
+                newValue: JSON.stringify({ status: dto.status }),
+            });
             return { result: 0, msg: '状态更新成功' };
         } catch (error) {
             this.logger.error('更新用户状态失败:', error);
+            await recordOperation({
+                operationType: 'USER',
+                operationCode: 'update_user_status',
+                operationDesc: '设置用户状态失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.user_id,
+            });
             return { result: 1, msg: '状态更新失败' };
         }
     }
@@ -218,9 +284,26 @@ export class UserService {
 
             user.password_hash = await hashPassword(dto.password);
             await this.userRepository.save(user);
+
+            await recordOperation({
+                operationType: 'USER',
+                operationCode: 'update_user_password',
+                operationDesc: `修改用户「${user.username}」密码`,
+                targetType: 'user',
+                targetId: user.user_id,
+                targetName: user.name,
+            });
             return { result: 0, msg: '密码修改成功' };
         } catch (error) {
             this.logger.error('修改用户密码失败:', error);
+            await recordOperation({
+                operationType: 'USER',
+                operationCode: 'update_user_password',
+                operationDesc: '修改用户密码失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.user_id,
+            });
             return { result: 1, msg: '密码修改失败' };
         }
     }

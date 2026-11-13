@@ -33,6 +33,7 @@ import { getLogger } from '../../utils/logger.util';
 import { v7 } from 'uuid';
 import { MinioFile } from '../../entity/file.entity';
 import { generateFileUrl } from '../../config/minio.config';
+import { recordOperation } from '../log';
 
 interface StockItem {
     warehouse_id?: string;
@@ -144,9 +145,33 @@ export class StockService {
                 );
             });
 
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'stock_in',
+                operationDesc: `零件入库「${recordNo}」,数量 ${dto.quantity}`,
+                targetType: 'stock_in_record',
+                targetId: record.record_id,
+                targetName: recordNo,
+                newValue: JSON.stringify({
+                    record_no: recordNo,
+                    item_id: dto.item_id,
+                    spec_id: dto.spec_id,
+                    quantity: dto.quantity,
+                    before_stock: spec.current_stock,
+                    after_stock: newStock,
+                }),
+            });
             return { result: 0, msg: '入库成功' };
         } catch (error) {
             this.logger.error('入库失败:', error);
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'stock_in',
+                operationDesc: '零件入库失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.item_id,
+            });
             return { result: 1, msg: '入库失败' };
         }
     }
@@ -186,9 +211,26 @@ export class StockService {
                     dto.remark
                 );
             });
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'stock_in_batch',
+                operationDesc: `批量入库 ${itemSpecs.length} 条明细`,
+                targetType: 'stock_in_record',
+                attachData: {
+                    count: itemSpecs.length,
+                    total_quantity: itemSpecs.reduce((sum, it) => sum + it.quantity, 0),
+                },
+            });
             return { result: 0, msg: '入库成功' };
         } catch (error) {
             this.logger.error('批量入库失败:', error);
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'stock_in_batch',
+                operationDesc: '批量入库失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+            });
             return { result: 1, msg: '入库失败' };
         }
     }
@@ -266,9 +308,34 @@ export class StockService {
                 );
             });
 
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'stock_out',
+                operationDesc: `零件出库「${recordNo}」,数量 ${dto.quantity}`,
+                targetType: 'stock_out_record',
+                targetId: record.record_id,
+                targetName: recordNo,
+                newValue: JSON.stringify({
+                    record_no: recordNo,
+                    item_id: dto.item_id,
+                    spec_id: dto.spec_id,
+                    warehouse_id: dto.warehouse_id,
+                    quantity: dto.quantity,
+                    before_stock: spec.current_stock,
+                    after_stock: newStock,
+                }),
+            });
             return { result: 0, msg: '出库成功' };
         } catch (error) {
             this.logger.error('出库失败:', error);
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'stock_out',
+                operationDesc: '零件出库失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.item_id,
+            });
             return { result: 1, msg: '出库失败' };
         }
     }
@@ -291,9 +358,26 @@ export class StockService {
             }
 
             await this.executeStockOut(itemSpecs, dto.date, dto.remark);
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'stock_out_batch',
+                operationDesc: `批量出库 ${itemSpecs.length} 条明细`,
+                targetType: 'stock_out_record',
+                attachData: {
+                    count: itemSpecs.length,
+                    total_quantity: itemSpecs.reduce((sum, it) => sum + it.quantity, 0),
+                },
+            });
             return { result: 0, msg: '出库成功' };
         } catch (error) {
             this.logger.error('批量出库失败:', error);
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'stock_out_batch',
+                operationDesc: '批量出库失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+            });
             return { result: 1, msg: '出库失败' };
         }
     }
@@ -357,9 +441,30 @@ export class StockService {
             }
 
             await this.executeStockOut(itemSpecs, dto.date, dto.remark);
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'stock_out_by_product',
+                operationDesc: `按产品「${product.name}」出库,数量 ${dto.quantity}`,
+                targetType: 'stock_out_record',
+                targetId: dto.product_id,
+                targetName: product.name,
+                attachData: {
+                    count: itemSpecs.length,
+                    product_quantity: dto.quantity,
+                    total_quantity: itemSpecs.reduce((sum, it) => sum + it.quantity, 0),
+                },
+            });
             return { result: 0, msg: '出库成功' };
         } catch (error) {
             this.logger.error('按产品出库失败:', error);
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'stock_out_by_product',
+                operationDesc: '按产品出库失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.product_id,
+            });
             return { result: 1, msg: '出库失败' };
         }
     }
@@ -739,9 +844,33 @@ export class StockService {
                 );
             });
 
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'stock_check',
+                operationDesc: `库存盘点「${recordNo}」,库存 ${beforeStock} -> ${dto.after_stock}`,
+                targetType: 'stock_check_record',
+                targetId: checkRecord.check_id,
+                targetName: recordNo,
+                oldValue: JSON.stringify({ before_stock: beforeStock }),
+                newValue: JSON.stringify({
+                    record_no: recordNo,
+                    item_id: dto.item_id,
+                    spec_id: dto.spec_id,
+                    warehouse_id: dto.warehouse_id,
+                    after_stock: dto.after_stock,
+                }),
+            });
             return { result: 0, msg: '盘点成功' };
         } catch (error) {
             this.logger.error('盘点失败:', error);
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'stock_check',
+                operationDesc: '库存盘点失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.item_id,
+            });
             return { result: 1, msg: '盘点失败' };
         }
     }
@@ -774,9 +903,23 @@ export class StockService {
             }
 
             await this.executeStockCheck(checkItems, dto.date, dto.warehouse_id, dto.remark);
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'stock_check_batch',
+                operationDesc: `批量盘点 ${checkItems.length} 条明细`,
+                targetType: 'stock_check_record',
+                attachData: { count: checkItems.length },
+            });
             return { result: 0, msg: '盘点成功' };
         } catch (error) {
             this.logger.error('批量盘点失败:', error);
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'stock_check_batch',
+                operationDesc: '批量盘点失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+            });
             return { result: 1, msg: '盘点失败' };
         }
     }
@@ -1398,9 +1541,35 @@ export class StockService {
             this.logger.info(
                 `撤销入库记录 ${record.record_no}，库存从 ${spec.current_stock} 回退到 ${newStock}`
             );
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'revert_stock_in',
+                operationDesc: `撤销入库记录「${record.record_no}」,数量 ${record.quantity}`,
+                targetType: 'stock_in_record',
+                targetId: record.record_id,
+                targetName: record.record_no,
+                oldValue: JSON.stringify({
+                    record_no: record.record_no,
+                    status: 1,
+                    current_stock: spec.current_stock,
+                }),
+                newValue: JSON.stringify({
+                    record_no: record.record_no,
+                    status: 2,
+                    current_stock: newStock,
+                }),
+            });
             return { result: 0, msg: '撤销成功' };
         } catch (error) {
             this.logger.error('撤销入库记录失败:', error);
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'revert_stock_in',
+                operationDesc: '撤销入库记录失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.record_id,
+            });
             return { result: 1, msg: '撤销失败' };
         }
     }
@@ -1451,9 +1620,35 @@ export class StockService {
             this.logger.info(
                 `撤销出库记录 ${record.record_no}，库存从 ${spec.current_stock} 恢复到 ${newStock}`
             );
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'revert_stock_out',
+                operationDesc: `撤销出库记录「${record.record_no}」,数量 ${record.quantity}`,
+                targetType: 'stock_out_record',
+                targetId: record.record_id,
+                targetName: record.record_no,
+                oldValue: JSON.stringify({
+                    record_no: record.record_no,
+                    status: 1,
+                    current_stock: spec.current_stock,
+                }),
+                newValue: JSON.stringify({
+                    record_no: record.record_no,
+                    status: 2,
+                    current_stock: newStock,
+                }),
+            });
             return { result: 0, msg: '撤销成功' };
         } catch (error) {
             this.logger.error('撤销出库记录失败:', error);
+            await recordOperation({
+                operationType: 'STOCK',
+                operationCode: 'revert_stock_out',
+                operationDesc: '撤销出库记录失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.record_id,
+            });
             return { result: 1, msg: '撤销失败' };
         }
     }

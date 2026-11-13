@@ -52,9 +52,8 @@ export async function requestLogger(
         const dntEncrypt = res.locals.dntEncrypt;
         let encryptError = false;
 
-        if (req.query.employeeId) {
-            res.locals.employeeId = req.query.employeeId;
-        }
+        // 写回响应头,客户端/网关可用同一 requestId 与服务端日志关联
+        res.setHeader('x-request-id', requestId);
 
         // multipart 由路由 multer 解析,此处 req.body 尚未生成,且 multer 会重建 req.body
         const multipart = isMultipartFormData(req);

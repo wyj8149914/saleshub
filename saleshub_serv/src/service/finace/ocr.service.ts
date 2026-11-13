@@ -9,6 +9,7 @@ import { InvoiceOcrDto, InvoiceUploadDto } from '../../dto/invoice.dto';
 import { getLogger } from '../../utils/logger.util';
 import { fileService } from '../file.service';
 import { mapInvoiceItem } from './invoice.mapper';
+import { recordOperation } from '../log';
 import { OrcResponse } from '../../interface/orc.interface';
 
 /** 批量识别并发数:同时调用 OCR 的文件上限,避免压垮 OCR 服务 */
@@ -227,12 +228,29 @@ export class InvoiceOcrService {
         });
 
         // 附加 relation_id 供前端关联原始文件;识别失败时下发空列表保持结构一致
-        return {
-            ...ocrResult,
-            datas: ocrResult.datas
-                ? { ...ocrResult.datas, relation_id: relationId }
-                : { relation_id: relationId, invoices: [], existed: [], failed: [] },
-        };
+        const datas = ocrResult.datas
+            ? { ...ocrResult.datas, relation_id: relationId }
+            : { relation_id: relationId, invoices: [], existed: [], failed: [] };
+
+        await recordOperation({
+            operationType: 'INVOICE',
+            operationCode: 'upload_invoice',
+            operationDesc: `上传识别发票「${file.originalname}」,入库 ${datas.invoices.length} 张,重复 ${datas.existed.length} 张,失败 ${datas.failed.length} 张`,
+            operatorId: dto.user_id,
+            targetType: 'invoice',
+            targetId: datas.invoices.length === 1 ? datas.invoices[0].invoice_id : relationId,
+            targetName: file.originalname,
+            operationResult: ocrResult.result === 0 ? 1 : 2,
+            errorMsg: ocrResult.result === 0 ? undefined : ocrResult.msg,
+            attachData: {
+                relation_id: relationId,
+                invoice_count: datas.invoices.length,
+                existed_count: datas.existed.length,
+                failed_count: datas.failed.length,
+            },
+        });
+
+        return { ...ocrResult, datas };
     }
 
     /**
@@ -287,6 +305,21 @@ export class InvoiceOcrService {
             total: results.length,
             success: successCount,
             failed: results.length - successCount,
+        });
+
+        await recordOperation({
+            operationType: 'INVOICE',
+            operationCode: 'upload_invoice_batch',
+            operationDesc: `批量上传识别发票 ${results.length} 个文件,成功 ${successCount} 个,失败 ${results.length - successCount} 个`,
+            operatorId: dto.user_id,
+            targetType: 'invoice',
+            operationResult: successCount > 0 ? 1 : 2,
+            errorMsg: successCount > 0 ? undefined : '全部文件识别失败',
+            attachData: {
+                total: results.length,
+                success_count: successCount,
+                fail_count: results.length - successCount,
+            },
         });
 
         return {

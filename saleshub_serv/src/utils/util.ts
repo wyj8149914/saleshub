@@ -7,6 +7,7 @@
 
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
+import { IncomingHttpHeaders } from 'http';
 
 type ArrayItem = { [key: string]: unknown } | string | number;
 
@@ -315,4 +316,25 @@ export function aesDecrypt(
     let decrypted = decipher.update(encryptedData, 'base64', 'utf8');
     decrypted += decipher.final('utf8');
     return decrypted;
+}
+
+/**
+ * @description: 获取客户端真实IP
+ * @param {*} req: Express请求对象
+ * @return {*} ip: 客户端IP(优先取代理转发头,无代理时取直连地址)
+ */
+export function getClientIp(req: { headers: IncomingHttpHeaders; ip?: string }): string {
+    // x-forwarded-for 可含多级代理,第一个为客户端原始IP
+    const forwarded = req.headers['x-forwarded-for'];
+    if (typeof forwarded === 'string' && forwarded.length > 0) {
+        const first = forwarded.split(',')[0].trim();
+        if (first) {
+            return first;
+        }
+    }
+    const realIp = req.headers['x-real-ip'];
+    if (typeof realIp === 'string' && realIp.length > 0) {
+        return realIp;
+    }
+    return req.ip ?? '';
 }

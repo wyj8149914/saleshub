@@ -4,6 +4,7 @@ import { TodoType } from '../../entity/todo.entity';
 import { CreateTodoTypeDto, ListTodoTypeDto, TodoTypeIdDto } from '../../dto/todo.dto';
 import { getLogger } from '../../utils/logger.util';
 import { BusinessError } from '../../utils/error.util';
+import { recordOperation } from '../log';
 
 /** 正常状态 */
 const STATUS_NORMAL = 1;
@@ -76,9 +77,27 @@ export class TodoTypeService {
                 });
                 return type.type_id;
             });
+            await recordOperation({
+                operationType: 'TODO_TYPE',
+                operationCode: 'create_todo_type',
+                operationDesc: `新建待办类型「${dto.type_name}」`,
+                operatorId: dto.user_id,
+                targetType: 'todo_type',
+                targetId: typeId,
+                targetName: dto.type_name,
+            });
             return { result: 0, msg: '创建成功', datas: { type_id: typeId } };
         } catch (error) {
             this.logger.error('待办类型新建失败:', error);
+            await recordOperation({
+                operationType: 'TODO_TYPE',
+                operationCode: 'create_todo_type',
+                operationDesc: '新建待办类型失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                operatorId: dto.user_id,
+                targetName: dto.type_name,
+            });
             if (error instanceof BusinessError) {
                 return { result: 1, msg: error.message };
             }
@@ -145,9 +164,26 @@ export class TodoTypeService {
                 { status: STATUS_DELETED, update_time: new Date() }
             );
             this.logger.info('待办类型删除完成:', { type_id: dto.type_id });
+
+            await recordOperation({
+                operationType: 'TODO_TYPE',
+                operationCode: 'delete_todo_type',
+                operationDesc: `删除待办类型「${type.type_name}」`,
+                targetType: 'todo_type',
+                targetId: type.type_id,
+                targetName: type.type_name,
+            });
             return { result: 0, msg: 'success' };
         } catch (error) {
             this.logger.error('待办类型删除失败:', error);
+            await recordOperation({
+                operationType: 'TODO_TYPE',
+                operationCode: 'delete_todo_type',
+                operationDesc: '删除待办类型失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.type_id,
+            });
             return { result: 1, msg: '删除失败' };
         }
     }

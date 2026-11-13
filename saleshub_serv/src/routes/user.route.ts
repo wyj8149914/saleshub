@@ -11,6 +11,8 @@ import {
     UpdateUserPasswordDto,
 } from '../dto/user.dto';
 import { userService } from '../service/auth';
+import { logService } from '../service/log';
+import { getClientIp } from '../utils/util';
 
 const router = Router();
 
@@ -21,6 +23,16 @@ router.post(
     asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
         const dtoObj = plainToInstance(LoginDto, req.body);
         const result = await userService.login(dtoObj);
+        // 登录日志:成功与失败均记录,recordLogin 内部捕获异常,不影响登录响应
+        const loginDatas = result.result === 0 && 'datas' in result ? result.datas : undefined;
+        void logService.recordLogin({
+            username: dtoObj.username,
+            user_id: loginDatas?.user_id ?? null,
+            result: result.result === 0 ? 1 : 2,
+            fail_msg: result.result === 0 ? null : result.msg,
+            ip: getClientIp(req),
+            user_agent: (req.get('user-agent') ?? '').slice(0, 255) || null,
+        });
         res.locals.datas = result;
         next();
     })

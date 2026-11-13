@@ -9,6 +9,7 @@ import {
     ListInvoiceDto,
     InvoiceIdDto,
     TaxFileInvoiceDto,
+    ReimburseInvoiceDto,
 } from '../dto/invoice.dto';
 import { ocrService, UploadFileItem, invoiceService } from '../service/finace';
 
@@ -180,7 +181,8 @@ router.post(
  * GET /list
  * 分页查询发票列表:不按用户过滤,只查正常状态发票
  * Query: pageIndex/pageSize-分页(必填), invoice_nature-发票性质, invoice_purpose-发票用途,
- *       is_tax_filed-报税状态(1-未报税/2-已报税), start_date/end_date-开票日期区间(含当天,YYYY-MM-DD),
+ *       is_tax_filed-报税状态(1-未报税/2-已报税), is_reimbursed-报销状态(1-未报销/2-已报销),
+ *       start_date/end_date-开票日期区间(含当天,YYYY-MM-DD),
  *       keyword-关键字(发票号码/销售方/购买方模糊)
  */
 router.get(
@@ -238,6 +240,24 @@ router.post(
         // validationMiddleware 已将校验通过的 DTO 回写到 req.body
         const dto = req.body as TaxFileInvoiceDto;
         const result = await invoiceService.taxFile(dto);
+        res.locals.datas = result;
+        next();
+    })
+);
+
+/**
+ * POST /reimburse
+ * 批量报销/取消报销:列表多选发票后一次性设置报销状态
+ * Body: invoice_ids-发票ID列表(1~200个), is_reimbursed-目标报销状态(1-未报销/2-已报销),
+ *       user_id-操作人用户ID
+ */
+router.post(
+    '/reimburse',
+    validationMiddleware(ReimburseInvoiceDto),
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+        // validationMiddleware 已将校验通过的 DTO 回写到 req.body
+        const dto = req.body as ReimburseInvoiceDto;
+        const result = await invoiceService.reimburse(dto);
         res.locals.datas = result;
         next();
     })

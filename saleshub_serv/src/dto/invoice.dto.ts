@@ -143,6 +143,13 @@ export class ListInvoiceDto extends PageDto {
     @IsIn([1, 2], { message: '报税状态只能为1-未报税或2-已报税' })
     @IsOptional()
     is_tax_filed: number;
+
+    /** 是否报销:1-未报销,2-已报销(可选,不传则不过滤) */
+    @Type(() => Number)
+    @IsInt()
+    @IsIn([1, 2], { message: '报销状态只能为1-未报销或2-已报销' })
+    @IsOptional()
+    is_reimbursed: number;
 }
 
 /**
@@ -164,6 +171,32 @@ export class TaxFileInvoiceDto {
     @IsInt()
     @IsIn([1, 2], { message: '报税状态只能为1-未报税或2-已报税' })
     is_tax_filed: number;
+
+    /** 操作人用户ID */
+    @IsString()
+    @IsNotEmpty({ message: '操作人用户ID不能为空' })
+    user_id: string;
+}
+
+/**
+ * 发票批量报销请求DTO(POST /invoice/reimburse)
+ *
+ * 列表多选发票后批量设置报销状态;取消报销时同时清空报销时间与操作人
+ */
+export class ReimburseInvoiceDto {
+    /** 发票ID列表(1~200个) */
+    @IsArray()
+    @ArrayMinSize(1, { message: '发票ID列表不能为空' })
+    @ArrayMaxSize(200, { message: '单次最多操作200张发票' })
+    @IsString({ each: true })
+    @IsNotEmpty({ each: true, message: '发票ID不能为空字符串' })
+    invoice_ids: string[];
+
+    /** 目标报销状态:1-未报销(取消报销),2-已报销 */
+    @Type(() => Number)
+    @IsInt()
+    @IsIn([1, 2], { message: '报销状态只能为1-未报销或2-已报销' })
+    is_reimbursed: number;
 
     /** 操作人用户ID */
     @IsString()

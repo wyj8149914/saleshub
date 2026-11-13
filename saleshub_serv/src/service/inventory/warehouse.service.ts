@@ -11,6 +11,7 @@ import {
     AssignSpecWarehouseDto,
     ListSpecWarehouseStockDto,
 } from '../../dto/warehouse.dto';
+import { recordOperation } from '../log';
 
 export class WarehouseService {
     private warehouseRepository = AppDataSource.getRepository(Warehouse);
@@ -31,9 +32,26 @@ export class WarehouseService {
             }
 
             await this.warehouseRepository.save(warehouse);
+            await recordOperation({
+                operationType: 'WAREHOUSE',
+                operationCode: 'create_warehouse',
+                operationDesc: `创建仓库「${warehouse.name}」`,
+                targetType: 'warehouse',
+                targetId: warehouse.warehouse_id,
+                targetName: warehouse.name,
+                newValue: JSON.stringify({ name: warehouse.name, location: warehouse.location }),
+            });
             return { result: 0, msg: '创建成功' };
         } catch (error) {
             this.logger.error('创建仓库失败:', error);
+            await recordOperation({
+                operationType: 'WAREHOUSE',
+                operationCode: 'create_warehouse',
+                operationDesc: '创建仓库失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetName: dto.name,
+            });
             return { result: 1, msg: '创建失败' };
         }
     }
@@ -57,9 +75,26 @@ export class WarehouseService {
             warehouse.update_time = new Date();
 
             await this.warehouseRepository.save(warehouse);
+            await recordOperation({
+                operationType: 'WAREHOUSE',
+                operationCode: 'update_warehouse',
+                operationDesc: `更新仓库「${warehouse.name}」`,
+                targetType: 'warehouse',
+                targetId: warehouse.warehouse_id,
+                targetName: warehouse.name,
+                newValue: JSON.stringify({ name: dto.name, location: dto.location }),
+            });
             return { result: 0, msg: '更新成功' };
         } catch (error) {
             this.logger.error('更新仓库失败:', error);
+            await recordOperation({
+                operationType: 'WAREHOUSE',
+                operationCode: 'update_warehouse',
+                operationDesc: '更新仓库失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.warehouse_id,
+            });
             return { result: 1, msg: '更新失败' };
         }
     }
@@ -92,9 +127,27 @@ export class WarehouseService {
             warehouse.update_time = new Date();
             await this.warehouseRepository.save(warehouse);
 
+            await recordOperation({
+                operationType: 'WAREHOUSE',
+                operationCode: 'delete_warehouse',
+                operationDesc: `删除仓库「${warehouse.name}」`,
+                targetType: 'warehouse',
+                targetId: warehouse.warehouse_id,
+                targetName: warehouse.name,
+                oldValue: JSON.stringify({ name: warehouse.name, status: 1 }),
+                newValue: JSON.stringify({ status: 2 }),
+            });
             return { result: 0, msg: '删除成功' };
         } catch (error) {
             this.logger.error('删除仓库失败:', error);
+            await recordOperation({
+                operationType: 'WAREHOUSE',
+                operationCode: 'delete_warehouse',
+                operationDesc: '删除仓库失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.warehouse_id,
+            });
             return { result: 1, msg: '删除失败' };
         }
     }
@@ -193,9 +246,31 @@ export class WarehouseService {
                 await this.specWarehouseRepository.save(specWarehouse);
             }
 
+            await recordOperation({
+                operationType: 'WAREHOUSE',
+                operationCode: 'assign_spec_warehouse',
+                operationDesc: `分配规格「${spec.spec}」到仓库「${warehouse.name}」,数量 ${dto.quantity}`,
+                targetType: 'warehouse',
+                targetId: warehouse.warehouse_id,
+                targetName: warehouse.name,
+                newValue: JSON.stringify({
+                    spec_id: dto.spec_id,
+                    warehouse_id: dto.warehouse_id,
+                    quantity: dto.quantity,
+                    current_stock: specWarehouse.current_stock,
+                }),
+            });
             return { result: 0, msg: '分配成功' };
         } catch (error) {
             this.logger.error('分配零件仓库失败:', error);
+            await recordOperation({
+                operationType: 'WAREHOUSE',
+                operationCode: 'assign_spec_warehouse',
+                operationDesc: '分配零件仓库失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.warehouse_id,
+            });
             return { result: 1, msg: '分配失败' };
         }
     }

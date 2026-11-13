@@ -6,6 +6,7 @@ import todoRouter from './todo.route';
 import fileRouter from './file.route';
 import userRouter from './user.route';
 import inventoryRouter from './inventory.route';
+import logRouter from './log.route';
 import { getLogger } from '../utils/logger.util';
 import { appConfig } from '../config/env.config';
 const logger = getLogger('SALESHUB_SERV');
@@ -34,6 +35,7 @@ export function initializeRoutes(app: Application): void {
     app.use(`${apiPrefix}/expense`, expenseRouter);
     app.use(`${apiPrefix}/order`, salesOrderRouter);
     app.use(`${apiPrefix}/todo`, todoRouter);
+    app.use(`${apiPrefix}/log`, logRouter);
 
     logger.info('✅ 路由初始化完成');
 }

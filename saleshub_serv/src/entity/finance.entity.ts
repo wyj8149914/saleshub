@@ -129,6 +129,22 @@ export class Invoice {
     })
     tax_filed_by: string | null;
 
+    // ============ 报销状态 ============
+
+    @Column({ type: 'int', default: 1, comment: '是否报销:1-未报销,2-已报销' })
+    is_reimbursed: number;
+
+    @Column({ type: 'timestamp', nullable: true, comment: '报销时间(取消报销时清空)' })
+    reimbursed_time: Date | null;
+
+    @Column({
+        type: 'varchar',
+        length: 32,
+        nullable: true,
+        comment: '报销操作人用户ID(取消报销时清空)',
+    })
+    reimbursed_by: string | null;
+
     // ============ JSONB 数据 ============
 
     @Column({

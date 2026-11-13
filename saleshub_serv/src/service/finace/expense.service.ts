@@ -14,6 +14,7 @@ import {
 } from '../../dto/expense.dto';
 import { getLogger } from '../../utils/logger.util';
 import { generateFileUrl } from '../../config/minio.config';
+import { recordOperation } from '../log';
 import { InventoryItem, InventoryItemSpec } from '../../entity/product.entity';
 import { StockService } from '../inventory/stock.service';
 import { BusinessError } from '../../utils/error.util';
@@ -249,6 +250,22 @@ export class ExpenseService {
                 });
                 return expense;
             });
+            await recordOperation({
+                operationType: 'EXPENSE',
+                operationCode: 'create_expense',
+                operationDesc: `新建支出费用单「${saved.expense_no}」`,
+                operatorId: dto.user_id,
+                targetType: 'expense',
+                targetId: saved.expense_id,
+                targetName: saved.expense_no,
+                newValue: JSON.stringify({
+                    expense_no: saved.expense_no,
+                    expense_type: dto.expense_type,
+                    amount: dto.amount,
+                    invoice_id: saved.invoice_id,
+                    item_count: dto.items?.length ?? 0,
+                }),
+            });
             return {
                 result: 0,
                 msg: '创建成功',
@@ -256,6 +273,14 @@ export class ExpenseService {
             };
         } catch (error) {
             this.logger.error('支出费用单新建失败:', error);
+            await recordOperation({
+                operationType: 'EXPENSE',
+                operationCode: 'create_expense',
+                operationDesc: '新建支出费用单失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                operatorId: dto.user_id,
+            });
             if (error instanceof BusinessError) {
                 return { result: 1, msg: error.message };
             }
@@ -391,9 +416,44 @@ export class ExpenseService {
                 }
             });
             this.logger.info('支出费用单修改完成:', { expense_id: dto.expense_id });
+
+            await recordOperation({
+                operationType: 'EXPENSE',
+                operationCode: 'update_expense',
+                operationDesc: `修改支出费用单「${expense.expense_no}」`,
+                targetType: 'expense',
+                targetId: expense.expense_id,
+                targetName: expense.expense_no,
+                oldValue: JSON.stringify({
+                    amount: expense.amount,
+                    expense_title: expense.expense_title,
+                    invoice_id: expense.invoice_id,
+                    category: expense.category,
+                    payee: expense.payee,
+                    remark: expense.remark,
+                }),
+                newValue: JSON.stringify({
+                    amount: dto.amount !== undefined ? dto.amount : expense.amount,
+                    expense_title: dto.expense_title ?? expense.expense_title,
+                    invoice_id:
+                        isWithInvoice && dto.invoice_id ? dto.invoice_id : expense.invoice_id,
+                    category: dto.category ?? expense.category,
+                    payee: dto.payee ?? expense.payee,
+                    remark: dto.remark ?? expense.remark,
+                    item_count: dto.items?.length,
+                }),
+            });
             return { result: 0, msg: 'success' };
         } catch (error) {
             this.logger.error('支出费用单修改失败:', error);
+            await recordOperation({
+                operationType: 'EXPENSE',
+                operationCode: 'update_expense',
+                operationDesc: '修改支出费用单失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.expense_id,
+            });
             if (error instanceof BusinessError) {
                 return { result: 1, msg: error.message };
             }
@@ -634,9 +694,28 @@ export class ExpenseService {
                 expense_id: dto.expense_id,
                 invoice_id: dto.invoice_id,
             });
+
+            await recordOperation({
+                operationType: 'EXPENSE',
+                operationCode: 'bind_invoice',
+                operationDesc: `支出费用单「${expense.expense_no}」关联发票`,
+                targetType: 'expense',
+                targetId: expense.expense_id,
+                targetName: expense.expense_no,
+                oldValue: JSON.stringify({ invoice_id: expense.invoice_id }),
+                newValue: JSON.stringify({ invoice_id: dto.invoice_id }),
+            });
             return { result: 0, msg: 'success' };
         } catch (error) {
             this.logger.error('支出费用单关联发票失败:', error);
+            await recordOperation({
+                operationType: 'EXPENSE',
+                operationCode: 'bind_invoice',
+                operationDesc: '支出费用单关联发票失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.expense_id,
+            });
             return { result: 1, msg: '操作失败' };
         }
     }
@@ -699,10 +778,28 @@ export class ExpenseService {
                     expense_no: expense.expense_no,
                     items: itemRows.length,
                 });
+
+                await recordOperation({
+                    operationType: 'EXPENSE',
+                    operationCode: 'stock_in_expense',
+                    operationDesc: `支出费用单「${expense.expense_no}」按采购明细整单入库(${itemRows.length} 行明细)`,
+                    targetType: 'expense',
+                    targetId: expense.expense_id,
+                    targetName: expense.expense_no,
+                    attachData: { date: dto.date, warehouse_id: dto.warehouse_id ?? null },
+                });
             });
             return { result: 0, msg: '入库成功' };
         } catch (error) {
             this.logger.error('支出费用单入库失败:', error);
+            await recordOperation({
+                operationType: 'EXPENSE',
+                operationCode: 'stock_in_expense',
+                operationDesc: '支出费用单入库失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.expense_id,
+            });
             if (error instanceof BusinessError) {
                 return { result: 1, msg: error.message };
             }
@@ -744,9 +841,33 @@ export class ExpenseService {
                 expense_id: dto.expense_id,
                 expense_no: expense.expense_no,
             });
+
+            await recordOperation({
+                operationType: 'EXPENSE',
+                operationCode: 'delete_expense',
+                operationDesc: `删除支出费用单「${expense.expense_no}」`,
+                targetType: 'expense',
+                targetId: expense.expense_id,
+                targetName: expense.expense_no,
+                oldValue: JSON.stringify({
+                    expense_no: expense.expense_no,
+                    expense_type: expense.expense_type,
+                    amount: expense.amount,
+                    invoice_id: expense.invoice_id,
+                    status: expense.status,
+                }),
+            });
             return { result: 0, msg: 'success' };
         } catch (error) {
             this.logger.error('支出费用单删除失败:', error);
+            await recordOperation({
+                operationType: 'EXPENSE',
+                operationCode: 'delete_expense',
+                operationDesc: '删除支出费用单失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.expense_id,
+            });
             return { result: 1, msg: '删除失败' };
         }
     }

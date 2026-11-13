@@ -3,9 +3,15 @@ import { In } from 'typeorm';
 import { AppDataSource } from '../../config/database.config';
 import { Expense, Invoice } from '../../entity/finance.entity';
 import { MinioFile } from '../../entity/file.entity';
-import { ListInvoiceDto, InvoiceIdDto, TaxFileInvoiceDto } from '../../dto/invoice.dto';
+import {
+    ListInvoiceDto,
+    InvoiceIdDto,
+    TaxFileInvoiceDto,
+    ReimburseInvoiceDto,
+} from '../../dto/invoice.dto';
 import { getLogger } from '../../utils/logger.util';
 import { generateFileUrl } from '../../config/minio.config';
+import { recordOperation } from '../log';
 
 /** 发票列表条目(轻量字段,不含明细等 JSONB 大字段) */
 interface InvoiceListItem {
@@ -29,6 +35,9 @@ interface InvoiceListItem {
     is_tax_filed: number;
     tax_filed_time: string | null;
     tax_filed_by: string | null;
+    is_reimbursed: number;
+    reimbursed_time: string | null;
+    reimbursed_by: string | null;
     status: number;
     create_time: Date;
 }
@@ -70,6 +79,9 @@ const INVOICE_LIST_SELECT = [
     'invoice.is_tax_filed AS is_tax_filed',
     "to_char(invoice.tax_filed_time, 'YYYY-MM-DD HH24:MI:SS') AS tax_filed_time",
     'invoice.tax_filed_by AS tax_filed_by',
+    'invoice.is_reimbursed AS is_reimbursed',
+    "to_char(invoice.reimbursed_time, 'YYYY-MM-DD HH24:MI:SS') AS reimbursed_time",
+    'invoice.reimbursed_by AS reimbursed_by',
     'invoice.status AS status',
     "to_char(invoice.create_time, 'YYYY-MM-DD HH24:MI:SS') AS create_time",
 ];
@@ -106,6 +118,13 @@ interface TaxFileInvoiceResult {
     datas?: { updated_count: number };
 }
 
+/** 报销操作响应 */
+interface ReimburseInvoiceResult {
+    result: number;
+    msg: string;
+    datas?: { updated_count: number };
+}
+
 /** 删除发票响应 */
 interface InvoiceOpResult {
     result: number;
@@ -121,7 +140,7 @@ export class InvoiceService {
      * 分页查询发票列表(GET /invoice/list)
      * - 只查正常状态(status=1),作废发票不展示
      * - 不按用户过滤,查询全部发票
-     * - 支持筛选:发票性质、发票用途、报税状态、开票日期区间(含起止当天)、关键字
+     * - 支持筛选:发票性质、发票用途、报税状态、报销状态、开票日期区间(含起止当天)、关键字
      *   (对发票号码/销售方名称/购买方名称模糊匹配)
      * - 按创建时间降序,返回轻量字段(不含 items 等大字段)
      *
@@ -147,6 +166,11 @@ export class InvoiceService {
             if (dto.is_tax_filed) {
                 queryBuilder.andWhere('invoice.is_tax_filed = :isTaxFiled', {
                     isTaxFiled: dto.is_tax_filed,
+                });
+            }
+            if (dto.is_reimbursed) {
+                queryBuilder.andWhere('invoice.is_reimbursed = :isReimbursed', {
+                    isReimbursed: dto.is_reimbursed,
                 });
             }
             if (dto.start_date) {
@@ -262,8 +286,11 @@ export class InvoiceService {
                     'invoice.invoice_nature AS invoice_nature',
                     'invoice.invoice_purpose AS invoice_purpose',
                     'invoice.is_tax_filed AS is_tax_filed',
-                    'to_char(invoice.tax_filed_time, "YYYY-MM-DD HH24:MI:SS") AS tax_filed_time',
+                    "to_char(invoice.tax_filed_time, 'YYYY-MM-DD HH24:MI:SS') AS tax_filed_time",
                     'invoice.tax_filed_by AS tax_filed_by',
+                    'invoice.is_reimbursed AS is_reimbursed',
+                    "to_char(invoice.reimbursed_time, 'YYYY-MM-DD HH24:MI:SS') AS reimbursed_time",
+                    'invoice.reimbursed_by AS reimbursed_by',
                     'invoice.items AS items',
                     'invoice.status AS status',
                     'invoice.create_time AS create_time',
@@ -360,6 +387,16 @@ export class InvoiceService {
                 operator: dto.user_id,
                 updated: updateResult.affected ?? 0,
             });
+
+            await recordOperation({
+                operationType: 'INVOICE',
+                operationCode: isFiled ? 'tax_file_invoice' : 'cancel_tax_file_invoice',
+                operationDesc: `批量${isFiled ? '报税' : '取消报税'} ${dto.invoice_ids.length} 张发票`,
+                operatorId: dto.user_id,
+                targetType: 'invoice',
+                targetId: dto.invoice_ids.length === 1 ? dto.invoice_ids[0] : null,
+                attachData: { invoice_ids: dto.invoice_ids },
+            });
             return {
                 result: 0,
                 msg: 'success',
@@ -367,6 +404,110 @@ export class InvoiceService {
             };
         } catch (error) {
             this.logger.error('发票报税操作失败:', error);
+            await recordOperation({
+                operationType: 'INVOICE',
+                operationCode: dto.is_tax_filed === 2 ? 'tax_file_invoice' : 'cancel_tax_file_invoice',
+                operationDesc: '批量报税操作失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                operatorId: dto.user_id,
+                attachData: { invoice_ids: dto.invoice_ids },
+            });
+            return { result: 1, msg: '操作失败' };
+        }
+    }
+
+    /**
+     * 批量报销/取消报销(POST /invoice/reimburse)
+     * - 先校验后更新:查询符合更新条件的发票,存在不符合条件的ID时整体拒绝,不做任何更新
+     *   (不符合条件:发票不存在/已作废,或已处于目标报销状态)
+     * - 报销只允许操作未报销(1)的发票;取消报销只允许操作已报销(2)的发票
+     * - 报销:写入报销时间与操作人;取消报销:同时清空报销时间与操作人
+     * - 校验与更新之间状态被并发修改时,更新条件兜底过滤,updated_count 为实际变更条数
+     *
+     * @param dto 发票ID列表、目标报销状态与操作人用户ID
+     */
+    async reimburse(dto: ReimburseInvoiceDto): Promise<ReimburseInvoiceResult> {
+        try {
+            const isReimbursed = dto.is_reimbursed === 2;
+
+            // 1. 先查询符合更新条件的发票(存在、未作废、当前状态与目标相反)
+            const validInvoices = await this.invoiceRepository.find({
+                where: {
+                    invoice_id: In(dto.invoice_ids),
+                    status: 1,
+                    is_reimbursed: isReimbursed ? 1 : 2,
+                },
+                select: ['invoice_id', 'invoice_number'],
+            });
+            const validIds = new Set(validInvoices.map((inv) => inv.invoice_id));
+
+            // 2. 存在不符合条件的ID:整体拒绝并返回错误信息,不做任何更新
+            const invalidIds = dto.invoice_ids.filter((id) => !validIds.has(id));
+            const invalidNumbers = validInvoices.map((inv) => inv.invoice_number).join(',');
+            if (invalidIds.length > 0) {
+                // 错误信息最多展示5个ID,超出时以数量提示
+                const suffix = invalidIds.length > 5 ? ` 等${invalidIds.length}条` : '';
+                this.logger.warn('发票报销操作被拒绝,存在不符合条件的发票:', {
+                    is_reimbursed: dto.is_reimbursed,
+                    operator: dto.user_id,
+                    invalid_ids: invalidIds,
+                });
+                return {
+                    result: 1,
+                    msg: `以下发票不符合${isReimbursed ? '报销' : '取消报销'}条件(不存在/已作废或状态已符合):${invalidNumbers}${suffix}`,
+                };
+            }
+
+            // 3. 全部符合条件后执行批量更新
+            const now = new Date();
+            // 更新条件限定当前状态为目标状态的相反值,兜底过滤校验后并发变更的数据
+            const updateResult = await this.invoiceRepository.update(
+                {
+                    invoice_id: In(dto.invoice_ids),
+                    status: 1,
+                    is_reimbursed: isReimbursed ? 1 : 2,
+                },
+                {
+                    is_reimbursed: dto.is_reimbursed,
+                    reimbursed_time: isReimbursed ? now : null,
+                    reimbursed_by: isReimbursed ? dto.user_id : null,
+                    update_time: now,
+                }
+            );
+            this.logger.info('发票报销操作完成:', {
+                invoice_ids: dto.invoice_ids,
+                is_reimbursed: dto.is_reimbursed,
+                operator: dto.user_id,
+                updated: updateResult.affected ?? 0,
+            });
+
+            await recordOperation({
+                operationType: 'INVOICE',
+                operationCode: isReimbursed ? 'reimburse_invoice' : 'cancel_reimburse_invoice',
+                operationDesc: `批量${isReimbursed ? '报销' : '取消报销'} ${dto.invoice_ids.length} 张发票`,
+                operatorId: dto.user_id,
+                targetType: 'invoice',
+                targetId: dto.invoice_ids.length === 1 ? dto.invoice_ids[0] : null,
+                attachData: { invoice_ids: dto.invoice_ids },
+            });
+            return {
+                result: 0,
+                msg: 'success',
+                datas: { updated_count: updateResult.affected ?? 0 },
+            };
+        } catch (error) {
+            this.logger.error('发票报销操作失败:', error);
+            await recordOperation({
+                operationType: 'INVOICE',
+                operationCode:
+                    dto.is_reimbursed === 2 ? 'reimburse_invoice' : 'cancel_reimburse_invoice',
+                operationDesc: '批量报销操作失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                operatorId: dto.user_id,
+                attachData: { invoice_ids: dto.invoice_ids },
+            });
             return { result: 1, msg: '操作失败' };
         }
     }
@@ -404,9 +545,32 @@ export class InvoiceService {
                 { status: 2, update_time: new Date() }
             );
             this.logger.info('发票删除完成:', { invoice_id: dto.invoice_id });
+
+            await recordOperation({
+                operationType: 'INVOICE',
+                operationCode: 'delete_invoice',
+                operationDesc: `删除发票「${invoice.invoice_number}」`,
+                targetType: 'invoice',
+                targetId: invoice.invoice_id,
+                targetName: invoice.invoice_number,
+                oldValue: JSON.stringify({
+                    invoice_number: invoice.invoice_number,
+                    total_amount: invoice.total_amount,
+                    seller_name: invoice.seller_name,
+                    status: invoice.status,
+                }),
+            });
             return { result: 0, msg: 'success' };
         } catch (error) {
             this.logger.error('发票删除失败:', error);
+            await recordOperation({
+                operationType: 'INVOICE',
+                operationCode: 'delete_invoice',
+                operationDesc: '删除发票失败',
+                operationResult: 2,
+                errorMsg: (error as Error).message,
+                targetId: dto.invoice_id,
+            });
             return { result: 1, msg: '删除失败' };
         }
     }
