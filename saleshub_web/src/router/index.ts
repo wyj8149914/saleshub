@@ -121,6 +121,18 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/system/UserList.vue'),
         meta: { title: '用户管理', requiresAdmin: true },
       },
+      {
+        path: 'login-logs',
+        name: 'LoginLogList',
+        component: () => import('@/views/system/LoginLogList.vue'),
+        meta: { title: '登录日志', requiresAdmin: true },
+      },
+      {
+        path: 'operation-logs',
+        name: 'OperationLogList',
+        component: () => import('@/views/system/OperationLogList.vue'),
+        meta: { title: '操作日志', requiresAdmin: true },
+      },
     ],
   },
   {

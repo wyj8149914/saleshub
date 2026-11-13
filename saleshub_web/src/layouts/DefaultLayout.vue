@@ -126,6 +126,7 @@ import {
   ImportOutlined,
   ExportOutlined,
   AuditOutlined,
+  LoginOutlined,
   HistoryOutlined,
   InfoCircleOutlined,
   HomeOutlined,
@@ -215,7 +216,11 @@ const menuItems: MenuItem[] = [
     label: '系统管理',
     icon: SettingOutlined,
     adminOnly: true,
-    children: [{ path: '/system/users', label: '用户管理', icon: TeamOutlined }],
+    children: [
+      { path: '/system/users', label: '用户管理', icon: TeamOutlined },
+      { path: '/system/login-logs', label: '登录日志', icon: LoginOutlined },
+      { path: '/system/operation-logs', label: '操作日志', icon: AuditOutlined },
+    ],
   },
 ];
 
