@@ -72,8 +72,8 @@ export class OperationLog {
     @Column({ type: 'varchar', length: 100, nullable: true, comment: '操作人姓名快照' })
     operator_name: string | null;
 
-    @Column({ type: 'varchar', array: true, nullable: true, comment: '操作时角色' })
-    operator_role: string[] | null;
+    @Column({ type: 'varchar', length: 100, nullable: true, comment: '操作时角色' })
+    operator_role: string | null;
 
     @Column({ type: 'varchar', length: 64, nullable: true, comment: '操作对象类型' })
     target_type: string | null;

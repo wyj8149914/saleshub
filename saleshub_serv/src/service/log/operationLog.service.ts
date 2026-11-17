@@ -42,7 +42,7 @@ export async function recordOperation(data: LogData): Promise<void> {
         log.operation_desc = data.operationDesc;
         log.operator_id = operatorId;
         log.operator_name = operator.name ?? null;
-        log.operator_role = operator.role ? [operator.role] : null;
+        log.operator_role = operator.role ? operator.role : null;
         log.target_type = data.targetType ?? null;
         log.target_id = data.targetId ?? null;
         log.target_name = data.targetName ?? null;
@@ -171,18 +171,24 @@ export class OperationLogService {
                 });
             }
             if (dto.keyword) {
-                qb.andWhere('(log.operation_desc ILIKE :keyword OR log.target_name ILIKE :keyword)', {
-                    keyword: `%${dto.keyword}%`,
-                });
+                qb.andWhere(
+                    '(log.operation_desc ILIKE :keyword OR log.target_name ILIKE :keyword)',
+                    {
+                        keyword: `%${dto.keyword}%`,
+                    }
+                );
             }
             if (dto.time_start) {
                 qb.andWhere('log.operation_time >= :timeStart', { timeStart: dto.time_start });
             }
             if (dto.time_end) {
                 // 结束日期含当天:与「止日期次日零点」比较
-                qb.andWhere("log.operation_time < to_date(:timeEnd, 'YYYY-MM-DD') + interval '1 day'", {
-                    timeEnd: dto.time_end,
-                });
+                qb.andWhere(
+                    "log.operation_time < to_date(:timeEnd, 'YYYY-MM-DD') + interval '1 day'",
+                    {
+                        timeEnd: dto.time_end,
+                    }
+                );
             }
 
             const start = (dto.pageIndex - 1) * dto.pageSize;
