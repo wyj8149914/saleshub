@@ -106,6 +106,7 @@ export interface InventoryItem {
   image_id: string | null;
   image_url: string | null;
   warn_stock: number;
+  unit: string | null;
   is_custom: 1 | 2;
   remark: string | null;
 }
@@ -123,6 +124,7 @@ export interface ItemListQuery {
 export interface ItemCreatePayload {
   type_id: string;
   name: string;
+  unit?: string;
   specs?: SpecPayload[];
   warnStock?: number;
   image_id?: string;
@@ -134,6 +136,7 @@ export interface ItemUpdatePayload {
   item_id: string;
   type_id: string;
   name: string;
+  unit?: string;
   specs?: SpecPayload[];
   warnStock?: number;
   image_id?: string;
@@ -182,6 +185,7 @@ export interface ProductItemRelation {
   remark: string | null;
   item_name: string;
   item_code: string;
+  item_unit: string | null;
   type_id: string;
   type_name: string;
   current_stock: number;
@@ -220,6 +224,7 @@ export interface ProductDetailItem {
   module_id: string | null;
   item_name: string;
   item_code: string;
+  item_unit: string | null;
   quantity_per_product: number;
   remark: string | null;
 }
@@ -276,6 +281,7 @@ export interface StockHistoryRecord {
   id: string;
   type: 'in' | 'out' | 'check';
   item_name: string | null;
+  item_unit: string | null;
   spec: string | null;
   quantity: number | null;
   before_stock: number;
@@ -299,6 +305,7 @@ export interface StockInRecord {
   before_stock: number;
   after_stock: number;
   item_name: string | null;
+  item_unit: string | null;
   spec: string | null;
   create_time: string;
 }
@@ -315,6 +322,7 @@ export interface StockOutRecord {
   before_stock: number;
   after_stock: number;
   item_name: string | null;
+  item_unit: string | null;
   spec: string | null;
   create_time: string;
 }
@@ -394,6 +402,7 @@ export interface StockCheckRecord {
   before_stock: number;
   after_stock: number;
   item_name: string | null;
+  item_unit: string | null;
   spec: string | null;
   create_time: string;
 }

@@ -63,12 +63,14 @@
                     <td class="cell-item">{{ item.item_name }}</td>
                     <td class="cell-code">{{ item.item_code }}</td>
                     <td class="cell-spec">{{ item.spec || '-' }}</td>
-                    <td class="cell-qty">{{ item.quantity_per_product }}</td>
+                    <td class="cell-qty">{{ item.quantity_per_product }}{{ item.item_unit || '' }}</td>
                     <td class="cell-price">
                       <span v-if="item.price !== null">¥{{ item.price }}</span>
                       <span v-else>-</span>
                     </td>
-                    <td class="cell-stock">{{ item.current_stock ?? '-' }}</td>
+                    <td class="cell-stock">
+                      {{ item.current_stock ?? '-' }}{{ item.current_stock != null ? (item.item_unit || '') : '' }}
+                    </td>
                     <td class="cell-remark">{{ item.remark || '-' }}</td>
                   </tr>
                 </template>
@@ -81,12 +83,14 @@
                   <td class="cell-item">{{ item.item_name }}</td>
                   <td class="cell-code">{{ item.item_code }}</td>
                   <td class="cell-spec">{{ item.spec || '-' }}</td>
-                  <td class="cell-qty">{{ item.quantity_per_product }}</td>
+                  <td class="cell-qty">{{ item.quantity_per_product }}{{ item.item_unit || '' }}</td>
                   <td class="cell-price">
                     <span v-if="item.price !== null">¥{{ item.price }}</span>
                     <span v-else>-</span>
                   </td>
-                  <td class="cell-stock">{{ item.current_stock ?? '-' }}</td>
+                  <td class="cell-stock">
+                    {{ item.current_stock ?? '-' }}{{ item.current_stock != null ? (item.item_unit || '') : '' }}
+                  </td>
                   <td class="cell-remark">{{ item.remark || '-' }}</td>
                 </tr>
               </template>

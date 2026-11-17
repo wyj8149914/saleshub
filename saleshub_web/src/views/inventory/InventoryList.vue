@@ -176,26 +176,29 @@
               </template>
               <template v-else-if="column.key === 'current_stock'">
                 <span class="stock-num" :class="{ 'text-danger': isSpecWarning(item, spec) }">
-                  {{ spec.current_stock }}
+                  {{ spec.current_stock }}{{ item.unit || '' }}
                 </span>
               </template>
               <template v-else-if="column.key === 'allocatedStock'">
                 <a-spin :spinning="isLoadingAllocation(item.item_id)" size="small">
-                  <span class="stock-num text-muted">{{
-                    getSpecAllocation(item.item_id, spec.spec_id)?.allocated_stock ?? '-'
-                  }}</span>
+                  <span v-if="getSpecAllocation(item.item_id, spec.spec_id)" class="stock-num text-muted">
+                    {{ getSpecAllocation(item.item_id, spec.spec_id)!.allocated_stock }}{{ item.unit || '' }}
+                  </span>
+                  <span v-else class="stock-num text-muted">-</span>
                 </a-spin>
               </template>
               <template v-else-if="column.key === 'unallocatedStock'">
                 <a-spin :spinning="isLoadingAllocation(item.item_id)" size="small">
                   <span
+                    v-if="getSpecAllocation(item.item_id, spec.spec_id)"
                     class="stock-num"
                     :class="{
-                      'text-success': getSpecAllocation(item.item_id, spec.spec_id)?.unallocated_stock ?? 0 > 0,
+                      'text-success': getSpecAllocation(item.item_id, spec.spec_id)!.unallocated_stock > 0,
                     }"
                   >
-                    {{ getSpecAllocation(item.item_id, spec.spec_id)?.unallocated_stock ?? '-' }}
+                    {{ getSpecAllocation(item.item_id, spec.spec_id)!.unallocated_stock }}{{ item.unit || '' }}
                   </span>
+                  <span v-else class="stock-num">-</span>
                 </a-spin>
               </template>
               <template v-else-if="column.key === 'warningStatus'">
@@ -240,6 +243,10 @@
             <span class="cell-code">{{ record.code }}</span>
           </template>
 
+          <template v-else-if="column.key === 'unit'">
+            <span>{{ record.unit || '-' }}</span>
+          </template>
+
           <template v-else-if="column.key === 'isCustom'">
             <a-tag :class="record.is_custom === 2 ? 'tag-custom' : 'tag-normal'">
               {{ record.is_custom === 2 ? '是' : '否' }}
@@ -253,12 +260,12 @@
 
           <template v-else-if="column.key === 'totalStock'">
             <span class="stock-num" :class="{ 'text-danger': isItemWarning(record) }">
-              {{ getTotalStock(record) }}
+              {{ getTotalStock(record) }}{{ record.unit || '' }}
             </span>
           </template>
 
           <template v-else-if="column.key === 'warnStock'">
-            <span class="stock-num text-muted">{{ record.warn_stock }}</span>
+            <span class="stock-num text-muted">{{ record.warn_stock }}{{ record.unit || '' }}</span>
           </template>
 
           <template v-else-if="column.key === 'warningStatus'">
@@ -321,7 +328,9 @@
               <div class="mobile-card-name">{{ item.name }}</div>
               <div class="mobile-card-code">{{ item.code }}</div>
               <div class="mobile-card-stock">
-                库存：<span :class="{ 'text-danger': isItemWarning(item) }">{{ getTotalStock(item) }}</span>
+                库存：<span :class="{ 'text-danger': isItemWarning(item) }"
+                  >{{ getTotalStock(item) }}{{ item.unit || '' }}</span
+                >
               </div>
             </div>
             <div class="mobile-card-action">
@@ -409,6 +418,7 @@ const columns = [
   { title: '图片', dataIndex: 'image_url', key: 'image', align: 'center' },
   { title: '类型', dataIndex: 'type_full_name', key: 'type', align: 'center' },
   { title: '编码', dataIndex: 'code', key: 'code', align: 'center' },
+  { title: '单位', dataIndex: 'unit', key: 'unit', align: 'center' },
   { title: '是否定制', dataIndex: 'is_custom', key: 'isCustom', align: 'center' },
   { title: '规格数量', key: 'allSpecs', ellipsis: true, align: 'center' },
   { title: '总库存', key: 'totalStock', align: 'center' },

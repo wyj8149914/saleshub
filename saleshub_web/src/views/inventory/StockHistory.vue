@@ -77,13 +77,13 @@
 
         <template v-else-if="column.key === 'quantity'">
           <span :class="getQuantityClass(record)">
-            {{ formatQuantity(record) }}
+            {{ formatQuantity(record) }}{{ record.item_unit || '' }}
           </span>
         </template>
 
         <template v-else-if="column.key === 'stockChange'">
           <span v-if="record.before_stock != null && record.after_stock != null">
-            {{ record.before_stock }} → {{ record.after_stock }}
+            {{ record.before_stock }} → {{ record.after_stock }}{{ record.item_unit || '' }}
           </span>
           <span v-else>-</span>
         </template>

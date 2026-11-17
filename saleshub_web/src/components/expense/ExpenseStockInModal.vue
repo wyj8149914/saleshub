@@ -57,6 +57,9 @@
           <template v-else-if="column.key === 'spec_name'">
             {{ record.spec_name || '默认' }}
           </template>
+          <template v-else-if="column.key === 'quantity'">
+            {{ record.quantity }}{{ record.item_unit || '' }}
+          </template>
           <template v-else-if="column.key === 'price'"> ¥{{ record.price }} </template>
         </template>
       </a-table>

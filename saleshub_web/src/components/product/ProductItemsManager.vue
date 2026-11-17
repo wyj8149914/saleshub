@@ -123,7 +123,7 @@
           </template>
           <template v-else-if="column.key === 'stock'">
             <span class="stock-num" :class="{ 'text-danger': record.current_stock <= record.warn_stock }">
-              {{ record.current_stock }}
+              {{ record.current_stock }}{{ record.item_unit || '' }}
             </span>
           </template>
           <template v-else-if="column.key === 'quantity_per_product'">
@@ -134,6 +134,7 @@
               :max="9999"
               size="small"
               class="qty-input"
+              :addon-after="record.item_unit || undefined"
             />
           </template>
           <template v-else-if="column.key === 'remark'">
@@ -288,6 +289,7 @@ interface SelectedItem {
   spec: string;
   item_name: string;
   item_code: string;
+  item_unit: string | null;
   type_id: string;
   type_name: string;
   current_stock: number;
@@ -386,7 +388,7 @@ const specOptions = computed(() => {
   return item.specs
     .filter((s) => !selectedKeys.has(s.spec_id))
     .map((s) => ({
-      label: `${s.spec || '默认'} (库存: ${s.current_stock})`,
+      label: `${s.spec || '默认'} (库存: ${s.current_stock}${item.unit || ''})`,
       value: s.spec_id,
     }));
 });
@@ -443,6 +445,7 @@ const loadProductItems = async () => {
         spec: i.spec,
         item_name: i.item_name,
         item_code: i.item_code,
+        item_unit: i.item_unit ?? null,
         type_id: i.type_id,
         type_name: i.type_name,
         current_stock: i.current_stock,
@@ -527,6 +530,7 @@ const handleAdd = () => {
     spec: specName,
     item_name: item.name,
     item_code: item.code,
+    item_unit: item.unit ?? null,
     type_id: item.type_id,
     type_name: item.type_name || item.type_id,
     current_stock: item.specs?.find((s) => s.spec_id === specId)?.current_stock || 0,

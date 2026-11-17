@@ -234,6 +234,8 @@ export interface ExpenseDetailItem {
   price: string;
   /** 零件名称(联查零件表),可能为 null */
   item_name: string | null;
+  /** 零件单位(联查零件表),可能为 null */
+  item_unit: string | null;
   /** 规格名称(联查规格表),可能为 null */
   spec_name: string | null;
   /** 备注,可能为 null */

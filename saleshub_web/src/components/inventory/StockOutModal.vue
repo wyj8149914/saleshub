@@ -114,7 +114,7 @@
                 <tbody>
                   <tr v-for="(alloc, aIdx) in row.allocations" :key="alloc.warehouse_id">
                     <td>{{ alloc.warehouse_name }}</td>
-                    <td>{{ alloc.availableStock }}</td>
+                    <td>{{ alloc.availableStock }}{{ rowUnit(row) }}</td>
                     <td>
                       <a-input-number
                         :value="alloc.quantity"
@@ -132,17 +132,17 @@
                   <tr>
                     <td><strong>合计</strong></td>
                     <td :class="{ 'text-warn': row.totalAvailable < row.totalQuantity }">
-                      {{ row.totalAvailable }}
+                      {{ row.totalAvailable }}{{ rowUnit(row) }}
                     </td>
                     <td :class="{ 'text-warn': getAllocationTotal(row) !== row.totalQuantity }">
-                      {{ getAllocationTotal(row) }}
+                      {{ getAllocationTotal(row) }}{{ rowUnit(row) }}
                     </td>
                   </tr>
                 </tfoot>
               </table>
             </a-spin>
             <div v-if="row.totalAvailable < row.totalQuantity" class="stock-warning">
-              库存不足，缺少 {{ row.totalQuantity - row.totalAvailable }} 件
+              库存不足，缺少 {{ row.totalQuantity - row.totalAvailable }}{{ rowUnit(row) || '件' }}
             </div>
             <div v-else-if="getAllocationTotal(row) !== row.totalQuantity" class="stock-warning">
               出库数量与分配合计不一致
@@ -212,15 +212,17 @@
                 <span v-else class="cell-muted">-</span>
               </template>
 
-              <template v-else-if="column.key === 'per'"> × {{ record.quantity_per_product }} </template>
+              <template v-else-if="column.key === 'per'">
+                × {{ record.quantity_per_product }}{{ record.item_unit || '' }}
+              </template>
 
               <template v-else-if="column.key === 'needed'">
-                <span class="needed-num">{{ record.needed }}</span>
+                <span class="needed-num">{{ record.needed }}{{ record.item_unit || '' }}</span>
               </template>
 
               <template v-else-if="column.key === 'stock'">
                 <span :class="{ 'text-warn': record.needed > record.warehouseStock }">{{
-                  record.warehouseStock ?? '-'
+                  (record.warehouseStock ?? '-') + (record.warehouseStock != null ? (record.item_unit || '') : '')
                 }}</span>
               </template>
             </template>
@@ -568,9 +570,15 @@ function specOptionsFor(row: BatchRow) {
   const item = items.find((i) => i.item_id === row.item_id);
   if (!item?.specs) return [];
   return item.specs.map((s) => ({
-    label: `${s.spec || '默认'} (库存: ${s.current_stock})`,
+    label: `${s.spec || '默认'} (库存: ${s.current_stock}${item.unit || ''})`,
     value: s.spec_id,
   }));
+}
+
+// 获取当前行零件的单位（用于数量展示）
+function rowUnit(row: BatchRow): string {
+  const item = getRowItems(row).find((i) => i.item_id === row.item_id);
+  return item?.unit || '';
 }
 
 // ==================== 按产品出库 ====================

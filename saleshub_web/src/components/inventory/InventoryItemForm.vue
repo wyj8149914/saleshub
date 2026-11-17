@@ -57,6 +57,10 @@
         <a-input v-model:value="form.name" placeholder="请输入零件名称" :maxlength="100" show-count />
       </a-form-item>
 
+      <a-form-item label="单位" name="unit">
+        <a-input v-model:value="form.unit" placeholder="请输入单位,如:个、台、米(可选)" :maxlength="20" />
+      </a-form-item>
+
       <a-form-item label="规格选项" name="specs">
         <spec-editor v-model:value="form.specs" />
       </a-form-item>
@@ -172,6 +176,7 @@ interface FormData {
   child_type_id: string | undefined;
   name: string;
   code: string;
+  unit?: string;
   specs: EditableSpec[];
   warnStock: number | undefined;
   image_id?: string;
@@ -184,6 +189,7 @@ const form = reactive<FormData>({
   child_type_id: undefined,
   name: '',
   code: '',
+  unit: undefined,
   specs: [],
   warnStock: undefined,
   image_id: undefined,
@@ -207,6 +213,7 @@ function resetForm() {
   form.child_type_id = undefined;
   form.name = '';
   form.code = '';
+  form.unit = undefined;
   form.specs = [];
   form.warnStock = undefined;
   form.image_id = undefined;
@@ -220,6 +227,7 @@ function populateForm() {
   if (props.item) {
     form.name = props.item.name;
     form.code = props.item.code;
+    form.unit = props.item.unit || undefined;
     form.specs = (props.item.specs || [])
       .filter((s) => s.spec !== '')
       .map((s) => ({ spec: s.spec, price: s.price ?? undefined, spec_id: s.spec_id }));
@@ -335,6 +343,7 @@ async function handleSubmit() {
         item_id: props.item!.item_id,
         type_id: submitTypeId.value,
         name: form.name,
+        unit: form.unit,
         specs: specsPayload,
         warnStock: form.warnStock,
         image_id: form.image_id,
@@ -347,6 +356,7 @@ async function handleSubmit() {
       const payload: ItemCreatePayload = {
         type_id: submitTypeId.value,
         name: form.name,
+        unit: form.unit,
         specs: specsPayload,
         warnStock: form.warnStock,
         image_id: form.image_id,

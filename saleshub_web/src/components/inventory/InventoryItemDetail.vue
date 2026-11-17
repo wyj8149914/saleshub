@@ -18,7 +18,8 @@
           <a-descriptions-item label="编码">{{ item.code }}</a-descriptions-item>
           <a-descriptions-item label="零件类型">{{ item.type_full_name || item.type_name || '-' }}</a-descriptions-item>
           <a-descriptions-item label="是否定制">{{ item.is_custom === 2 ? '是' : '否' }}</a-descriptions-item>
-          <a-descriptions-item label="预警库存">{{ item.warn_stock }}</a-descriptions-item>
+          <a-descriptions-item label="预警库存">{{ item.warn_stock }}{{ item.unit || '' }}</a-descriptions-item>
+          <a-descriptions-item label="单位">{{ item.unit || '-' }}</a-descriptions-item>
           <a-descriptions-item label="备注">{{ item.remark || '-' }}</a-descriptions-item>
         </a-descriptions>
       </div>
@@ -44,7 +45,7 @@
             </template>
             <template v-if="column.key === 'current_stock'">
               <span class="stock-num" :class="{ 'text-danger': record.current_stock <= item.warn_stock }">
-                {{ record.current_stock }}
+                {{ record.current_stock }}{{ item.unit || '' }}
               </span>
             </template>
           </template>
@@ -77,7 +78,7 @@
 
       <!-- 总库存 -->
       <div class="total-stock">
-        总库存: <span class="total-num">{{ totalStock }}</span>
+        总库存: <span class="total-num">{{ totalStock }}{{ item.unit || '' }}</span>
       </div>
     </div>
   </a-modal>

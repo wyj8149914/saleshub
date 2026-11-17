@@ -479,9 +479,10 @@ function needsSpec(row: ItemRow) {
 
 /** 行内规格下拉选项 */
 function specOptionsFor(row: ItemRow) {
-  const specs = rowItem(row)?.specs || [];
+  const item = rowItem(row);
+  const specs = item?.specs || [];
   return specs.map((s) => ({
-    label: `${s.spec || '默认'} (库存: ${s.current_stock})`,
+    label: `${s.spec || '默认'} (库存: ${s.current_stock}${item?.unit || ''})`,
     value: s.spec_id,
   }));
 }

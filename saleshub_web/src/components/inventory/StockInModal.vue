@@ -390,7 +390,7 @@ const singleSpecOptions = computed(() => {
   const item = singleItem.value;
   if (!item?.specs) return [];
   return item.specs.map((s) => ({
-    label: `${s.spec || '默认'} (库存: ${s.current_stock})`,
+    label: `${s.spec || '默认'} (库存: ${s.current_stock}${item.unit || ''})`,
     value: s.spec_id,
   }));
 });
@@ -518,7 +518,7 @@ function specOptionsFor(row: BatchRow) {
   const item = items.find((i) => i.item_id === row.item_id);
   if (!item?.specs) return [];
   return item.specs.map((s) => ({
-    label: `${s.spec || '默认'} (库存: ${s.current_stock})`,
+    label: `${s.spec || '默认'} (库存: ${s.current_stock}${item.unit || ''})`,
     value: s.spec_id,
   }));
 }

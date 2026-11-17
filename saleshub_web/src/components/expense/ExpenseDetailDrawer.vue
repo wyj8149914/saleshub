@@ -78,6 +78,9 @@
               <template v-else-if="column.key === 'spec_name'">
                 {{ specLabel(record.spec_id) }}
               </template>
+              <template v-else-if="column.key === 'quantity'">
+                {{ record.quantity }}{{ record.item_unit || '' }}
+              </template>
               <template v-else-if="column.key === 'price'"> ¥{{ record.price }} </template>
               <template v-else-if="column.key === 'row_amount'">
                 <span class="amount-text">¥{{ rowAmount(record) }}</span>
