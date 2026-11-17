@@ -21,8 +21,8 @@
             {{ detail.operator_name || '-' }}
           </a-descriptions-item>
           <a-descriptions-item label="操作人角色">
-            <template v-if="detail.operator_role && detail.operator_role.length > 0">
-              <a-tag v-for="role in detail.operator_role" :key="role" color="blue">{{ role }}</a-tag>
+            <template v-if="detail.operator_role">
+              <a-tag color="blue">{{ detail.operator_role }}</a-tag>
             </template>
             <span v-else>-</span>
           </a-descriptions-item>

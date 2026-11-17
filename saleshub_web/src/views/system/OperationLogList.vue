@@ -82,8 +82,8 @@
           </template>
 
           <template v-else-if="column.key === 'operator_role'">
-            <template v-if="record.operator_role && record.operator_role.length > 0">
-              <a-tag v-for="role in record.operator_role" :key="role" color="blue">{{ role }}</a-tag>
+            <template v-if="record.operator_role">
+              <a-tag color="blue">{{ record.operator_role }}</a-tag>
             </template>
             <span v-else>-</span>
           </template>
