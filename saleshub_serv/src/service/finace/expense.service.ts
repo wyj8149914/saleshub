@@ -621,6 +621,7 @@ export class ExpenseService {
                     'ei.quantity AS quantity',
                     'ei.price AS price',
                     'item.name AS item_name',
+                    'item.unit AS item_unit',
                     'spec.spec AS spec_name',
                 ])
                 .where('ei.expense_id = :expenseId AND ei.status = :status', {

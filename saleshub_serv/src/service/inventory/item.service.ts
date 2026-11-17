@@ -24,6 +24,7 @@ interface ItemListRawRow {
     name: string | null;
     code: string | null;
     warn_stock: number | null;
+    unit: string | null;
     image_id: string | null;
     remark: string | null;
     is_custom: number;
@@ -94,6 +95,9 @@ export class InventoryItemService {
             if (dto.warnStock !== null && dto.warnStock !== undefined) {
                 item.warn_stock = dto.warnStock;
             }
+            if (dto.unit !== undefined) {
+                item.unit = dto.unit;
+            }
             if (dto.image_id) {
                 item.image_id = dto.image_id;
             }
@@ -134,6 +138,7 @@ export class InventoryItemService {
                     code: code,
                     type_id: dto.type_id,
                     warn_stock: dto.warnStock ?? null,
+                    unit: dto.unit ?? null,
                     spec_count: specRows.length,
                 }),
             });
@@ -169,6 +174,7 @@ export class InventoryItemService {
                     'item.name AS name',
                     'item.code AS code',
                     'item.warn_stock AS warn_stock',
+                    'item.unit AS unit',
                     'item.image_id AS image_id',
                     'item.remark AS remark',
                     'item.is_custom AS is_custom',
@@ -244,6 +250,7 @@ export class InventoryItemService {
                     name: it.name,
                     code: it.code,
                     warn_stock: it.warn_stock,
+                    unit: it.unit,
                     image_id: it.image_id,
                     is_custom: it.is_custom,
                     specs: specMap.get(it.item_id) || [],
@@ -295,6 +302,7 @@ export class InventoryItemService {
                 name: item.name,
                 type_id: item.type_id,
                 warn_stock: item.warn_stock ?? null,
+                unit: item.unit ?? null,
                 remark: item.remark ?? null,
             });
 
@@ -312,6 +320,9 @@ export class InventoryItemService {
             item.name = dto.name;
             if (dto.warnStock !== null && dto.warnStock !== undefined) {
                 item.warn_stock = dto.warnStock;
+            }
+            if (dto.unit !== undefined) {
+                item.unit = dto.unit;
             }
             if (dto.image_id !== undefined) {
                 item.image_id = dto.image_id;
@@ -340,6 +351,7 @@ export class InventoryItemService {
                         name: item.name,
                         type_id: item.type_id,
                         warn_stock: item.warn_stock ?? null,
+                        unit: item.unit ?? null,
                         remark: item.remark ?? null,
                     }),
                 });
@@ -441,6 +453,7 @@ export class InventoryItemService {
                     name: item.name,
                     type_id: item.type_id,
                     warn_stock: item.warn_stock ?? null,
+                    unit: item.unit ?? null,
                     remark: item.remark ?? null,
                     spec_add_count: addRows.length,
                     spec_update_count: toUpdateEntries.length,

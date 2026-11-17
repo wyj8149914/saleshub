@@ -50,6 +50,9 @@ export class InventoryItem {
     @Column({ type: 'int', default: 10, comment: '预警阈值' })
     warn_stock: number;
 
+    @Column({ type: 'varchar', length: 20, nullable: true, comment: '单位,用户手动填写' })
+    unit: string;
+
     @Column({ type: 'varchar', length: 32, nullable: true, comment: '零件图片 file.relation_id' })
     image_id: string;
 

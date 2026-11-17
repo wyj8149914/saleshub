@@ -48,6 +48,10 @@ export class CreateInventoryItemDto {
     warnStock: number;
 
     @IsOptional()
+    @MaxLength(20, { message: '单位长度不能超过20' })
+    unit?: string;
+
+    @IsOptional()
     @Type(() => Number)
     @IsInt()
     @IsIn([1, 2], { message: '是否定制必须是1-否,2-是' })

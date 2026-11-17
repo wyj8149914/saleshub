@@ -493,6 +493,7 @@ export class StockService {
                     'rec.id AS id',
                     'rec.type AS type',
                     'item.name AS item_name',
+                    'item.unit AS item_unit',
                     'spec.spec AS spec',
                     'rec.quantity AS quantity',
                     'rec.before_stock AS before_stock',
@@ -569,6 +570,7 @@ export class StockService {
                     'rec.before_stock AS before_stock',
                     'rec.after_stock AS after_stock',
                     'item.name AS item_name',
+                    'item.unit AS item_unit',
                     'spec.spec AS spec',
                     "to_char(rec.create_time, 'YYYY-MM-DD HH24:MI:SS') AS create_time",
                 ])
@@ -645,6 +647,7 @@ export class StockService {
                     'rec.before_stock AS before_stock',
                     'rec.after_stock AS after_stock',
                     'item.name AS item_name',
+                    'item.unit AS item_unit',
                     'spec.spec AS spec',
                     "to_char(rec.create_time, 'YYYY-MM-DD HH24:MI:SS') AS create_time",
                 ])
@@ -709,6 +712,7 @@ export class StockService {
                     'rec.before_stock AS before_stock',
                     'rec.after_stock AS after_stock',
                     'item.name AS item_name',
+                    'item.unit AS item_unit',
                     'spec.spec AS spec',
                     "to_char(rec.create_time, 'YYYY-MM-DD HH24:MI:SS') AS create_time",
                 ])

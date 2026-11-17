@@ -38,6 +38,7 @@ interface ProductItemRawRow {
     remark: string | null;
     item_name: string | null;
     item_code: string | null;
+    item_unit: string | null;
     type_id?: string | null;
     type_name?: string | null;
     warn_stock?: number | null;
@@ -462,6 +463,7 @@ export class ProductService {
                             'pi.remark AS remark',
                             'i.name AS item_name',
                             'i.code AS item_code',
+                            'i.unit AS item_unit',
                             'i.type_id AS type_id',
                             't.type_name AS type_name',
                             'i.warn_stock AS warn_stock',
@@ -510,6 +512,7 @@ export class ProductService {
                         'pi.remark AS remark',
                         'i.name AS item_name',
                         'i.code AS item_code',
+                        'i.unit AS item_unit',
                         'i.type_id AS type_id',
                         't.type_name AS type_name',
                         'i.warn_stock AS warn_stock',
@@ -948,6 +951,7 @@ export class ProductService {
                     'pi.remark AS remark',
                     'i.name AS item_name',
                     'i.code AS item_code',
+                    'i.unit AS item_unit',
                     'i.type_id AS type_id',
                     't.type_name AS type_name',
                     'i.warn_stock AS warn_stock',
@@ -1004,6 +1008,7 @@ export class ProductService {
                     'pi.module_id AS module_id',
                     'i.name AS item_name',
                     'i.code AS item_code',
+                    'i.unit AS item_unit',
                     'pi.quantity_per_product AS quantity_per_product',
                     'pi.remark AS remark',
                 ])
