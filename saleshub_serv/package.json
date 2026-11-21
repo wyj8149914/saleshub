@@ -1,5 +1,5 @@
 {
-    "name": "card-backend-node",
+    "name": "saleshub_serv",
     "version": "1.0.0",
     "description": "库存销售管理统 - Node.js后端服务",
     "main": "dist/server.js",

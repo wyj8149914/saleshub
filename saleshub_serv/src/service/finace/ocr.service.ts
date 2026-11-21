@@ -348,13 +348,12 @@ export class InvoiceOcrService {
 
         // 查重:同一发票号码只保留一条记录
         const existing = await this.invoiceRepository.findOne({
-            where: { invoice_number: invoice.invoice_number },
+            where: { invoice_number: invoice.invoice_number, status: 1 },
         });
         if (existing) {
             this.logger.info('发票已存在,跳过入库:', { invoice_number: invoice.invoice_number });
             return toSaveItem(existing, true);
         }
-
         try {
             await this.invoiceRepository.save(invoice);
             return toSaveItem(invoice, false);
@@ -368,6 +367,7 @@ export class InvoiceOcrService {
                     where: { invoice_number: invoice.invoice_number },
                 });
                 if (winner) {
+                    this.logger.info('发票入库冲突,回查已有记录:', { invoice_number: invoice.invoice_number });
                     return toSaveItem(winner, true);
                 }
             }
