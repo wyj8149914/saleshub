@@ -158,6 +158,7 @@ export class InventoryItemService {
 
     /**
      * 查询所有正常状态的零件
+     * - 支持筛选:类型、零件名称、规格名称(命中零件展示其全部规格)、编码、是否定制
      */
     async list(dto: ListInventoryItemDto) {
         try {
@@ -187,6 +188,23 @@ export class InventoryItemService {
             }
             if (dto.name) {
                 queryBuilder.andWhere('item.name LIKE :name', { name: `%${dto.name}%` });
+            }
+            if (dto.spec_name) {
+                // 按规格名称模糊匹配:EXISTS 子查询过滤存在匹配规格的零件,
+                // 命中零件的所有规格在下方按 item_id 全量加载,不受匹配规格限制
+                queryBuilder.andWhere((qb) => {
+                    const subQuery = qb
+                        .subQuery()
+                        .select('1')
+                        .from(InventoryItemSpec, 'spec')
+                        .where('spec.item_id = item.item_id')
+                        .andWhere('spec.status = :specStatus', { specStatus: 1 })
+                        .andWhere('spec.spec LIKE :specName', {
+                            specName: `%${dto.spec_name}%`,
+                        })
+                        .getQuery();
+                    return `EXISTS (${subQuery})`;
+                });
             }
             if (dto.code) {
                 queryBuilder.andWhere('item.code = :code', { code: dto.code });

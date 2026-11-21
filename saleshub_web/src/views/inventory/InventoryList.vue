@@ -29,6 +29,19 @@
           </template>
         </a-input>
 
+        <a-input
+          v-model:value="filters.spec_name"
+          placeholder="按规格搜索"
+          allow-clear
+          class="filter-input"
+          @press-enter="handleSearch"
+          @change="handleFilterChange"
+        >
+          <template #prefix>
+            <SearchOutlined />
+          </template>
+        </a-input>
+
         <a-select
           v-model:value="filterParentTypeId"
           placeholder="一级类型"
@@ -647,10 +660,12 @@ const handleAllocateCancel = () => {
 
 const filters = reactive<{
   name: string;
+  spec_name: string;
   code: string;
   is_custom: 1 | 2 | undefined;
 }>({
   name: '',
+  spec_name: '',
   code: '',
   is_custom: undefined,
 });
@@ -672,6 +687,7 @@ const loadItems = async () => {
       pageIndex: pagination.current,
       pageSize: pagination.pageSize,
       name: filters.name || undefined,
+      spec_name: filters.spec_name || undefined,
       code: filters.code || undefined,
       type_id: typeId,
       is_custom: filters.is_custom,
@@ -692,6 +708,7 @@ const handleSearch = () => {
 
 const handleReset = () => {
   filters.name = '';
+  filters.spec_name = '';
   filters.code = '';
   filters.is_custom = undefined;
   filterParentTypeId.value = undefined;

@@ -116,6 +116,8 @@ export interface ItemListQuery {
   pageSize: number;
   type_id?: string;
   name?: string;
+  /** 规格名称模糊搜索,命中零件展示其全部规格 */
+  spec_name?: string;
   code?: string;
   isWarning?: 1 | 2;
   is_custom?: 1 | 2;

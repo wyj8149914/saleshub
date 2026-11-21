@@ -79,6 +79,9 @@ export class ListInventoryItemDto extends PageDto {
     name: string;
 
     @IsOptional()
+    spec_name: string;
+
+    @IsOptional()
     code: string;
 
     @IsOptional()
