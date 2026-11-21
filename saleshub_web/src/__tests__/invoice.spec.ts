@@ -34,6 +34,7 @@ function makeInvoice(isTaxFiled: number, isReimbursed = 1): Invoice {
   return {
     invoice_id: `id-${isTaxFiled}-${Math.random().toString(36).slice(2, 8)}`,
     user_id: 'u1',
+    user_name: null,
     file_id: 'f1',
     invoice_type: 16,
     sub_type: 'VatElectronicInvoiceFull',

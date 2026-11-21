@@ -113,6 +113,8 @@ export interface Invoice {
   invoice_id: string;
   /** 识别用户 ID */
   user_id: string;
+  /** 上传识别人员姓名(按 user_id 关联用户表),可能为 null */
+  user_name: string | null;
   /** 原始文件 ID(minio_file.relation_id) */
   file_id: string;
   /** 发票类型(腾讯云 MixedInvoiceOCR,如 16-全电发票) */

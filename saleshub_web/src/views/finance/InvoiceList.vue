@@ -239,6 +239,7 @@ const columns = [
   { title: '开票日期', dataIndex: 'invoice_date', key: 'invoice_date' },
   { title: '报税时间', dataIndex: 'tax_filed_time', key: 'tax_filed_time' },
   { title: '报销时间', dataIndex: 'reimbursed_time', key: 'reimbursed_time' },
+  { title: '上传人', dataIndex: 'user_name', key: 'user_name' },
   { title: '购买方', dataIndex: 'buyer_name', key: 'buyer_name', ellipsis: true },
   { title: '税额', dataIndex: 'tax_amount', key: 'tax_amount', align: 'right' as const },
   { title: '入库时间', dataIndex: 'create_time', key: 'create_time' },

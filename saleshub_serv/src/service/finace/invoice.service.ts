@@ -3,6 +3,7 @@ import { In } from 'typeorm';
 import { AppDataSource } from '../../config/database.config';
 import { Expense, Invoice } from '../../entity/finance.entity';
 import { MinioFile } from '../../entity/file.entity';
+import { User } from '../../entity/user.entity';
 import {
     ListInvoiceDto,
     InvoiceIdDto,
@@ -17,6 +18,8 @@ import { recordOperation } from '../log';
 interface InvoiceListItem {
     invoice_id: string;
     user_id: string;
+    /** 上传识别人员姓名(admin_user.name,按 user_id 关联) */
+    user_name: string | null;
     file_id: string;
     invoice_type: number;
     sub_type: string;
@@ -63,6 +66,7 @@ const INVOICE_LIST_SELECT = [
     'invoice.invoice_id AS invoice_id',
     'invoice.tag AS tag',
     'invoice.user_id AS user_id',
+    'uploader.name AS user_name',
     'invoice.file_id AS file_id',
     'invoice.invoice_type AS invoice_type',
     'invoice.sub_type AS sub_type',
@@ -156,6 +160,7 @@ export class InvoiceService {
             const queryBuilder = this.invoiceRepository
                 .createQueryBuilder('invoice')
                 .select(INVOICE_LIST_SELECT)
+                .leftJoin(User, 'uploader', 'uploader.user_id = invoice.user_id')
                 .where('invoice.status = :status', { status: 1 });
 
             if (dto.invoice_nature) {
@@ -227,6 +232,7 @@ export class InvoiceService {
             const items = await this.invoiceRepository
                 .createQueryBuilder('invoice')
                 .select(INVOICE_LIST_SELECT)
+                .leftJoin(User, 'uploader', 'uploader.user_id = invoice.user_id')
                 .where('invoice.status = :status', { status: 1 })
                 .andWhere('invoice.invoice_nature = :invoiceNature', { invoiceNature: 1 })
                 // NOT EXISTS 过滤已被正常状态费用单关联的发票
@@ -263,10 +269,12 @@ export class InvoiceService {
             const row = await this.invoiceRepository
                 .createQueryBuilder('invoice')
                 .leftJoin(MinioFile, 'file', 'file.relation_id = invoice.file_id')
+                .leftJoin(User, 'uploader', 'uploader.user_id = invoice.user_id')
                 .select([
                     'invoice.invoice_id AS invoice_id',
                     'invoice.tag AS tag',
                     'invoice.user_id AS user_id',
+                    'uploader.name AS user_name',
                     'invoice.file_id AS file_id',
                     'invoice.biz_type AS biz_type',
                     'invoice.biz_id AS biz_id',

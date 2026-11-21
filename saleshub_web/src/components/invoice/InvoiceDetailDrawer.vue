@@ -89,8 +89,8 @@
           <a-descriptions-item label="备注" :span="2">
             {{ detail.remark || '-' }}
           </a-descriptions-item>
-          <a-descriptions-item label="识别用户">
-            {{ detail.user_id }}
+          <a-descriptions-item label="上传人">
+            {{ detail.user_name || detail.user_id }}
           </a-descriptions-item>
           <a-descriptions-item label="入库时间">
             {{ formatDateTime(detail.create_time) }}
