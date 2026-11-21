@@ -159,6 +159,8 @@ export interface Invoice {
   status: number;
   /** 入库时间,ISO 日期时间字符串 */
   create_time: string;
+  /** 购买的产品名称(明细条目名称合并,多个以英文逗号分隔),可能为 null */
+  item_names: string | null;
 }
 
 /** 未绑定支出费用单的实开发票列表 datas(不分页,无 total) */

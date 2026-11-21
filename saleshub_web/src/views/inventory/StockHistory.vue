@@ -76,9 +76,7 @@
         </template>
 
         <template v-else-if="column.key === 'quantity'">
-          <span :class="getQuantityClass(record)">
-            {{ formatQuantity(record) }}{{ record.item_unit || '' }}
-          </span>
+          <span :class="getQuantityClass(record)"> {{ formatQuantity(record) }}{{ record.item_unit || '' }} </span>
         </template>
 
         <template v-else-if="column.key === 'stockChange'">

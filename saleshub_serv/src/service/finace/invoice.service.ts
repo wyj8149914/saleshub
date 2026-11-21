@@ -40,6 +40,8 @@ interface InvoiceListItem {
     reimbursed_by: string | null;
     status: number;
     create_time: Date;
+    /** 购买的产品名称(明细 items 条目 Name 合并,多个以英文逗号分隔) */
+    item_names: string | null;
 }
 
 /** 发票列表响应 */
@@ -84,6 +86,9 @@ const INVOICE_LIST_SELECT = [
     'invoice.reimbursed_by AS reimbursed_by',
     'invoice.status AS status',
     "to_char(invoice.create_time, 'YYYY-MM-DD HH24:MI:SS') AS create_time",
+    // 购买的产品名称:展开明细 items 数组,合并条目 Name(去重,英文逗号分隔)
+    "(SELECT string_agg(DISTINCT t->>'Name', ',') " +
+        'FROM jsonb_array_elements(invoice.items) t) AS item_names',
 ];
 
 /** 发票详情数据(含明细 items 与原始文件地址,排除 detail/raw_response/ocr_request_id/ocr_code) */

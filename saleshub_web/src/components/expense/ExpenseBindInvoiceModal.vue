@@ -4,7 +4,7 @@
     title="关联发票"
     :confirm-loading="loading"
     :mask-closable="false"
-    width="720px"
+    width="920px"
     ok-text="确认关联"
     cancel-text="取消"
     @ok="handleSubmit"
@@ -38,7 +38,14 @@
           :scroll="{ x: 'max-content', y: 280 }"
         >
           <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'sub_type_desc'">
+            <template v-if="column.key === 'item_names'">
+              <!-- 产品名称过长时截断,hover 显示完整内容 -->
+              <a-tooltip :title="record.item_names || ''">
+                <div class="item-names-cell">{{ record.item_names || '-' }}</div>
+              </a-tooltip>
+            </template>
+
+            <template v-else-if="column.key === 'sub_type_desc'">
               {{ record.sub_type_desc || '-' }}
             </template>
 
@@ -136,6 +143,7 @@ const selectedInvoiceId = ref<string>('');
 /** 「选择已有发票」表格列 */
 const selectColumns = [
   { title: '发票号码', dataIndex: 'invoice_number', key: 'invoice_number', width: 200, fixed: 'left' as const },
+  { title: '产品名称', dataIndex: 'item_names', key: 'item_names', width: 220 },
   { title: '发票类型', dataIndex: 'sub_type_desc', key: 'sub_type_desc', width: 160, ellipsis: true },
   { title: '价税合计', dataIndex: 'total_amount', key: 'total_amount', width: 100, align: 'right' as const },
   { title: '开票日期', dataIndex: 'invoice_date', key: 'invoice_date', width: 110 },
@@ -275,5 +283,13 @@ watch(
 .amount-text {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+/* 产品名称单元格:固定最大宽度,超出单行省略,hover 由 a-tooltip 展示全文 */
+.item-names-cell {
+  max-width: 200px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 </style>

@@ -106,7 +106,7 @@ export class InvoiceOcrService {
             if (ocrResponse.result !== 0) {
                 return { result: 1, msg: ocrResponse.msg };
             }
-            this.logger.info('OCR识别结果:', ocrResponse);
+            this.logger.info('OCR识别结果:', JSON.stringify(ocrResponse));
             const items = ocrResponse.datas.MixedInvoiceItems ?? [];
             if (items.length === 0) {
                 this.logger.warn('OCR未识别到发票:', { file_id: dto.file_id });
@@ -279,10 +279,10 @@ export class InvoiceOcrService {
                             // 单文件结果中的 relation_id 已上提为条目字段,不重复下发
                             datas: ocrResult.datas
                                 ? {
-                                      invoices: ocrResult.datas.invoices,
-                                      existed: ocrResult.datas.existed,
-                                      failed: ocrResult.datas.failed,
-                                  }
+                                    invoices: ocrResult.datas.invoices,
+                                    existed: ocrResult.datas.existed,
+                                    failed: ocrResult.datas.failed,
+                                }
                                 : undefined,
                         } satisfies InvoiceFileResult;
                     } catch (error) {

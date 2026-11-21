@@ -57,6 +57,7 @@ function makeInvoice(isTaxFiled: number, isReimbursed = 1): Invoice {
     reimbursed_by: null,
     status: 1,
     create_time: '2026-01-01 00:00:00',
+    item_names: null,
   };
 }
 
@@ -250,9 +251,7 @@ describe('发票报销', () => {
   });
 
   it('报销选择校验:超过 200 条拒绝', () => {
-    const records = Array.from({ length: INVOICE_MAX_TAX_COUNT + 1 }, () =>
-      makeInvoice(InvoiceTaxStatus.NOT_FILED)
-    );
+    const records = Array.from({ length: INVOICE_MAX_TAX_COUNT + 1 }, () => makeInvoice(InvoiceTaxStatus.NOT_FILED));
     const { valid, msg } = validateReimburseSelection(records, InvoiceReimburseStatus.REIMBURSED);
     expect(valid).toBe(false);
     expect(msg).toContain('200');

@@ -114,7 +114,7 @@ export function sumInvoiceTotalAmount(invoices: Invoice[]): string {
 function validateStatusSelection(
   records: Invoice[],
   targetStatus: number,
-  field: 'is_tax_filed' | 'is_reimbursed'
+  field: 'is_tax_filed' | 'is_reimbursed',
 ): TaxSelectionCheck {
   if (records.length === 0) {
     return { valid: false, msg: '请先选择要操作的发票' };

@@ -69,7 +69,7 @@
                       <span v-else>-</span>
                     </td>
                     <td class="cell-stock">
-                      {{ item.current_stock ?? '-' }}{{ item.current_stock != null ? (item.item_unit || '') : '' }}
+                      {{ item.current_stock ?? '-' }}{{ item.current_stock != null ? item.item_unit || '' : '' }}
                     </td>
                     <td class="cell-remark">{{ item.remark || '-' }}</td>
                   </tr>
@@ -89,7 +89,7 @@
                     <span v-else>-</span>
                   </td>
                   <td class="cell-stock">
-                    {{ item.current_stock ?? '-' }}{{ item.current_stock != null ? (item.item_unit || '') : '' }}
+                    {{ item.current_stock ?? '-' }}{{ item.current_stock != null ? item.item_unit || '' : '' }}
                   </td>
                   <td class="cell-remark">{{ item.remark || '-' }}</td>
                 </tr>

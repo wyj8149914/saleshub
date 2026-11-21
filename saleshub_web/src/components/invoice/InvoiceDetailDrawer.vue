@@ -134,7 +134,12 @@
 import { computed, ref, watch } from 'vue';
 import { EyeOutlined } from '@ant-design/icons-vue';
 import { invoiceApi } from '@/api/invoice';
-import { INVOICE_NATURE_LABELS, INVOICE_PURPOSE_LABELS, InvoiceReimburseStatus, InvoiceTaxStatus } from '@/types/invoice';
+import {
+  INVOICE_NATURE_LABELS,
+  INVOICE_PURPOSE_LABELS,
+  InvoiceReimburseStatus,
+  InvoiceTaxStatus,
+} from '@/types/invoice';
 import type { InvoiceDetail, InvoiceItemEntry } from '@/types/invoice';
 import { invoiceItemFieldLabel } from '@/utils/invoice';
 

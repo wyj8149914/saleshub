@@ -222,7 +222,7 @@
 
               <template v-else-if="column.key === 'stock'">
                 <span :class="{ 'text-warn': record.needed > record.warehouseStock }">{{
-                  (record.warehouseStock ?? '-') + (record.warehouseStock != null ? (record.item_unit || '') : '')
+                  (record.warehouseStock ?? '-') + (record.warehouseStock != null ? record.item_unit || '' : '')
                 }}</span>
               </template>
             </template>
